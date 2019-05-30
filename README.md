@@ -50,6 +50,12 @@ for page in doc.pages:
 - Run "python3 trptest.py"
 - You should see output using the sample JSON response file included in the source.
 
+## Other Resources
+
+- [Large scale document processing with Amazon Textract - Reference Architecture](https://github.com/aws-samples/amazon-textract-serverless-large-scale-document-processing)
+- [Batch processing tool](https://github.com/aws-samples/amazon-textract-textractor)
+- [Code samples](https://github.com/aws-samples/amazon-textract-code-samples)
+
 ## License Summary
 
 This sample code is made available under the MIT-0 license. See the LICENSE file.
