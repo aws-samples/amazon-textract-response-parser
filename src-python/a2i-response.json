@@ -1,0 +1,3821 @@
+{
+    "aiServiceRequest": {
+        "document": {
+            "s3Object": {
+                "bucket": "textract-documentsbucket-sirajama",
+                "name": "inputDocuments/mr2.png"
+            }
+        },
+        "featureTypes": [
+            "TABLES",
+            "FORMS"
+        ],
+        "humanLoopConfig": {
+            "flowDefinitionArn": "arn:aws:sagemaker:us-east-1:298034081971:flow-definition/insurance-validation-flowv6",
+            "humanLoopName": "ivf-25e512f2-75a2-11ea-ab9f-36f379a2239d"
+        }
+    },
+    "aiServiceResponse": {
+        "blocks": [
+            {
+                "blockType": "PAGE",
+                "geometry": {
+                    "boundingBox": {
+                        "height": 1,
+                        "left": 0,
+                        "top": 0,
+                        "width": 1
+                    },
+                    "polygon": [
+                        {
+                            "x": 2.1155324e-16,
+                            "y": 0
+                        },
+                        {
+                            "x": 1,
+                            "y": 7.10414e-17
+                        },
+                        {
+                            "x": 1,
+                            "y": 1
+                        },
+                        {
+                            "x": 0,
+                            "y": 1
+                        }
+                    ]
+                },
+                "id": "e764658e-babf-4fa9-8eaf-71b336468fe5",
+                "relationships": [
+                    {
+                        "ids": [
+                            "3108a765-0c6d-48c1-be3d-9ec6cca43fb8",
+                            "d7403c80-f64b-4e01-8e69-a425b6d97e46",
+                            "29e0ae12-41a0-454a-ae75-e415c1cbc94b",
+                            "ab504d6f-45e4-44e0-be1f-7ed7ff662c91",
+                            "9699eb51-bcb5-420d-96d2-2fe7272dd726",
+                            "2bc3d049-a6ed-483d-b9e9-253922bf7417",
+                            "7c457ec5-d5d0-4737-9d50-8aaebe558500",
+                            "5f350a4f-2fcd-4f90-8d47-df9757d4bf58",
+                            "b4c82dda-d65d-4283-9899-33b511695441",
+                            "40ae9ff8-4d00-4ef4-bcfb-466ba85e4bc3",
+                            "8fd8b847-c361-4230-a2a4-1c555283c67a",
+                            "a5c0086f-e8d8-4220-8110-a46ce1cfa90f",
+                            "a7942c81-05e2-4b21-9f7d-09086d93e0be",
+                            "09eb1d97-5db8-4d3b-9784-376ce1522644",
+                            "29082da0-0dad-421d-a8c9-df5cc0d20bc7",
+                            "3f252f2d-f438-4f85-ad22-b945cbc8154d",
+                            "7816b8bb-b339-4e88-a1d6-0ad691ac0290",
+                            "9b4939f3-483c-4f75-9651-eee0727fa315",
+                            "c4ae9cab-835c-4332-975e-22aa4208fb70",
+                            "d19c70c0-50f1-4720-aae8-785ad81bfb52",
+                            "500a5d4b-a855-4f33-a262-33304cf2b3e4",
+                            "ec7ebb77-2cf3-440f-875f-47771c99aba6",
+                            "ffc0f514-cdb7-49c9-a729-ab85a51ae1f0",
+                            "8801f4b7-d958-47d9-8f65-f4bff9f16afd",
+                            "81139649-b27c-48d6-9ab0-08350756d0f1",
+                            "3871231f-34e7-40d5-ac93-e9bb168a5ca4",
+                            "47c2c981-9590-447c-b3b1-f35dae4c6670",
+                            "137d5e1d-7d04-490e-920a-dfbf37ee7450",
+                            "a323081d-baac-4306-ac61-70c9393a73eb",
+                            "e61c53dd-e189-41ab-9034-8e76e999ec8f",
+                            "89061259-37e2-44dc-a0c4-b03638c26124",
+                            "efef5f95-e05c-476c-8251-6378c6d69001",
+                            "5d2518f0-40e5-420f-b72e-3aae5c2425a1"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 97.18951,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.024819765,
+                        "left": 0.32416707,
+                        "top": 0.057702165,
+                        "width": 0.5107142
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.32416707,
+                            "y": 0.057702165
+                        },
+                        {
+                            "x": 0.83488125,
+                            "y": 0.057702165
+                        },
+                        {
+                            "x": 0.83488125,
+                            "y": 0.08252193
+                        },
+                        {
+                            "x": 0.32416707,
+                            "y": 0.08252193
+                        }
+                    ]
+                },
+                "id": "3108a765-0c6d-48c1-be3d-9ec6cca43fb8",
+                "relationships": [
+                    {
+                        "ids": [
+                            "9528e915-8de4-4a01-ba93-a295c6429d3f",
+                            "101e3657-0c58-40af-9d9d-29fb1a38fceb",
+                            "d3582348-abfe-4fec-8768-dec9d3d1a3c2"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "Mall Mobile Repair"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.620125,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02029768,
+                        "left": 0.242488,
+                        "top": 0.0892392,
+                        "width": 0.67564625
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.242488,
+                            "y": 0.0892392
+                        },
+                        {
+                            "x": 0.9181343,
+                            "y": 0.0892392
+                        },
+                        {
+                            "x": 0.9181343,
+                            "y": 0.10953688
+                        },
+                        {
+                            "x": 0.242488,
+                            "y": 0.10953688
+                        }
+                    ]
+                },
+                "id": "d7403c80-f64b-4e01-8e69-a425b6d97e46",
+                "relationships": [
+                    {
+                        "ids": [
+                            "91257bc8-29ad-4bc1-9c11-530237a5da24",
+                            "5c035a27-6031-4109-9254-05a22f507131",
+                            "51997171-fa0c-4a4e-bf26-84b522a54476",
+                            "b22cb843-5679-4183-95f1-342e31ee1918",
+                            "ca9e70da-551e-44de-8c66-cf2e1feb9638",
+                            "e8da18d8-1c4b-4566-b576-edee8fae4c55"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "You break it We fix it"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.73003,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02269014,
+                        "left": 0.2586333,
+                        "top": 0.11995361,
+                        "width": 0.645947
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.2586333,
+                            "y": 0.11995361
+                        },
+                        {
+                            "x": 0.9045803,
+                            "y": 0.11995361
+                        },
+                        {
+                            "x": 0.9045803,
+                            "y": 0.14264375
+                        },
+                        {
+                            "x": 0.2586333,
+                            "y": 0.14264375
+                        }
+                    ]
+                },
+                "id": "29e0ae12-41a0-454a-ae75-e415c1cbc94b",
+                "relationships": [
+                    {
+                        "ids": [
+                            "84f7f5fb-16b1-4ae1-800c-7b7ff6248ee2",
+                            "90443359-09b9-4910-973e-2bcec0a3865c",
+                            "a1c556c4-4db9-4b27-99ca-4bfaad8e1eb3",
+                            "ddd4c16d-02b3-4abf-b478-785c2a2879dc",
+                            "4521a1c0-919c-49a1-803a-7e0371ed42bb"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "444, New Mall, New Town"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.9187,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01969862,
+                        "left": 0.46672013,
+                        "top": 0.15139394,
+                        "width": 0.22254544
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.46672013,
+                            "y": 0.15139394
+                        },
+                        {
+                            "x": 0.68926555,
+                            "y": 0.15139394
+                        },
+                        {
+                            "x": 0.68926555,
+                            "y": 0.17109255
+                        },
+                        {
+                            "x": 0.46672013,
+                            "y": 0.17109255
+                        }
+                    ]
+                },
+                "id": "ab504d6f-45e4-44e0-be1f-7ed7ff662c91",
+                "relationships": [
+                    {
+                        "ids": [
+                            "76ac69d4-12cf-4b70-8c06-ab3b248e84b1",
+                            "95186354-30eb-414a-82cb-1a7ea733b417"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "MA 00001"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.72334,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02119486,
+                        "left": 0.4932077,
+                        "top": 0.2128705,
+                        "width": 0.4507787
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.4932077,
+                            "y": 0.2128705
+                        },
+                        {
+                            "x": 0.9439864,
+                            "y": 0.2128705
+                        },
+                        {
+                            "x": 0.9439864,
+                            "y": 0.23406535
+                        },
+                        {
+                            "x": 0.4932077,
+                            "y": 0.23406535
+                        }
+                    ]
+                },
+                "id": "9699eb51-bcb5-420d-96d2-2fe7272dd726",
+                "relationships": [
+                    {
+                        "ids": [
+                            "4bfd9716-4fce-4e69-813d-ac3806906a93",
+                            "f2790ea1-b8a8-4dd6-a5ca-9157bec638e7"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "Date: 03/02/2020"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.906136,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.019374598,
+                        "left": 0.2186609,
+                        "top": 0.24418725,
+                        "width": 0.64496577
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.2186609,
+                            "y": 0.24418725
+                        },
+                        {
+                            "x": 0.8636267,
+                            "y": 0.24418725
+                        },
+                        {
+                            "x": 0.8636267,
+                            "y": 0.26356184
+                        },
+                        {
+                            "x": 0.2186609,
+                            "y": 0.26356184
+                        }
+                    ]
+                },
+                "id": "2bc3d049-a6ed-483d-b9e9-253922bf7417",
+                "relationships": [
+                    {
+                        "ids": [
+                            "479e9792-2fa7-452b-bc50-69d69dc6a9e5",
+                            "4c560b98-f2eb-4aef-9d17-9a4997b5ed9a",
+                            "98a1e130-9aa0-4592-88aa-b546f2bd0e7a",
+                            "c039d6e4-3451-4b7d-be9b-4aa68e099364"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "Customer Name: John Doe"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.2183,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.024882257,
+                        "left": 0.21588285,
+                        "top": 0.30372137,
+                        "width": 0.5906096
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21588285,
+                            "y": 0.30372137
+                        },
+                        {
+                            "x": 0.80649245,
+                            "y": 0.30372137
+                        },
+                        {
+                            "x": 0.80649245,
+                            "y": 0.32860363
+                        },
+                        {
+                            "x": 0.21588285,
+                            "y": 0.32860363
+                        }
+                    ]
+                },
+                "id": "7c457ec5-d5d0-4737-9d50-8aaebe558500",
+                "relationships": [
+                    {
+                        "ids": [
+                            "039e310a-53ff-4d55-bd9b-6cb878c23ca7",
+                            "42949eb3-3f15-41f4-bd7f-fb1f3f1e0d1d",
+                            "5752a4cb-82cb-4ff1-8509-c64f6a7a8eb1"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "Device S/N: 424403233"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.69493,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.025607735,
+                        "left": 0.21768335,
+                        "top": 0.33554754,
+                        "width": 0.44663107
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21768335,
+                            "y": 0.33554754
+                        },
+                        {
+                            "x": 0.66431445,
+                            "y": 0.33554754
+                        },
+                        {
+                            "x": 0.66431445,
+                            "y": 0.36115527
+                        },
+                        {
+                            "x": 0.21768335,
+                            "y": 0.36115527
+                        }
+                    ]
+                },
+                "id": "5f350a4f-2fcd-4f90-8d47-df9757d4bf58",
+                "relationships": [
+                    {
+                        "ids": [
+                            "3d0e87a0-0102-46dc-b56e-e9ccd989db88",
+                            "b64799f1-334d-4ec1-96b7-c12b44fd8f82"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "Policy: AG133441"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 97.51201,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.019860417,
+                        "left": 0.21901202,
+                        "top": 0.3976416,
+                        "width": 0.30794704
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21901202,
+                            "y": 0.3976416
+                        },
+                        {
+                            "x": 0.52695906,
+                            "y": 0.3976416
+                        },
+                        {
+                            "x": 0.52695906,
+                            "y": 0.41750202
+                        },
+                        {
+                            "x": 0.21901202,
+                            "y": 0.41750202
+                        }
+                    ]
+                },
+                "id": "b4c82dda-d65d-4283-9899-33b511695441",
+                "relationships": [
+                    {
+                        "ids": [
+                            "5f778c44-6799-4fac-b1f6-9f32fa16a3b2",
+                            "12f1a47a-a57d-408e-8952-d551ffd138a1"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "Job Details"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.53273,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02450244,
+                        "left": 0.21992747,
+                        "top": 0.4894485,
+                        "width": 0.5817503
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21992747,
+                            "y": 0.4894485
+                        },
+                        {
+                            "x": 0.8016777,
+                            "y": 0.4894485
+                        },
+                        {
+                            "x": 0.8016777,
+                            "y": 0.51395094
+                        },
+                        {
+                            "x": 0.21992747,
+                            "y": 0.51395094
+                        }
+                    ]
+                },
+                "id": "40ae9ff8-4d00-4ef4-bcfb-466ba85e4bc3",
+                "relationships": [
+                    {
+                        "ids": [
+                            "1f05bab3-df48-4236-a10c-54698377f602",
+                            "14ea2388-50ed-4be0-bc62-d116df59391c",
+                            "faafe006-c642-43a9-85dc-885d95c9ce85"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "Screen Replace $99.00"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.18958,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.024822064,
+                        "left": 0.21758953,
+                        "top": 0.5196849,
+                        "width": 0.5904365
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21758953,
+                            "y": 0.5196849
+                        },
+                        {
+                            "x": 0.808026,
+                            "y": 0.5196849
+                        },
+                        {
+                            "x": 0.808026,
+                            "y": 0.54450697
+                        },
+                        {
+                            "x": 0.21758953,
+                            "y": 0.54450697
+                        }
+                    ]
+                },
+                "id": "8fd8b847-c361-4230-a2a4-1c555283c67a",
+                "relationships": [
+                    {
+                        "ids": [
+                            "cf23cf10-de84-475a-abf7-82b0fcf5b656",
+                            "1573707e-60f3-4e85-90b7-0ff29f9c1b4a",
+                            "f4ab36bc-57b3-4db7-af47-59b5674e4e02"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "Labor Charges $49.99"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.57196,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.022857666,
+                        "left": 0.23006997,
+                        "top": 0.5515018,
+                        "width": 0.28620675
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.23006997,
+                            "y": 0.5515018
+                        },
+                        {
+                            "x": 0.5162767,
+                            "y": 0.5515018
+                        },
+                        {
+                            "x": 0.5162767,
+                            "y": 0.5743595
+                        },
+                        {
+                            "x": 0.23006997,
+                            "y": 0.5743595
+                        }
+                    ]
+                },
+                "id": "a5c0086f-e8d8-4220-8110-a46ce1cfa90f",
+                "relationships": [
+                    {
+                        "ids": [
+                            "34066604-b348-4e63-b97f-915f4bdde8c2",
+                            "dc3d75e3-3dd1-4706-8d4a-d7313ac8288f"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "(flat rate)"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 69.80187,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.020683765,
+                        "left": 0.21824719,
+                        "top": 0.61347944,
+                        "width": 0.47107917
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21824719,
+                            "y": 0.61347944
+                        },
+                        {
+                            "x": 0.68932635,
+                            "y": 0.61347944
+                        },
+                        {
+                            "x": 0.68932635,
+                            "y": 0.6341632
+                        },
+                        {
+                            "x": 0.21824719,
+                            "y": 0.6341632
+                        }
+                    ]
+                },
+                "id": "a7942c81-05e2-4b21-9f7d-09086d93e0be",
+                "relationships": [
+                    {
+                        "ids": [
+                            "637b4c54-931b-4d3a-8800-2a58b0a390ed",
+                            "b68e3e55-d6c7-4600-8d20-9897f015212f",
+                            "d9dd6924-3c81-438e-9577-6fa307a4dcea"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "Additional Notes -"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.9032,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.024597615,
+                        "left": 0.21707901,
+                        "top": 0.64506114,
+                        "width": 0.6168775
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21707901,
+                            "y": 0.64506114
+                        },
+                        {
+                            "x": 0.8339565,
+                            "y": 0.64506114
+                        },
+                        {
+                            "x": 0.8339565,
+                            "y": 0.6696588
+                        },
+                        {
+                            "x": 0.21707901,
+                            "y": 0.6696588
+                        }
+                    ]
+                },
+                "id": "09eb1d97-5db8-4d3b-9784-376ce1522644",
+                "relationships": [
+                    {
+                        "ids": [
+                            "538088fc-5db5-4c0a-b273-82a95ce5a545",
+                            "aa9ce232-61c7-478d-8cb8-da41254700b6",
+                            "60b9cfc6-d074-400a-a2cb-3a6c1f8a18a5",
+                            "1f4f8154-c52e-4328-8b5e-1067494f1718"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "Warranty fixed 10 days"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.94729,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.023833843,
+                        "left": 0.22088936,
+                        "top": 0.675953,
+                        "width": 0.47306797
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.22088936,
+                            "y": 0.675953
+                        },
+                        {
+                            "x": 0.6939573,
+                            "y": 0.675953
+                        },
+                        {
+                            "x": 0.6939573,
+                            "y": 0.69978684
+                        },
+                        {
+                            "x": 0.22088936,
+                            "y": 0.69978684
+                        }
+                    ]
+                },
+                "id": "29082da0-0dad-421d-a8c9-df5cc0d20bc7",
+                "relationships": [
+                    {
+                        "ids": [
+                            "6487eb6e-3d0b-4779-afce-89f1ee168e5d",
+                            "ebd1215a-7784-4600-a72a-d16a5dff7fd9",
+                            "20c82995-e30e-4c14-9edf-b03aa21a17c6"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "from receipt date"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.74751,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02883792,
+                        "left": 0.21727453,
+                        "top": 0.7367701,
+                        "width": 0.4645571
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21727453,
+                            "y": 0.7367701
+                        },
+                        {
+                            "x": 0.68183166,
+                            "y": 0.7367701
+                        },
+                        {
+                            "x": 0.68183166,
+                            "y": 0.765608
+                        },
+                        {
+                            "x": 0.21727453,
+                            "y": 0.765608
+                        }
+                    ]
+                },
+                "id": "3f252f2d-f438-4f85-ad22-b945cbc8154d",
+                "relationships": [
+                    {
+                        "ids": [
+                            "911f8f63-be3e-4e7c-bbf5-9edcb194c07d",
+                            "62462e47-8ffc-4f9b-86b3-34cd56e8d865"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "Total $148.99"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.01189,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.023964286,
+                        "left": 0.21997344,
+                        "top": 0.8042776,
+                        "width": 0.56201667
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21997344,
+                            "y": 0.8042776
+                        },
+                        {
+                            "x": 0.7819901,
+                            "y": 0.8042776
+                        },
+                        {
+                            "x": 0.7819901,
+                            "y": 0.8282419
+                        },
+                        {
+                            "x": 0.21997344,
+                            "y": 0.8282419
+                        }
+                    ]
+                },
+                "id": "7816b8bb-b339-4e88-a1d6-0ad691ac0290",
+                "relationships": [
+                    {
+                        "ids": [
+                            "7379e93f-df82-4d28-a90e-f8e3f52cab0a",
+                            "e3312857-2a6a-40de-b7bf-d00bb6f264dd",
+                            "7ec950dc-bc15-4d39-9fda-e2f8efdf7f03",
+                            "d0119262-d800-466d-aa6d-68bf0cfc6c48"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "Paid by: Credit Card"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.87143,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01994628,
+                        "left": 0.21655525,
+                        "top": 0.8358282,
+                        "width": 0.67764795
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21655525,
+                            "y": 0.8358282
+                        },
+                        {
+                            "x": 0.8942032,
+                            "y": 0.8358282
+                        },
+                        {
+                            "x": 0.8942032,
+                            "y": 0.85577446
+                        },
+                        {
+                            "x": 0.21655525,
+                            "y": 0.85577446
+                        }
+                    ]
+                },
+                "id": "9b4939f3-483c-4f75-9651-eee0727fa315",
+                "relationships": [
+                    {
+                        "ids": [
+                            "a20107e2-7b35-40b9-86e0-254843149497",
+                            "07d1cf9f-117f-4b31-8e72-c3720068e511",
+                            "8985ef07-086a-40bd-afc2-cce4da9f98f9",
+                            "b69d79c9-e01d-4abf-b7cf-65485bf6ae8f",
+                            "085da2d7-4b1f-430e-a3ad-accac40d6ea0"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "VISA 4400 XXXX XXXX XXXX"
+            },
+            {
+                "blockType": "LINE",
+                "confidence": 99.61508,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.019450285,
+                        "left": 0.21773706,
+                        "top": 0.86649597,
+                        "width": 0.33189663
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21773706,
+                            "y": 0.86649597
+                        },
+                        {
+                            "x": 0.5496337,
+                            "y": 0.86649597
+                        },
+                        {
+                            "x": 0.5496337,
+                            "y": 0.8859463
+                        },
+                        {
+                            "x": 0.21773706,
+                            "y": 0.8859463
+                        }
+                    ]
+                },
+                "id": "c4ae9cab-835c-4332-975e-22aa4208fb70",
+                "relationships": [
+                    {
+                        "ids": [
+                            "566f6a76-c7c4-470b-b768-e0880caccf5f",
+                            "ca2d3fde-bb9f-477f-a852-f2df8990517c"
+                        ],
+                        "type": "CHILD"
+                    }
+                ],
+                "text": "AUTH: 043221"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 91.69564,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.019946229,
+                        "left": 0.32416707,
+                        "top": 0.057702165,
+                        "width": 0.11333931
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.32416707,
+                            "y": 0.057702165
+                        },
+                        {
+                            "x": 0.43750638,
+                            "y": 0.057702165
+                        },
+                        {
+                            "x": 0.43750638,
+                            "y": 0.077648394
+                        },
+                        {
+                            "x": 0.32416707,
+                            "y": 0.077648394
+                        }
+                    ]
+                },
+                "id": "9528e915-8de4-4a01-ba93-a295c6429d3f",
+                "text": "Mall"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.94557,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.019671168,
+                        "left": 0.4653701,
+                        "top": 0.057794947,
+                        "width": 0.17169113
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.4653701,
+                            "y": 0.057794947
+                        },
+                        {
+                            "x": 0.63706124,
+                            "y": 0.057794947
+                        },
+                        {
+                            "x": 0.63706124,
+                            "y": 0.077466115
+                        },
+                        {
+                            "x": 0.4653701,
+                            "y": 0.077466115
+                        }
+                    ]
+                },
+                "id": "101e3657-0c58-40af-9d9d-29fb1a38fceb",
+                "text": "Mobile"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.92729,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.024458155,
+                        "left": 0.6644006,
+                        "top": 0.058063775,
+                        "width": 0.17048065
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.6644006,
+                            "y": 0.058063775
+                        },
+                        {
+                            "x": 0.83488125,
+                            "y": 0.058063775
+                        },
+                        {
+                            "x": 0.83488125,
+                            "y": 0.08252193
+                        },
+                        {
+                            "x": 0.6644006,
+                            "y": 0.08252193
+                        }
+                    ]
+                },
+                "id": "d3582348-abfe-4fec-8768-dec9d3d1a3c2",
+                "text": "Repair"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.545494,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.018896936,
+                        "left": 0.242488,
+                        "top": 0.090622835,
+                        "width": 0.08328396
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.242488,
+                            "y": 0.090622835
+                        },
+                        {
+                            "x": 0.32577196,
+                            "y": 0.090622835
+                        },
+                        {
+                            "x": 0.32577196,
+                            "y": 0.10951977
+                        },
+                        {
+                            "x": 0.242488,
+                            "y": 0.10951977
+                        }
+                    ]
+                },
+                "id": "91257bc8-29ad-4bc1-9c11-530237a5da24",
+                "text": "You"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.84449,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.019189522,
+                        "left": 0.3536243,
+                        "top": 0.090000354,
+                        "width": 0.14344372
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.3536243,
+                            "y": 0.090000354
+                        },
+                        {
+                            "x": 0.49706802,
+                            "y": 0.090000354
+                        },
+                        {
+                            "x": 0.49706802,
+                            "y": 0.109189875
+                        },
+                        {
+                            "x": 0.3536243,
+                            "y": 0.109189875
+                        }
+                    ]
+                },
+                "id": "5c035a27-6031-4109-9254-05a22f507131",
+                "text": "break"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.652794,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02009817,
+                        "left": 0.526299,
+                        "top": 0.0894387,
+                        "width": 0.05461603
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.526299,
+                            "y": 0.0894387
+                        },
+                        {
+                            "x": 0.58091503,
+                            "y": 0.0894387
+                        },
+                        {
+                            "x": 0.58091503,
+                            "y": 0.10953687
+                        },
+                        {
+                            "x": 0.526299,
+                            "y": 0.10953687
+                        }
+                    ]
+                },
+                "id": "51997171-fa0c-4a4e-bf26-84b522a54476",
+                "text": "it"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.33779,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.018259736,
+                        "left": 0.6650073,
+                        "top": 0.090594895,
+                        "width": 0.05496823
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.6650073,
+                            "y": 0.090594895
+                        },
+                        {
+                            "x": 0.71997553,
+                            "y": 0.090594895
+                        },
+                        {
+                            "x": 0.71997553,
+                            "y": 0.10885463
+                        },
+                        {
+                            "x": 0.6650073,
+                            "y": 0.10885463
+                        }
+                    ]
+                },
+                "id": "b22cb843-5679-4183-95f1-342e31ee1918",
+                "text": "We"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.57772,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.019531773,
+                        "left": 0.7533313,
+                        "top": 0.089346506,
+                        "width": 0.0817313
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.7533313,
+                            "y": 0.089346506
+                        },
+                        {
+                            "x": 0.8350626,
+                            "y": 0.089346506
+                        },
+                        {
+                            "x": 0.8350626,
+                            "y": 0.10887828
+                        },
+                        {
+                            "x": 0.7533313,
+                            "y": 0.10887828
+                        }
+                    ]
+                },
+                "id": "ca9e70da-551e-44de-8c66-cf2e1feb9638",
+                "text": "fix"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.76246,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0201527,
+                        "left": 0.8657807,
+                        "top": 0.0892392,
+                        "width": 0.0523536
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.8657807,
+                            "y": 0.0892392
+                        },
+                        {
+                            "x": 0.9181343,
+                            "y": 0.0892392
+                        },
+                        {
+                            "x": 0.9181343,
+                            "y": 0.1093919
+                        },
+                        {
+                            "x": 0.8657807,
+                            "y": 0.1093919
+                        }
+                    ]
+                },
+                "id": "e8da18d8-1c4b-4566-b576-edee8fae4c55",
+                "text": "it"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.887146,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02269014,
+                        "left": 0.2586333,
+                        "top": 0.11995361,
+                        "width": 0.10183977
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.2586333,
+                            "y": 0.11995361
+                        },
+                        {
+                            "x": 0.36047307,
+                            "y": 0.11995361
+                        },
+                        {
+                            "x": 0.36047307,
+                            "y": 0.14264375
+                        },
+                        {
+                            "x": 0.2586333,
+                            "y": 0.14264375
+                        }
+                    ]
+                },
+                "id": "84f7f5fb-16b1-4ae1-800c-7b7ff6248ee2",
+                "text": "444,"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.41745,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.018834256,
+                        "left": 0.3978421,
+                        "top": 0.120783724,
+                        "width": 0.08239172
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.3978421,
+                            "y": 0.120783724
+                        },
+                        {
+                            "x": 0.48023382,
+                            "y": 0.120783724
+                        },
+                        {
+                            "x": 0.48023382,
+                            "y": 0.13961798
+                        },
+                        {
+                            "x": 0.3978421,
+                            "y": 0.13961798
+                        }
+                    ]
+                },
+                "id": "90443359-09b9-4910-973e-2bcec0a3865c",
+                "text": "New"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.841156,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02249405,
+                        "left": 0.5097763,
+                        "top": 0.12009461,
+                        "width": 0.1329584
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.5097763,
+                            "y": 0.12009461
+                        },
+                        {
+                            "x": 0.6427347,
+                            "y": 0.12009461
+                        },
+                        {
+                            "x": 0.6427347,
+                            "y": 0.14258866
+                        },
+                        {
+                            "x": 0.5097763,
+                            "y": 0.14258866
+                        }
+                    ]
+                },
+                "id": "a1c556c4-4db9-4b27-99ca-4bfaad8e1eb3",
+                "text": "Mall,"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.77108,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01846051,
+                        "left": 0.6800399,
+                        "top": 0.12113114,
+                        "width": 0.0838866
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.6800399,
+                            "y": 0.12113114
+                        },
+                        {
+                            "x": 0.7639265,
+                            "y": 0.12113114
+                        },
+                        {
+                            "x": 0.7639265,
+                            "y": 0.13959165
+                        },
+                        {
+                            "x": 0.6800399,
+                            "y": 0.13959165
+                        }
+                    ]
+                },
+                "id": "ddd4c16d-02b3-4abf-b478-785c2a2879dc",
+                "text": "New"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.733315,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.018523466,
+                        "left": 0.79379165,
+                        "top": 0.120842144,
+                        "width": 0.11078865
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.79379165,
+                            "y": 0.120842144
+                        },
+                        {
+                            "x": 0.9045803,
+                            "y": 0.120842144
+                        },
+                        {
+                            "x": 0.9045803,
+                            "y": 0.13936561
+                        },
+                        {
+                            "x": 0.79379165,
+                            "y": 0.13936561
+                        }
+                    ]
+                },
+                "id": "4521a1c0-919c-49a1-803a-7e0371ed42bb",
+                "text": "Town"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.958115,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01834321,
+                        "left": 0.46672013,
+                        "top": 0.1525436,
+                        "width": 0.05887837
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.46672013,
+                            "y": 0.1525436
+                        },
+                        {
+                            "x": 0.5255985,
+                            "y": 0.1525436
+                        },
+                        {
+                            "x": 0.5255985,
+                            "y": 0.17088681
+                        },
+                        {
+                            "x": 0.46672013,
+                            "y": 0.17088681
+                        }
+                    ]
+                },
+                "id": "76ac69d4-12cf-4b70-8c06-ab3b248e84b1",
+                "text": "MA"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.87928,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01969861,
+                        "left": 0.5565063,
+                        "top": 0.15139394,
+                        "width": 0.13275924
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.5565063,
+                            "y": 0.15139394
+                        },
+                        {
+                            "x": 0.68926555,
+                            "y": 0.15139394
+                        },
+                        {
+                            "x": 0.68926555,
+                            "y": 0.17109255
+                        },
+                        {
+                            "x": 0.5565063,
+                            "y": 0.17109255
+                        }
+                    ]
+                },
+                "id": "95186354-30eb-414a-82cb-1a7ea733b417",
+                "text": "00001"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.65475,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01890931,
+                        "left": 0.4932077,
+                        "top": 0.21439208,
+                        "width": 0.1302086
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.4932077,
+                            "y": 0.21439208
+                        },
+                        {
+                            "x": 0.6234163,
+                            "y": 0.21439208
+                        },
+                        {
+                            "x": 0.6234163,
+                            "y": 0.23330139
+                        },
+                        {
+                            "x": 0.4932077,
+                            "y": 0.23330139
+                        }
+                    ]
+                },
+                "id": "4bfd9716-4fce-4e69-813d-ac3806906a93",
+                "text": "Date:"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.79194,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02119487,
+                        "left": 0.6617794,
+                        "top": 0.2128705,
+                        "width": 0.28220695
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.6617794,
+                            "y": 0.2128705
+                        },
+                        {
+                            "x": 0.94398636,
+                            "y": 0.2128705
+                        },
+                        {
+                            "x": 0.94398636,
+                            "y": 0.23406537
+                        },
+                        {
+                            "x": 0.6617794,
+                            "y": 0.23406537
+                        }
+                    ]
+                },
+                "id": "f2790ea1-b8a8-4dd6-a5ca-9157bec638e7",
+                "text": "03/02/2020"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.93105,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01837319,
+                        "left": 0.2186609,
+                        "top": 0.24509671,
+                        "width": 0.22265746
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.2186609,
+                            "y": 0.24509671
+                        },
+                        {
+                            "x": 0.44131836,
+                            "y": 0.24509671
+                        },
+                        {
+                            "x": 0.44131836,
+                            "y": 0.2634699
+                        },
+                        {
+                            "x": 0.2186609,
+                            "y": 0.2634699
+                        }
+                    ]
+                },
+                "id": "479e9792-2fa7-452b-bc50-69d69dc6a9e5",
+                "text": "Customer"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.93316,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01851917,
+                        "left": 0.47130764,
+                        "top": 0.24504267,
+                        "width": 0.13257182
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.47130764,
+                            "y": 0.24504267
+                        },
+                        {
+                            "x": 0.60387945,
+                            "y": 0.24504267
+                        },
+                        {
+                            "x": 0.60387945,
+                            "y": 0.26356184
+                        },
+                        {
+                            "x": 0.47130764,
+                            "y": 0.26356184
+                        }
+                    ]
+                },
+                "id": "4c560b98-f2eb-4aef-9d17-9a4997b5ed9a",
+                "text": "Name:"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.85619,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01922529,
+                        "left": 0.6431094,
+                        "top": 0.24418725,
+                        "width": 0.10824017
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.6431094,
+                            "y": 0.24418725
+                        },
+                        {
+                            "x": 0.75134957,
+                            "y": 0.24418725
+                        },
+                        {
+                            "x": 0.75134957,
+                            "y": 0.26341254
+                        },
+                        {
+                            "x": 0.6431094,
+                            "y": 0.26341254
+                        }
+                    ]
+                },
+                "id": "98a1e130-9aa0-4592-88aa-b546f2bd0e7a",
+                "text": "John"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.90413,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0187879,
+                        "left": 0.7830796,
+                        "top": 0.24461411,
+                        "width": 0.0805471
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.7830796,
+                            "y": 0.24461411
+                        },
+                        {
+                            "x": 0.8636267,
+                            "y": 0.24461411
+                        },
+                        {
+                            "x": 0.8636267,
+                            "y": 0.26340201
+                        },
+                        {
+                            "x": 0.7830796,
+                            "y": 0.26340201
+                        }
+                    ]
+                },
+                "id": "c039d6e4-3451-4b7d-be9b-4aa68e099364",
+                "text": "Doe"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.95256,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01986256,
+                        "left": 0.21588285,
+                        "top": 0.30540082,
+                        "width": 0.16944896
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21588285,
+                            "y": 0.30540082
+                        },
+                        {
+                            "x": 0.3853318,
+                            "y": 0.30540082
+                        },
+                        {
+                            "x": 0.3853318,
+                            "y": 0.32526338
+                        },
+                        {
+                            "x": 0.21588285,
+                            "y": 0.32526338
+                        }
+                    ]
+                },
+                "id": "039e310a-53ff-4d55-bd9b-6cb878c23ca7",
+                "text": "Device"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.399765,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02488226,
+                        "left": 0.41478527,
+                        "top": 0.30372137,
+                        "width": 0.10394543
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.41478527,
+                            "y": 0.30372137
+                        },
+                        {
+                            "x": 0.5187307,
+                            "y": 0.30372137
+                        },
+                        {
+                            "x": 0.5187307,
+                            "y": 0.32860363
+                        },
+                        {
+                            "x": 0.41478527,
+                            "y": 0.32860363
+                        }
+                    ]
+                },
+                "id": "42949eb3-3f15-41f4-bd7f-fb1f3f1e0d1d",
+                "text": "S/N:"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 98.30255,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01956784,
+                        "left": 0.55881935,
+                        "top": 0.30574566,
+                        "width": 0.2476731
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.55881935,
+                            "y": 0.30574566
+                        },
+                        {
+                            "x": 0.80649245,
+                            "y": 0.30574566
+                        },
+                        {
+                            "x": 0.80649245,
+                            "y": 0.3253135
+                        },
+                        {
+                            "x": 0.55881935,
+                            "y": 0.3253135
+                        }
+                    ]
+                },
+                "id": "5752a4cb-82cb-4ff1-8509-c64f6a7a8eb1",
+                "text": "424403233"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.683975,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02560773,
+                        "left": 0.21768335,
+                        "top": 0.33554754,
+                        "width": 0.18862198
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21768335,
+                            "y": 0.33554754
+                        },
+                        {
+                            "x": 0.40630534,
+                            "y": 0.33554754
+                        },
+                        {
+                            "x": 0.40630534,
+                            "y": 0.36115527
+                        },
+                        {
+                            "x": 0.21768335,
+                            "y": 0.36115527
+                        }
+                    ]
+                },
+                "id": "3d0e87a0-0102-46dc-b56e-e9ccd989db88",
+                "text": "Policy:"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.70589,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01930141,
+                        "left": 0.4435765,
+                        "top": 0.33650023,
+                        "width": 0.22073795
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.4435765,
+                            "y": 0.33650023
+                        },
+                        {
+                            "x": 0.66431445,
+                            "y": 0.33650023
+                        },
+                        {
+                            "x": 0.66431445,
+                            "y": 0.35580164
+                        },
+                        {
+                            "x": 0.4435765,
+                            "y": 0.35580164
+                        }
+                    ]
+                },
+                "id": "b64799f1-334d-4ec1-96b7-c12b44fd8f82",
+                "text": "AG133441"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.83076,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01972029,
+                        "left": 0.21901202,
+                        "top": 0.39774206,
+                        "width": 0.08121218
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21901202,
+                            "y": 0.39774206
+                        },
+                        {
+                            "x": 0.3002242,
+                            "y": 0.39774206
+                        },
+                        {
+                            "x": 0.3002242,
+                            "y": 0.41746235
+                        },
+                        {
+                            "x": 0.21901202,
+                            "y": 0.41746235
+                        }
+                    ]
+                },
+                "id": "5f778c44-6799-4fac-b1f6-9f32fa16a3b2",
+                "text": "Job"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 95.19325,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01986042,
+                        "left": 0.32681617,
+                        "top": 0.3976416,
+                        "width": 0.20014289
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.32681617,
+                            "y": 0.3976416
+                        },
+                        {
+                            "x": 0.52695906,
+                            "y": 0.3976416
+                        },
+                        {
+                            "x": 0.52695906,
+                            "y": 0.41750202
+                        },
+                        {
+                            "x": 0.32681617,
+                            "y": 0.41750202
+                        }
+                    ]
+                },
+                "id": "12f1a47a-a57d-408e-8952-d551ffd138a1",
+                "text": "Details"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.78479,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01882303,
+                        "left": 0.21992747,
+                        "top": 0.49122387,
+                        "width": 0.16439787
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21992747,
+                            "y": 0.49122387
+                        },
+                        {
+                            "x": 0.38432533,
+                            "y": 0.49122387
+                        },
+                        {
+                            "x": 0.38432533,
+                            "y": 0.5100469
+                        },
+                        {
+                            "x": 0.21992747,
+                            "y": 0.5100469
+                        }
+                    ]
+                },
+                "id": "1f05bab3-df48-4236-a10c-54698377f602",
+                "text": "Screen"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.972336,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02327317,
+                        "left": 0.4144567,
+                        "top": 0.49067783,
+                        "width": 0.1952607
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.4144567,
+                            "y": 0.49067783
+                        },
+                        {
+                            "x": 0.6097174,
+                            "y": 0.49067783
+                        },
+                        {
+                            "x": 0.6097174,
+                            "y": 0.513951
+                        },
+                        {
+                            "x": 0.4144567,
+                            "y": 0.513951
+                        }
+                    ]
+                },
+                "id": "14ea2388-50ed-4be0-bc62-d116df59391c",
+                "text": "Replace"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 98.841064,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0222494,
+                        "left": 0.6449814,
+                        "top": 0.4894485,
+                        "width": 0.1566963
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.6449814,
+                            "y": 0.4894485
+                        },
+                        {
+                            "x": 0.8016777,
+                            "y": 0.4894485
+                        },
+                        {
+                            "x": 0.8016777,
+                            "y": 0.5116979
+                        },
+                        {
+                            "x": 0.6449814,
+                            "y": 0.5116979
+                        }
+                    ]
+                },
+                "id": "faafe006-c642-43a9-85dc-885d95c9ce85",
+                "text": "$99.00"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.46387,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01950795,
+                        "left": 0.21758953,
+                        "top": 0.5205627,
+                        "width": 0.13820617
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21758953,
+                            "y": 0.5205627
+                        },
+                        {
+                            "x": 0.3557957,
+                            "y": 0.5205627
+                        },
+                        {
+                            "x": 0.3557957,
+                            "y": 0.54007065
+                        },
+                        {
+                            "x": 0.21758953,
+                            "y": 0.54007065
+                        }
+                    ]
+                },
+                "id": "cf23cf10-de84-475a-abf7-82b0fcf5b656",
+                "text": "Labor"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.88478,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02381537,
+                        "left": 0.38494027,
+                        "top": 0.52069163,
+                        "width": 0.21601659
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.38494027,
+                            "y": 0.52069163
+                        },
+                        {
+                            "x": 0.60095686,
+                            "y": 0.52069163
+                        },
+                        {
+                            "x": 0.60095686,
+                            "y": 0.544507
+                        },
+                        {
+                            "x": 0.38494027,
+                            "y": 0.544507
+                        }
+                    ]
+                },
+                "id": "1573707e-60f3-4e85-90b7-0ff29f9c1b4a",
+                "text": "Charges"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 98.22011,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02207894,
+                        "left": 0.6453457,
+                        "top": 0.5196849,
+                        "width": 0.1626803
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.6453457,
+                            "y": 0.5196849
+                        },
+                        {
+                            "x": 0.808026,
+                            "y": 0.5196849
+                        },
+                        {
+                            "x": 0.808026,
+                            "y": 0.54176384
+                        },
+                        {
+                            "x": 0.6453457,
+                            "y": 0.54176384
+                        }
+                    ]
+                },
+                "id": "f4ab36bc-57b3-4db7-af47-59b5674e4e02",
+                "text": "$49.99"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.9376,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0228577,
+                        "left": 0.23006997,
+                        "top": 0.5515018,
+                        "width": 0.12576666
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.23006997,
+                            "y": 0.5515018
+                        },
+                        {
+                            "x": 0.35583663,
+                            "y": 0.5515018
+                        },
+                        {
+                            "x": 0.35583663,
+                            "y": 0.5743595
+                        },
+                        {
+                            "x": 0.23006997,
+                            "y": 0.5743595
+                        }
+                    ]
+                },
+                "id": "34066604-b348-4e63-b97f-915f4bdde8c2",
+                "text": "(flat"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.20632,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02095094,
+                        "left": 0.38925728,
+                        "top": 0.5531734,
+                        "width": 0.12701938
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.38925728,
+                            "y": 0.5531734
+                        },
+                        {
+                            "x": 0.51627666,
+                            "y": 0.5531734
+                        },
+                        {
+                            "x": 0.51627666,
+                            "y": 0.57412434
+                        },
+                        {
+                            "x": 0.38925728,
+                            "y": 0.57412434
+                        }
+                    ]
+                },
+                "id": "dc3d75e3-3dd1-4706-8d4a-d7313ac8288f",
+                "text": "rate)"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.896935,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02068376,
+                        "left": 0.21824719,
+                        "top": 0.61347944,
+                        "width": 0.27851984
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21824719,
+                            "y": 0.61347944
+                        },
+                        {
+                            "x": 0.49676704,
+                            "y": 0.61347944
+                        },
+                        {
+                            "x": 0.49676704,
+                            "y": 0.6341632
+                        },
+                        {
+                            "x": 0.21824719,
+                            "y": 0.6341632
+                        }
+                    ]
+                },
+                "id": "637b4c54-931b-4d3a-8800-2a58b0a390ed",
+                "text": "Additional"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.95183,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0186945,
+                        "left": 0.52867407,
+                        "top": 0.6150696,
+                        "width": 0.15252773
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.52867407,
+                            "y": 0.6150696
+                        },
+                        {
+                            "x": 0.6812018,
+                            "y": 0.6150696
+                        },
+                        {
+                            "x": 0.6812018,
+                            "y": 0.6337641
+                        },
+                        {
+                            "x": 0.52867407,
+                            "y": 0.6337641
+                        }
+                    ]
+                },
+                "id": "b68e3e55-d6c7-4600-8d20-9897f015212f",
+                "text": "Notes"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 9.556861,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.014019,
+                        "left": 0.67736626,
+                        "top": 0.6194276,
+                        "width": 0.01196009
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.67736626,
+                            "y": 0.6194276
+                        },
+                        {
+                            "x": 0.68932635,
+                            "y": 0.6194276
+                        },
+                        {
+                            "x": 0.68932635,
+                            "y": 0.6334466
+                        },
+                        {
+                            "x": 0.67736626,
+                            "y": 0.6334466
+                        }
+                    ]
+                },
+                "id": "d9dd6924-3c81-438e-9577-6fa307a4dcea",
+                "text": "-"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.769585,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02312314,
+                        "left": 0.21707901,
+                        "top": 0.6463424,
+                        "width": 0.22652572
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21707901,
+                            "y": 0.6463424
+                        },
+                        {
+                            "x": 0.44360474,
+                            "y": 0.6463424
+                        },
+                        {
+                            "x": 0.44360474,
+                            "y": 0.66946554
+                        },
+                        {
+                            "x": 0.21707901,
+                            "y": 0.66946554
+                        }
+                    ]
+                },
+                "id": "538088fc-5db5-4c0a-b273-82a95ce5a545",
+                "text": "Warranty"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.96708,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02027376,
+                        "left": 0.47374314,
+                        "top": 0.64506114,
+                        "width": 0.13972536
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.47374314,
+                            "y": 0.64506114
+                        },
+                        {
+                            "x": 0.6134685,
+                            "y": 0.64506114
+                        },
+                        {
+                            "x": 0.6134685,
+                            "y": 0.6653349
+                        },
+                        {
+                            "x": 0.47374314,
+                            "y": 0.6653349
+                        }
+                    ]
+                },
+                "id": "aa9ce232-61c7-478d-8cb8-da41254700b6",
+                "text": "fixed"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.94415,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01931554,
+                        "left": 0.6426299,
+                        "top": 0.64560676,
+                        "width": 0.05196246
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.6426299,
+                            "y": 0.64560676
+                        },
+                        {
+                            "x": 0.69459236,
+                            "y": 0.64560676
+                        },
+                        {
+                            "x": 0.69459236,
+                            "y": 0.6649223
+                        },
+                        {
+                            "x": 0.6426299,
+                            "y": 0.6649223
+                        }
+                    ]
+                },
+                "id": "60b9cfc6-d074-400a-a2cb-3a6c1f8a18a5",
+                "text": "10"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.93195,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0241559,
+                        "left": 0.72451586,
+                        "top": 0.6455029,
+                        "width": 0.10944064
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.72451586,
+                            "y": 0.6455029
+                        },
+                        {
+                            "x": 0.8339565,
+                            "y": 0.6455029
+                        },
+                        {
+                            "x": 0.8339565,
+                            "y": 0.6696588
+                        },
+                        {
+                            "x": 0.72451586,
+                            "y": 0.6696588
+                        }
+                    ]
+                },
+                "id": "1f4f8154-c52e-4328-8b5e-1067494f1718",
+                "text": "days"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.96383,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01938933,
+                        "left": 0.22088936,
+                        "top": 0.6759994,
+                        "width": 0.10933968
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.22088936,
+                            "y": 0.6759994
+                        },
+                        {
+                            "x": 0.33022904,
+                            "y": 0.6759994
+                        },
+                        {
+                            "x": 0.33022904,
+                            "y": 0.69538873
+                        },
+                        {
+                            "x": 0.22088936,
+                            "y": 0.69538873
+                        }
+                    ]
+                },
+                "id": "6487eb6e-3d0b-4779-afce-89f1ee168e5d",
+                "text": "from"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.96759,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02377635,
+                        "left": 0.35991177,
+                        "top": 0.67601055,
+                        "width": 0.1948047
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.35991177,
+                            "y": 0.67601055
+                        },
+                        {
+                            "x": 0.55471647,
+                            "y": 0.67601055
+                        },
+                        {
+                            "x": 0.55471647,
+                            "y": 0.6997869
+                        },
+                        {
+                            "x": 0.35991177,
+                            "y": 0.6997869
+                        }
+                    ]
+                },
+                "id": "ebd1215a-7784-4600-a72a-d16a5dff7fd9",
+                "text": "receipt"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.91045,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01988587,
+                        "left": 0.58531296,
+                        "top": 0.675953,
+                        "width": 0.10864434
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.58531296,
+                            "y": 0.675953
+                        },
+                        {
+                            "x": 0.6939573,
+                            "y": 0.675953
+                        },
+                        {
+                            "x": 0.6939573,
+                            "y": 0.69583887
+                        },
+                        {
+                            "x": 0.58531296,
+                            "y": 0.69583887
+                        }
+                    ]
+                },
+                "id": "20c82995-e30e-4c14-9edf-b03aa21a17c6",
+                "text": "date"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.81427,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02351264,
+                        "left": 0.21727453,
+                        "top": 0.7385722,
+                        "width": 0.18703507
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21727453,
+                            "y": 0.7385722
+                        },
+                        {
+                            "x": 0.4043096,
+                            "y": 0.7385722
+                        },
+                        {
+                            "x": 0.4043096,
+                            "y": 0.76208484
+                        },
+                        {
+                            "x": 0.21727453,
+                            "y": 0.76208484
+                        }
+                    ]
+                },
+                "id": "911f8f63-be3e-4e7c-bbf5-9edcb194c07d",
+                "text": "Total"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.680756,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0288379,
+                        "left": 0.45194077,
+                        "top": 0.7367701,
+                        "width": 0.22989088
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.45194077,
+                            "y": 0.7367701
+                        },
+                        {
+                            "x": 0.68183166,
+                            "y": 0.7367701
+                        },
+                        {
+                            "x": 0.68183166,
+                            "y": 0.765608
+                        },
+                        {
+                            "x": 0.45194077,
+                            "y": 0.765608
+                        }
+                    ]
+                },
+                "id": "62462e47-8ffc-4f9b-86b3-34cd56e8d865",
+                "text": "$148.99"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.71886,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0194466,
+                        "left": 0.21997344,
+                        "top": 0.804526,
+                        "width": 0.10959179
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21997344,
+                            "y": 0.804526
+                        },
+                        {
+                            "x": 0.32956523,
+                            "y": 0.804526
+                        },
+                        {
+                            "x": 0.32956523,
+                            "y": 0.8239726
+                        },
+                        {
+                            "x": 0.21997344,
+                            "y": 0.8239726
+                        }
+                    ]
+                },
+                "id": "7379e93f-df82-4d28-a90e-f8e3f52cab0a",
+                "text": "Paid"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.67575,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0239643,
+                        "left": 0.35615247,
+                        "top": 0.8042776,
+                        "width": 0.07581425
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.35615247,
+                            "y": 0.8042776
+                        },
+                        {
+                            "x": 0.43196672,
+                            "y": 0.8042776
+                        },
+                        {
+                            "x": 0.43196672,
+                            "y": 0.8282419
+                        },
+                        {
+                            "x": 0.35615247,
+                            "y": 0.8282419
+                        }
+                    ]
+                },
+                "id": "e3312857-2a6a-40de-b7bf-d00bb6f264dd",
+                "text": "by:"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 96.74888,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02006213,
+                        "left": 0.47122723,
+                        "top": 0.8043731,
+                        "width": 0.16805822
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.47122723,
+                            "y": 0.8043731
+                        },
+                        {
+                            "x": 0.63928545,
+                            "y": 0.8043731
+                        },
+                        {
+                            "x": 0.63928545,
+                            "y": 0.82443523
+                        },
+                        {
+                            "x": 0.47122723,
+                            "y": 0.82443523
+                        }
+                    ]
+                },
+                "id": "7ec950dc-bc15-4d39-9fda-e2f8efdf7f03",
+                "text": "Credit"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.904076,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01898145,
+                        "left": 0.6695494,
+                        "top": 0.8046887,
+                        "width": 0.1124407
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.6695494,
+                            "y": 0.8046887
+                        },
+                        {
+                            "x": 0.7819901,
+                            "y": 0.8046887
+                        },
+                        {
+                            "x": 0.7819901,
+                            "y": 0.82367015
+                        },
+                        {
+                            "x": 0.6695494,
+                            "y": 0.82367015
+                        }
+                    ]
+                },
+                "id": "d0119262-d800-466d-aa6d-68bf0cfc6c48",
+                "text": "Card"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.86294,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0187101,
+                        "left": 0.21655525,
+                        "top": 0.8370553,
+                        "width": 0.11397048
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21655525,
+                            "y": 0.8370553
+                        },
+                        {
+                            "x": 0.33052573,
+                            "y": 0.8370553
+                        },
+                        {
+                            "x": 0.33052573,
+                            "y": 0.8557654
+                        },
+                        {
+                            "x": 0.21655525,
+                            "y": 0.8557654
+                        }
+                    ]
+                },
+                "id": "a20107e2-7b35-40b9-86e0-254843149497",
+                "text": "VISA"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.96192,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0193705,
+                        "left": 0.36111665,
+                        "top": 0.8358282,
+                        "width": 0.10672855
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.36111665,
+                            "y": 0.8358282
+                        },
+                        {
+                            "x": 0.4678452,
+                            "y": 0.8358282
+                        },
+                        {
+                            "x": 0.4678452,
+                            "y": 0.8551987
+                        },
+                        {
+                            "x": 0.36111665,
+                            "y": 0.8551987
+                        }
+                    ]
+                },
+                "id": "07d1cf9f-117f-4b31-8e72-c3720068e511",
+                "text": "4400"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.8873,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0176021,
+                        "left": 0.4979113,
+                        "top": 0.8377293,
+                        "width": 0.11482737
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.4979113,
+                            "y": 0.8377293
+                        },
+                        {
+                            "x": 0.61273867,
+                            "y": 0.8377293
+                        },
+                        {
+                            "x": 0.61273867,
+                            "y": 0.8553314
+                        },
+                        {
+                            "x": 0.4979113,
+                            "y": 0.8553314
+                        }
+                    ]
+                },
+                "id": "8985ef07-086a-40bd-afc2-cce4da9f98f9",
+                "text": "XXXX"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.75661,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0179551,
+                        "left": 0.63973707,
+                        "top": 0.8369649,
+                        "width": 0.11440289
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.63973707,
+                            "y": 0.8369649
+                        },
+                        {
+                            "x": 0.75413996,
+                            "y": 0.8369649
+                        },
+                        {
+                            "x": 0.75413996,
+                            "y": 0.85492
+                        },
+                        {
+                            "x": 0.63973707,
+                            "y": 0.85492
+                        }
+                    ]
+                },
+                "id": "b69d79c9-e01d-4abf-b7cf-65485bf6ae8f",
+                "text": "XXXX"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.888405,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01848046,
+                        "left": 0.7815282,
+                        "top": 0.837294,
+                        "width": 0.112675
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.7815282,
+                            "y": 0.837294
+                        },
+                        {
+                            "x": 0.8942032,
+                            "y": 0.837294
+                        },
+                        {
+                            "x": 0.8942032,
+                            "y": 0.85577446
+                        },
+                        {
+                            "x": 0.7815282,
+                            "y": 0.85577446
+                        }
+                    ]
+                },
+                "id": "085da2d7-4b1f-430e-a3ad-accac40d6ea0",
+                "text": "XXXX"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.38315,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.0183004,
+                        "left": 0.21773706,
+                        "top": 0.8676459,
+                        "width": 0.12845884
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21773706,
+                            "y": 0.8676459
+                        },
+                        {
+                            "x": 0.3461959,
+                            "y": 0.8676459
+                        },
+                        {
+                            "x": 0.3461959,
+                            "y": 0.8859463
+                        },
+                        {
+                            "x": 0.21773706,
+                            "y": 0.8859463
+                        }
+                    ]
+                },
+                "id": "566f6a76-c7c4-470b-b768-e0880caccf5f",
+                "text": "AUTH:"
+            },
+            {
+                "blockType": "WORD",
+                "confidence": 99.847015,
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.01897287,
+                        "left": 0.39013013,
+                        "top": 0.86649597,
+                        "width": 0.15950356
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.39013013,
+                            "y": 0.86649597
+                        },
+                        {
+                            "x": 0.5496337,
+                            "y": 0.86649597
+                        },
+                        {
+                            "x": 0.5496337,
+                            "y": 0.88546884
+                        },
+                        {
+                            "x": 0.39013013,
+                            "y": 0.88546884
+                        }
+                    ]
+                },
+                "id": "ca2d3fde-bb9f-477f-a852-f2df8990517c",
+                "text": "043221"
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 55.551563,
+                "entityTypes": [
+                    "KEY"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.022006284,
+                        "left": 0.21704902,
+                        "top": 0.5207687,
+                        "width": 0.38852945
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21704902,
+                            "y": 0.5207687
+                        },
+                        {
+                            "x": 0.6055785,
+                            "y": 0.5207687
+                        },
+                        {
+                            "x": 0.6055785,
+                            "y": 0.542775
+                        },
+                        {
+                            "x": 0.21704902,
+                            "y": 0.542775
+                        }
+                    ]
+                },
+                "id": "d19c70c0-50f1-4720-aae8-785ad81bfb52",
+                "relationships": [
+                    {
+                        "ids": [
+                            "500a5d4b-a855-4f33-a262-33304cf2b3e4"
+                        ],
+                        "type": "VALUE"
+                    },
+                    {
+                        "ids": [
+                            "cf23cf10-de84-475a-abf7-82b0fcf5b656",
+                            "1573707e-60f3-4e85-90b7-0ff29f9c1b4a"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 55.551563,
+                "entityTypes": [
+                    "VALUE"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.019893166,
+                        "left": 0.6438621,
+                        "top": 0.51978976,
+                        "width": 0.1654523
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.6438621,
+                            "y": 0.51978976
+                        },
+                        {
+                            "x": 0.80931437,
+                            "y": 0.51978976
+                        },
+                        {
+                            "x": 0.80931437,
+                            "y": 0.5396829
+                        },
+                        {
+                            "x": 0.6438621,
+                            "y": 0.5396829
+                        }
+                    ]
+                },
+                "id": "500a5d4b-a855-4f33-a262-33304cf2b3e4",
+                "relationships": [
+                    {
+                        "ids": [
+                            "f4ab36bc-57b3-4db7-af47-59b5674e4e02"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 57.21336,
+                "entityTypes": [
+                    "KEY"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02102787,
+                        "left": 0.21815214,
+                        "top": 0.49226,
+                        "width": 0.39622915
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21815214,
+                            "y": 0.49226
+                        },
+                        {
+                            "x": 0.6143813,
+                            "y": 0.49226
+                        },
+                        {
+                            "x": 0.6143813,
+                            "y": 0.5132879
+                        },
+                        {
+                            "x": 0.21815214,
+                            "y": 0.5132879
+                        }
+                    ]
+                },
+                "id": "ec7ebb77-2cf3-440f-875f-47771c99aba6",
+                "relationships": [
+                    {
+                        "ids": [
+                            "ffc0f514-cdb7-49c9-a729-ab85a51ae1f0"
+                        ],
+                        "type": "VALUE"
+                    },
+                    {
+                        "ids": [
+                            "1f05bab3-df48-4236-a10c-54698377f602",
+                            "14ea2388-50ed-4be0-bc62-d116df59391c"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 57.21336,
+                "entityTypes": [
+                    "VALUE"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.021711515,
+                        "left": 0.64606464,
+                        "top": 0.48996806,
+                        "width": 0.16338573
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.64606464,
+                            "y": 0.48996806
+                        },
+                        {
+                            "x": 0.8094503,
+                            "y": 0.48996806
+                        },
+                        {
+                            "x": 0.8094503,
+                            "y": 0.5116796
+                        },
+                        {
+                            "x": 0.64606464,
+                            "y": 0.5116796
+                        }
+                    ]
+                },
+                "id": "ffc0f514-cdb7-49c9-a729-ab85a51ae1f0",
+                "relationships": [
+                    {
+                        "ids": [
+                            "faafe006-c642-43a9-85dc-885d95c9ce85"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 61.78828,
+                "entityTypes": [
+                    "KEY"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.018444765,
+                        "left": 0.49412963,
+                        "top": 0.21524137,
+                        "width": 0.13285735
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.49412963,
+                            "y": 0.21524137
+                        },
+                        {
+                            "x": 0.626987,
+                            "y": 0.21524137
+                        },
+                        {
+                            "x": 0.626987,
+                            "y": 0.23368613
+                        },
+                        {
+                            "x": 0.49412963,
+                            "y": 0.23368613
+                        }
+                    ]
+                },
+                "id": "8801f4b7-d958-47d9-8f65-f4bff9f16afd",
+                "relationships": [
+                    {
+                        "ids": [
+                            "81139649-b27c-48d6-9ab0-08350756d0f1"
+                        ],
+                        "type": "VALUE"
+                    },
+                    {
+                        "ids": [
+                            "4bfd9716-4fce-4e69-813d-ac3806906a93"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 61.78828,
+                "entityTypes": [
+                    "VALUE"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.021107702,
+                        "left": 0.663132,
+                        "top": 0.21348816,
+                        "width": 0.28013107
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.663132,
+                            "y": 0.21348816
+                        },
+                        {
+                            "x": 0.9432631,
+                            "y": 0.21348816
+                        },
+                        {
+                            "x": 0.9432631,
+                            "y": 0.23459587
+                        },
+                        {
+                            "x": 0.663132,
+                            "y": 0.23459587
+                        }
+                    ]
+                },
+                "id": "81139649-b27c-48d6-9ab0-08350756d0f1",
+                "relationships": [
+                    {
+                        "ids": [
+                            "f2790ea1-b8a8-4dd6-a5ca-9157bec638e7"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 53.477592,
+                "entityTypes": [
+                    "KEY"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.022197094,
+                        "left": 0.21318783,
+                        "top": 0.3060539,
+                        "width": 0.31240368
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21318783,
+                            "y": 0.3060539
+                        },
+                        {
+                            "x": 0.5255915,
+                            "y": 0.3060539
+                        },
+                        {
+                            "x": 0.5255915,
+                            "y": 0.328251
+                        },
+                        {
+                            "x": 0.21318783,
+                            "y": 0.328251
+                        }
+                    ]
+                },
+                "id": "3871231f-34e7-40d5-ac93-e9bb168a5ca4",
+                "relationships": [
+                    {
+                        "ids": [
+                            "47c2c981-9590-447c-b3b1-f35dae4c6670"
+                        ],
+                        "type": "VALUE"
+                    },
+                    {
+                        "ids": [
+                            "039e310a-53ff-4d55-bd9b-6cb878c23ca7",
+                            "42949eb3-3f15-41f4-bd7f-fb1f3f1e0d1d"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 53.477592,
+                "entityTypes": [
+                    "VALUE"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.020867875,
+                        "left": 0.5610694,
+                        "top": 0.30533606,
+                        "width": 0.24651062
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.5610694,
+                            "y": 0.30533606
+                        },
+                        {
+                            "x": 0.80758005,
+                            "y": 0.30533606
+                        },
+                        {
+                            "x": 0.80758005,
+                            "y": 0.32620394
+                        },
+                        {
+                            "x": 0.5610694,
+                            "y": 0.32620394
+                        }
+                    ]
+                },
+                "id": "47c2c981-9590-447c-b3b1-f35dae4c6670",
+                "relationships": [
+                    {
+                        "ids": [
+                            "5752a4cb-82cb-4ff1-8509-c64f6a7a8eb1"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 46.55586,
+                "entityTypes": [
+                    "KEY"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.020361632,
+                        "left": 0.21510133,
+                        "top": 0.24574025,
+                        "width": 0.3912498
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21510133,
+                            "y": 0.24574025
+                        },
+                        {
+                            "x": 0.60635114,
+                            "y": 0.24574025
+                        },
+                        {
+                            "x": 0.60635114,
+                            "y": 0.26610187
+                        },
+                        {
+                            "x": 0.21510133,
+                            "y": 0.26610187
+                        }
+                    ]
+                },
+                "id": "137d5e1d-7d04-490e-920a-dfbf37ee7450",
+                "relationships": [
+                    {
+                        "ids": [
+                            "a323081d-baac-4306-ac61-70c9393a73eb"
+                        ],
+                        "type": "VALUE"
+                    },
+                    {
+                        "ids": [
+                            "479e9792-2fa7-452b-bc50-69d69dc6a9e5",
+                            "4c560b98-f2eb-4aef-9d17-9a4997b5ed9a"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 46.55586,
+                "entityTypes": [
+                    "VALUE"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.019857462,
+                        "left": 0.6460559,
+                        "top": 0.2444246,
+                        "width": 0.21836998
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.6460559,
+                            "y": 0.2444246
+                        },
+                        {
+                            "x": 0.86442584,
+                            "y": 0.2444246
+                        },
+                        {
+                            "x": 0.86442584,
+                            "y": 0.26428205
+                        },
+                        {
+                            "x": 0.6460559,
+                            "y": 0.26428205
+                        }
+                    ]
+                },
+                "id": "a323081d-baac-4306-ac61-70c9393a73eb",
+                "relationships": [
+                    {
+                        "ids": [
+                            "98a1e130-9aa0-4592-88aa-b546f2bd0e7a",
+                            "c039d6e4-3451-4b7d-be9b-4aa68e099364"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 46.362053,
+                "entityTypes": [
+                    "KEY"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02477883,
+                        "left": 0.21738026,
+                        "top": 0.33516002,
+                        "width": 0.1859698
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21738026,
+                            "y": 0.33516002
+                        },
+                        {
+                            "x": 0.40335006,
+                            "y": 0.33516002
+                        },
+                        {
+                            "x": 0.40335006,
+                            "y": 0.35993883
+                        },
+                        {
+                            "x": 0.21738026,
+                            "y": 0.35993883
+                        }
+                    ]
+                },
+                "id": "e61c53dd-e189-41ab-9034-8e76e999ec8f",
+                "relationships": [
+                    {
+                        "ids": [
+                            "89061259-37e2-44dc-a0c4-b03638c26124"
+                        ],
+                        "type": "VALUE"
+                    },
+                    {
+                        "ids": [
+                            "3d0e87a0-0102-46dc-b56e-e9ccd989db88"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 46.362053,
+                "entityTypes": [
+                    "VALUE"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.021096388,
+                        "left": 0.44273973,
+                        "top": 0.3357211,
+                        "width": 0.22283408
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.44273973,
+                            "y": 0.3357211
+                        },
+                        {
+                            "x": 0.6655738,
+                            "y": 0.3357211
+                        },
+                        {
+                            "x": 0.6655738,
+                            "y": 0.35681748
+                        },
+                        {
+                            "x": 0.44273973,
+                            "y": 0.35681748
+                        }
+                    ]
+                },
+                "id": "89061259-37e2-44dc-a0c4-b03638c26124",
+                "relationships": [
+                    {
+                        "ids": [
+                            "b64799f1-334d-4ec1-96b7-c12b44fd8f82"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 41.29178,
+                "entityTypes": [
+                    "KEY"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.02385445,
+                        "left": 0.21882042,
+                        "top": 0.73902375,
+                        "width": 0.19576286
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.21882042,
+                            "y": 0.73902375
+                        },
+                        {
+                            "x": 0.4145833,
+                            "y": 0.73902375
+                        },
+                        {
+                            "x": 0.4145833,
+                            "y": 0.7628782
+                        },
+                        {
+                            "x": 0.21882042,
+                            "y": 0.7628782
+                        }
+                    ]
+                },
+                "id": "efef5f95-e05c-476c-8251-6378c6d69001",
+                "relationships": [
+                    {
+                        "ids": [
+                            "5d2518f0-40e5-420f-b72e-3aae5c2425a1"
+                        ],
+                        "type": "VALUE"
+                    },
+                    {
+                        "ids": [
+                            "911f8f63-be3e-4e7c-bbf5-9edcb194c07d"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 41.29178,
+                "entityTypes": [
+                    "VALUE"
+                ],
+                "geometry": {
+                    "boundingBox": {
+                        "height": 0.026887024,
+                        "left": 0.45399767,
+                        "top": 0.73757654,
+                        "width": 0.2335081
+                    },
+                    "polygon": [
+                        {
+                            "x": 0.45399767,
+                            "y": 0.73757654
+                        },
+                        {
+                            "x": 0.6875058,
+                            "y": 0.73757654
+                        },
+                        {
+                            "x": 0.6875058,
+                            "y": 0.76446354
+                        },
+                        {
+                            "x": 0.45399767,
+                            "y": 0.76446354
+                        }
+                    ]
+                },
+                "id": "5d2518f0-40e5-420f-b72e-3aae5c2425a1",
+                "relationships": [
+                    {
+                        "ids": [
+                            "62462e47-8ffc-4f9b-86b3-34cd56e8d865"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            }
+        ],
+        "documentMetadata": {
+            "pages": 1
+        }
+    },
+    "awsManagedHumanLoopRequestSource": "AWS/Textract/AnalyzeDocument/Forms/V1",
+    "flowDefinitionArn": "arn:aws:sagemaker:us-east-1:298034081971:flow-definition/insurance-validation-flowv6",
+    "humanAnswers": [
+        {
+            "answerContent": {
+                "AWS/Textract/AnalyzeDocument/Forms/V1": {
+                    "blocks": [
+                        {
+                            "blockType": "WORD",
+                            "id": "225f6c94-f9e1-49cb-a57e-e42403bae7c0",
+                            "text": "Policy"
+                        },
+                        {
+                            "blockType": "WORD",
+                            "id": "bd73cca7-048b-4c46-8cef-ece3b2c156e2",
+                            "text": "Number:"
+                        },
+                        {
+                            "blockType": "WORD",
+                            "id": "c3d6df11-c179-4243-aa1a-48fded207d3e",
+                            "text": "AG133441"
+                        },
+                        {
+                            "blockType": "KEY_VALUE_SET",
+                            "entityTypes": [
+                                "KEY"
+                            ],
+                            "id": "c441171e-8a2a-429c-9296-4e9447378ce6",
+                            "relationships": [
+                                {
+                                    "ids": [
+                                        "2e058639-c1e8-4e9c-a943-396965b53d9e"
+                                    ],
+                                    "type": "VALUE"
+                                },
+                                {
+                                    "ids": [
+                                        "225f6c94-f9e1-49cb-a57e-e42403bae7c0",
+                                        "bd73cca7-048b-4c46-8cef-ece3b2c156e2"
+                                    ],
+                                    "type": "CHILD"
+                                }
+                            ]
+                        },
+                        {
+                            "blockType": "KEY_VALUE_SET",
+                            "entityTypes": [
+                                "VALUE"
+                            ],
+                            "id": "2e058639-c1e8-4e9c-a943-396965b53d9e",
+                            "relationships": [
+                                {
+                                    "ids": [
+                                        "c3d6df11-c179-4243-aa1a-48fded207d3e"
+                                    ],
+                                    "type": "CHILD"
+                                }
+                            ]
+                        },
+                        {
+                            "blockType": "WORD",
+                            "id": "f53da241-5916-4efc-8c03-7237ea5d0cef",
+                            "text": "Device"
+                        },
+                        {
+                            "blockType": "WORD",
+                            "id": "3717a4f1-752d-4428-9f5c-e15a0ba35768",
+                            "text": "ID:"
+                        },
+                        {
+                            "blockType": "WORD",
+                            "id": "7f5d76d0-5ff6-4527-9c33-00dcc3fa1f70",
+                            "text": "424403233"
+                        },
+                        {
+                            "blockType": "KEY_VALUE_SET",
+                            "entityTypes": [
+                                "KEY"
+                            ],
+                            "id": "64cad9a8-2a28-40ef-9ecf-c3111069bde8",
+                            "relationships": [
+                                {
+                                    "ids": [
+                                        "14d04885-c582-4960-8ee2-7d0eff735c30"
+                                    ],
+                                    "type": "VALUE"
+                                },
+                                {
+                                    "ids": [
+                                        "f53da241-5916-4efc-8c03-7237ea5d0cef",
+                                        "3717a4f1-752d-4428-9f5c-e15a0ba35768"
+                                    ],
+                                    "type": "CHILD"
+                                }
+                            ]
+                        },
+                        {
+                            "blockType": "KEY_VALUE_SET",
+                            "entityTypes": [
+                                "VALUE"
+                            ],
+                            "id": "14d04885-c582-4960-8ee2-7d0eff735c30",
+                            "relationships": [
+                                {
+                                    "ids": [
+                                        "7f5d76d0-5ff6-4527-9c33-00dcc3fa1f70"
+                                    ],
+                                    "type": "CHILD"
+                                }
+                            ]
+                        },
+                        {
+                            "blockType": "WORD",
+                            "id": "911f8f63-be3e-4e7c-bbf5-9edcb194c07d",
+                            "text": "Total"
+                        },
+                        {
+                            "blockType": "WORD",
+                            "id": "62462e47-8ffc-4f9b-86b3-34cd56e8d865",
+                            "text": "$148.99"
+                        },
+                        {
+                            "blockType": "KEY_VALUE_SET",
+                            "confidence": 41.291778564453125,
+                            "entityTypes": [
+                                "KEY"
+                            ],
+                            "id": "efef5f95-e05c-476c-8251-6378c6d69001",
+                            "relationships": [
+                                {
+                                    "ids": [
+                                        "5d2518f0-40e5-420f-b72e-3aae5c2425a1"
+                                    ],
+                                    "type": "VALUE"
+                                },
+                                {
+                                    "ids": [
+                                        "911f8f63-be3e-4e7c-bbf5-9edcb194c07d"
+                                    ],
+                                    "type": "CHILD"
+                                }
+                            ]
+                        },
+                        {
+                            "blockType": "KEY_VALUE_SET",
+                            "confidence": 41.291778564453125,
+                            "entityTypes": [
+                                "VALUE"
+                            ],
+                            "id": "5d2518f0-40e5-420f-b72e-3aae5c2425a1",
+                            "relationships": [
+                                {
+                                    "ids": [
+                                        "62462e47-8ffc-4f9b-86b3-34cd56e8d865"
+                                    ],
+                                    "type": "CHILD"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "submissionTime": "2020-04-03T11:59:51.470Z",
+            "workerId": "66b74ced2dbe1cfd"
+        }
+    ],
+    "humanLoopName": "ivf-25e512f2-75a2-11ea-ab9f-36f379a2239d",
+    "humanTaskActivationConditionResults": {
+        "Conditions": [
+            {
+                "EvaluationResult": true,
+                "Or": [
+                    {
+                        "ConditionParameters": {
+                            "ImportantFormKey": "Policy Number:",
+                            "ImportantFormKeyAliases": [
+                                "Policy No.",
+                                "Policy #:",
+                                "Policy Number.",
+                                "Policy No:",
+                                "Policy NO:",
+                                "Policy #."
+                            ],
+                            "KeyValueBlockConfidenceLessThan": 50,
+                            "WordBlockConfidenceLessThan": 85
+                        },
+                        "ConditionType": "ImportantFormKeyConfidenceCheck",
+                        "EvaluationResult": false
+                    },
+                    {
+                        "ConditionParameters": {
+                            "ImportantFormKey": "Total:",
+                            "ImportantFormKeyAliases": [
+                                "Total Due:",
+                                "Total Amount:",
+                                "Total",
+                                "Total Due",
+                                "Total Amount"
+                            ],
+                            "KeyValueBlockConfidenceLessThan": 45,
+                            "WordBlockConfidenceLessThan": 85
+                        },
+                        "ConditionType": "ImportantFormKeyConfidenceCheck",
+                        "EvaluationResult": true
+                    },
+                    {
+                        "ConditionParameters": {
+                            "ImportantFormKey": "Device ID:",
+                            "ImportantFormKeyAliases": [
+                                "Serial Number:",
+                                "Device S/N:",
+                                "Serial #:",
+                                "Device Identification Number",
+                                "Serial No.",
+                                "Serial No:",
+                                "Device #:",
+                                "Device No:",
+                                "Device Serial No:",
+                                "Device S/N"
+                            ],
+                            "KeyValueBlockConfidenceLessThan": 45,
+                            "WordBlockConfidenceLessThan": 85
+                        },
+                        "ConditionType": "ImportantFormKeyConfidenceCheck",
+                        "EvaluationResult": false
+                    },
+                    {
+                        "ConditionParameters": {
+                            "ImportantFormKey": "Policy Number:",
+                            "ImportantFormKeyAliases": [
+                                "Policy No.",
+                                "Policy #:",
+                                "Policy Number.",
+                                "Policy No:",
+                                "Policy NO:",
+                                "Policy #."
+                            ]
+                        },
+                        "ConditionType": "MissingImportantFormKey",
+                        "EvaluationResult": true
+                    },
+                    {
+                        "ConditionParameters": {
+                            "ImportantFormKey": "Total:",
+                            "ImportantFormKeyAliases": [
+                                "Total Due:",
+                                "Total Amount:",
+                                "Total",
+                                "Total Due",
+                                "Total Amount"
+                            ]
+                        },
+                        "ConditionType": "MissingImportantFormKey",
+                        "EvaluationResult": false
+                    },
+                    {
+                        "ConditionParameters": {
+                            "ImportantFormKey": "Device ID:",
+                            "ImportantFormKeyAliases": [
+                                "Serial Number:",
+                                "Device S/N:",
+                                "Serial #:",
+                                "Device Identification Number",
+                                "Serial No.",
+                                "Serial No:",
+                                "Device #:",
+                                "Device No:",
+                                "Device Serial No:",
+                                "Device S/N"
+                            ]
+                        },
+                        "ConditionType": "MissingImportantFormKey",
+                        "EvaluationResult": false
+                    }
+                ]
+            }
+        ]
+    },
+    "selectedAiServiceResponse": {
+        "blocks": [
+            {
+                "blockType": "WORD",
+                "id": "911f8f63-be3e-4e7c-bbf5-9edcb194c07d",
+                "text": "Total"
+            },
+            {
+                "blockType": "WORD",
+                "id": "62462e47-8ffc-4f9b-86b3-34cd56e8d865",
+                "text": "$148.99"
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 41.291778564453125,
+                "entityTypes": [
+                    "KEY"
+                ],
+                "geometry": {
+                    "polygon": [
+                        {
+                            "x": 0.21882042288780212,
+                            "y": 0.739023745059967
+                        },
+                        {
+                            "x": 0.414583295583725,
+                            "y": 0.739023745059967
+                        },
+                        {
+                            "x": 0.414583295583725,
+                            "y": 0.7628781795501709
+                        },
+                        {
+                            "x": 0.21882042288780212,
+                            "y": 0.7628781795501709
+                        }
+                    ]
+                },
+                "id": "efef5f95-e05c-476c-8251-6378c6d69001",
+                "relationships": [
+                    {
+                        "ids": [
+                            "5d2518f0-40e5-420f-b72e-3aae5c2425a1"
+                        ],
+                        "type": "VALUE"
+                    },
+                    {
+                        "ids": [
+                            "911f8f63-be3e-4e7c-bbf5-9edcb194c07d"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            },
+            {
+                "blockType": "KEY_VALUE_SET",
+                "confidence": 41.291778564453125,
+                "entityTypes": [
+                    "VALUE"
+                ],
+                "geometry": {
+                    "polygon": [
+                        {
+                            "x": 0.4539976716041565,
+                            "y": 0.7375765442848206
+                        },
+                        {
+                            "x": 0.6875057816505432,
+                            "y": 0.7375765442848206
+                        },
+                        {
+                            "x": 0.6875057816505432,
+                            "y": 0.7644635438919067
+                        },
+                        {
+                            "x": 0.4539976716041565,
+                            "y": 0.7644635438919067
+                        }
+                    ]
+                },
+                "id": "5d2518f0-40e5-420f-b72e-3aae5c2425a1",
+                "relationships": [
+                    {
+                        "ids": [
+                            "62462e47-8ffc-4f9b-86b3-34cd56e8d865"
+                        ],
+                        "type": "CHILD"
+                    }
+                ]
+            }
+        ]
+    }
+}
