@@ -24,7 +24,7 @@ if sys.argv[-1] == 'publish':
 setup(
     name='amazon-textract-response-parser',
     packages=['trp', 'a2i'],
-    version='0.1.0',
+    version='0.1.1',
     description='Easily parse JSON returned by Amazon Textract.',
     long_description_content_type='text/markdown',
     long_description=read('README.md'),
