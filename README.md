@@ -4,6 +4,12 @@ You can use Textract response parser library to easily parser JSON returned by A
 
 ## Python Usage
 
+To install 
+
+```
+python -m pip install amazon-textract-response-parser
+```
+
 ```
 # Call Amazon Textract and get JSON response
 #  client = boto3.client('textract')
@@ -92,9 +98,19 @@ Check out the `src-csharp` folder for instructions on how to run [.NET Core C#](
 
 ## Test
 
-- Download [code](./src-python) on your local machine.
-- Run "python3 trptest.py"
-- You should see output using the sample JSON response file included in the source.
+- Install pytest (```python -m pip install pytest```)
+- Run pytest (```pytest```)
+- You should see an output like
+
+```
+collected 3 items
+
+src-python/tests/test_trp.py ...                                         [100%]
+
+============================== 3 passed in 0.02s ===============================
+```
+
+Indicating successful tests.
 
 ## Other Resources
 

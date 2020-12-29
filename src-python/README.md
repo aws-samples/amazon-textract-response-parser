@@ -5,7 +5,7 @@ You can use Textract response parser library to easily parser JSON returned by A
 ## Installation
 
 ```
-python -m pip install textract-response-parser
+python -m pip install amazon-textract-response-parser
 ```
 
 ## Python Usage
