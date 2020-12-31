@@ -4,13 +4,13 @@ You can use Textract response parser library to easily parser JSON returned by A
 
 ## Installation
 
-```
+```bash
 python -m pip install amazon-textract-response-parser
 ```
 
 ## Python Usage
 
-```
+```python
 # Call Amazon Textract and get JSON response
 #  client = boto3.client('textract')
 #  response = client.analyze_document(Document={...}, FeatureTypes=[...])
@@ -55,7 +55,7 @@ for page in doc.pages:
 
 - Clone the repo and run pytest
 
-```
+```bash
 python -m pip install pytest
 git clone https://github.com/aws-samples/amazon-textract-response-parser.git
 cd amazon-textract-response-parser
