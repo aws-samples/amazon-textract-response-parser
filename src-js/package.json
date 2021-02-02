@@ -14,7 +14,7 @@
     "url": "git+https://github.com/aws-samples/amazon-textract-response-parser.git"
   },
   "author": "Amazon Rekognition Textract Demos <rekognition-textract-demos@amazon.com>",
-  "license": "MIT-0",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/aws-samples/amazon-textract-response-parser/issues"
   },
