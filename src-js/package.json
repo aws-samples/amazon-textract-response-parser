@@ -1,0 +1,22 @@
+{
+  "name": "textract-trp",
+  "version": "0.1.1",
+  "description": "Parse API responses from Amazon Textract",
+  "main": "lib/index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aws-samples/amazon-textract-response-parser.git"
+  },
+  "author": "Amazon Rekognition Textract Demos <rekognition-textract-demos@amazon.com>",
+  "license": "MIT-0",
+  "bugs": {
+    "url": "https://github.com/aws-samples/amazon-textract-response-parser/issues"
+  },
+  "homepage": "https://github.com/aws-samples/amazon-textract-response-parser#readme"
+}
