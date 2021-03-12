@@ -32,7 +32,7 @@ class BoundingBox:
         return self._top
 
 
-class Polygon:
+class Point:
     def __init__(self, x, y):
         self._x = x
         self._y = y
@@ -55,12 +55,9 @@ class Geometry:
         polygon = geometry["Polygon"]
         bb = BoundingBox(boundingBox["Width"], boundingBox["Height"],
                          boundingBox["Left"], boundingBox["Top"])
-        pgs = []
-        for pg in polygon:
-            pgs.append(Polygon(pg["X"], pg["Y"]))
 
+        self._polygon = [Point(p["X"], p["Y"]) for p in polygon]
         self._boundingBox = bb
-        self._polygon = pgs
 
     def __str__(self):
         s = "BoundingBox: {}\n".format(str(self._boundingBox))
