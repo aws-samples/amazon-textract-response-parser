@@ -84,6 +84,10 @@ class Word:
         self._text = ""
         if (block['Text']):
             self._text = block['Text']
+        self._textType = ""
+        if (block['TextType']):
+            self._textType = block['TextType']
+        
 
     def __str__(self):
         return self._text
@@ -107,6 +111,10 @@ class Word:
     @property
     def block(self):
         return self._block
+    
+    @property
+    def textType(self):
+        return self._textType
 
 
 class Line:
