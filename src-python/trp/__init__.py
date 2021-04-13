@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Top-level package for amazon-textract-response-parser."""
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 
 class BoundingBox:
