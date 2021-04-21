@@ -8,12 +8,62 @@ You can use Textract response parser library to easily parser JSON returned by A
 python -m pip install amazon-textract-response-parser
 ```
 
+## Pipeline and Serializer/Deserializer
+
+### Serializer/Deserializer
+
+Based on the [marshmallow] (https://marshmallow.readthedocs.io/en/stable/) framework, the serializer/deserializer allows for creating an object represenation of the Textract JSON response.
+
+#### Deserialize Textract JSON
+```python
+# j holds the Textract JSON
+from trp.trp2 import TDocument, TDocumentSchema
+t_doc = TDocumentSchema().load(json.loads(j))
+```
+
+#### Serialize Textract
+```python
+from trp.trp2 import TDocument, TDocumentSchema
+t_doc = TDocumentSchema().dump(t_doc)
+```
+
+
+### Pipeline order blocks
+
+By default Textract does not put the elements identified in an order in the JSON response.
+
+The sample implementation ```order_blocks_by_geo``` of a function using the Serializer/Deserializer shows how to change the structure and order the elements while maintaining the schema. This way no change is necessary to integrate with existing processing.
+
+```python
+# the sample code below makes use of the amazon-textract-caller
+python -m pip install amazon-textract-caller
+```
+
+```python
+from textractcaller.t_call import call_textract, Textract_Features
+from trp.trp2 import TDocument, TDocumentSchema
+from trp.t_pipeline import order_blocks_by_geo
+import trp
+import json
+
+j = call_textract(input_document="path_to_some_document (PDF, JPEG, PNG)", features=[Textract_Features.FORMS, Textract_Features.TABLES])
+# the t_doc will be not ordered
+t_doc = TDocumentSchema().load(json.loads(j))
+# the ordered_doc has elements ordered by y-coordinate (top to bottom of page)
+ordered_doc = order_blocks_by_geo(t_doc)
+# send to trp for further processing logic
+trp_doc = trp.Document(TDocumentSchema().dump(ordered_doc))
+```
+
+
 ## Python Usage
 
 ```
-# Call Amazon Textract and get JSON response
-#  client = boto3.client('textract')
-#  response = client.analyze_document(Document={...}, FeatureTypes=[...])
+# the sample code below makes use of the amazon-textract-caller
+python -m pip install amazon-textract-caller
+```
+from textractcaller.t_call import call_textract, Textract_Features
+
 
 # Parse JSON response from Textract
 from trp import Document
