@@ -14,9 +14,12 @@ class BaseSchema(m.Schema):
     @m.post_dump
     def remove_skip_values(self, data, many, pass_many=False):
         return {
-            key: value for key, value in data.items()
-            if isinstance(value, (dict, list, set, tuple, range, frozenset)) or value not in self.SKIP_VALUES
+            key: value
+            for key, value in data.items()
+            if isinstance(value, (dict, list, set, tuple, range,
+                                  frozenset)) or value not in self.SKIP_VALUES
         }
+
 
 class TextractBlockTypes(Enum):
     WORD = auto()
@@ -50,15 +53,19 @@ class TBoundingBox():
     def top(self):
         return self.__top
 
+
 class TBoundingBoxSchema(BaseSchema):
     width = m.fields.Float(data_key="Width", required=False, allow_none=False)
-    height = m.fields.Float(data_key="Height", required=False, allow_none=False)
+    height = m.fields.Float(data_key="Height",
+                            required=False,
+                            allow_none=False)
     left = m.fields.Float(data_key="Left", required=False, allow_none=False)
     top = m.fields.Float(data_key="Top", required=False, allow_none=False)
 
     @post_load
     def make_tbounding_box(self, data, **kwargs):
         return TBoundingBox(**data)
+
 
 class TPoint():
     def __init__(self, x: float, y: float):
@@ -72,6 +79,10 @@ class TPoint():
     @property
     def y(self):
         return self.__y
+
+    def __str__(self) -> str:
+        return f"Point: x: {self.__x}, y: {self.__y}"
+
 
 class TPointSchema(BaseSchema):
     x = m.fields.Float(data_key="X", required=False, allow_none=False)
@@ -97,9 +108,16 @@ class TGeometry():
     def polygon(self):
         return self.__polygon
 
+
 class TGeometrySchema(BaseSchema):
-    bounding_box = m.fields.Nested(TBoundingBoxSchema, data_key="BoundingBox", required=False, allow_none=False)
-    polygon = m.fields.List(m.fields.Nested(TPointSchema), data_key="Polygon", required=False, allow_none=False)
+    bounding_box = m.fields.Nested(TBoundingBoxSchema,
+                                   data_key="BoundingBox",
+                                   required=False,
+                                   allow_none=False)
+    polygon = m.fields.List(m.fields.Nested(TPointSchema),
+                            data_key="Polygon",
+                            required=False,
+                            allow_none=False)
 
     @post_load
     def make_tgeometry(self, data, **kwargs):
@@ -122,9 +140,13 @@ class TRelationship():
     def __repr__(self):
         return f'type: {self.__type}, ids: {self.__ids}'
 
+
 class TRelationshipSchema(BaseSchema):
     type = m.fields.String(data_key="Type", required=False, allow_none=False)
-    ids = m.fields.List(m.fields.String, data_key="Ids", required=False, allow_none=False)
+    ids = m.fields.List(m.fields.String,
+                        data_key="Ids",
+                        required=False,
+                        allow_none=False)
 
     @post_load
     def make_trelationship(self, data, **kwargs):
@@ -150,7 +172,8 @@ class TBlock():
                  row_index: int = None,
                  row_span: int = None,
                  selection_status: str = None,
-                 text_type: str = None):
+                 text_type: str = None,
+                 custom: dict = None):
         self.__block_type = block_type
         self.__geometry = geometry
         self.__id = id
@@ -165,6 +188,7 @@ class TBlock():
         self.__row_span = row_span
         self.__selection_status = selection_status
         self.__text_type = text_type
+        self.__custom = custom
 
     @property
     def block_type(self):
@@ -183,7 +207,7 @@ class TBlock():
         return self.__relationships
 
     @relationships.setter
-    def relationships(self, value:List[TRelationship]):
+    def relationships(self, value: List[TRelationship]):
         self.__relationships = value
 
     @property
@@ -226,25 +250,57 @@ class TBlock():
     def text_type(self):
         return self.__text_type
 
+    @property
+    def custom(self):
+        return self.__custom
+
+    @custom.setter
+    def custom(self, value: dict):
+        self.__custom = value
+
+
 class TBlockSchema(BaseSchema):
     block_type = m.fields.String(data_key="BlockType", allow_none=False)
-    geometry = m.fields.Nested(TGeometrySchema, data_key="Geometry", allow_none=False)
+    geometry = m.fields.Nested(TGeometrySchema,
+                               data_key="Geometry",
+                               allow_none=False)
     id = m.fields.String(data_key="Id", allow_none=False)
-    relationships=m.fields.List(m.fields.Nested(TRelationshipSchema), data_key="Relationships", allow_none=False)
-    confidence=m.fields.Float(data_key="Confidence", required=False, allow_none=False)
-    text=m.fields.String(data_key="Text", required=False, allow_none=False)
-    column_index=m.fields.Int(data_key="ColumnIndex", required=False, allow_none=False)
-    column_span=m.fields.Int(data_key="ColumnSpan", required=False, allow_none=False)
-    entity_types=m.fields.List(m.fields.String, data_key="EntityTypes", required=False, allow_none=False)
-    page=m.fields.Int(data_key="Page", required=False, allow_none=False)
-    row_index=m.fields.Int(data_key="RowIndex", required=False, allow_none=False)
-    row_span=m.fields.Int(data_key="RowSpan", required=False, allow_none=False)
-    selection_status=m.fields.String(data_key="SelectionStatus", required=False, allow_none=False)
-    text_type=m.fields.String(data_key="TextType", required=False, allow_none=False)
+    relationships = m.fields.List(m.fields.Nested(TRelationshipSchema),
+                                  data_key="Relationships",
+                                  allow_none=False)
+    confidence = m.fields.Float(data_key="Confidence",
+                                required=False,
+                                allow_none=False)
+    text = m.fields.String(data_key="Text", required=False, allow_none=False)
+    column_index = m.fields.Int(data_key="ColumnIndex",
+                                required=False,
+                                allow_none=False)
+    column_span = m.fields.Int(data_key="ColumnSpan",
+                               required=False,
+                               allow_none=False)
+    entity_types = m.fields.List(m.fields.String,
+                                 data_key="EntityTypes",
+                                 required=False,
+                                 allow_none=False)
+    page = m.fields.Int(data_key="Page", required=False, allow_none=False)
+    row_index = m.fields.Int(data_key="RowIndex",
+                             required=False,
+                             allow_none=False)
+    row_span = m.fields.Int(data_key="RowSpan",
+                            required=False,
+                            allow_none=False)
+    selection_status = m.fields.String(data_key="SelectionStatus",
+                                       required=False,
+                                       allow_none=False)
+    text_type = m.fields.String(data_key="TextType",
+                                required=False,
+                                allow_none=False)
+    custom = m.fields.Dict(data_key="Custom", required=False, allow_none=False)
 
     @post_load
-    def make_tblock(self,data, **kwargs):
+    def make_tblock(self, data, **kwargs):
         return TBlock(**data)
+
 
 class TDocumentMetadata():
     def __init__(self, pages: int = None):
@@ -253,6 +309,7 @@ class TDocumentMetadata():
     @property
     def pages(self):
         return self.__pages
+
 
 class TDocumentMetadataSchema(BaseSchema):
     pages = m.fields.Int(data_key="Pages", required=False)
@@ -263,7 +320,7 @@ class TDocumentMetadataSchema(BaseSchema):
 
 
 class TWarnings():
-    def __init__(self, error_code: str=None, pages: List[int]=None):
+    def __init__(self, error_code: str = None, pages: List[int] = None):
         self.__pages = pages
         self.__error_code = error_code
 
@@ -275,40 +332,61 @@ class TWarnings():
     def error_code(self):
         return self.__error_code
 
+
 class TWarningsSchema(BaseSchema):
-    pages = m.fields.List(m.fields.Int, data_key="Pages", required=False, allow_none=False)
-    error_code = m.fields.String(data_key="ErrorCode", required=False, allow_none=False)
+    pages = m.fields.List(m.fields.Int,
+                          data_key="Pages",
+                          required=False,
+                          allow_none=False)
+    error_code = m.fields.String(data_key="ErrorCode",
+                                 required=False,
+                                 allow_none=False)
+
     @post_load
     def make_twarnings(self, data, **kwargs):
         return TWarnings(**data)
 
 
 class THttpHeaders():
-    def __init__(self, x_amzn_request_id:str=None,
-                 content_type:str=None,
-                 content_length:int=None,
-                 date:str=None):
-        self.__date=date
+    def __init__(self,
+                 x_amzn_request_id: str = None,
+                 content_type: str = None,
+                 content_length: int = None,
+                 connection: str = None,
+                 date: str = None):
+        self.__date = date
         self.__x_amzn_request_id = x_amzn_request_id
         self.__content_type = content_type
         self.__content_length = content_length
+        self.__connection = connection
+
     @property
     def date(self):
         return self.__date
+
     @property
     def x_amzn_request_id(self):
         return self.__x_amzn_request_id
+
     @property
     def content_type(self):
         return self.__content_type
+
     @property
     def content_length(self):
         return self.__content_length
 
+    @property
+    def connection(self):
+        return self.__connection
+
+
 class TResponseMetadata():
-    def __init__(self, request_id:str=None, http_status_code: int = None,
-                 retry_attempts:int=None,
-                 http_headers:THttpHeaders = None):
+    def __init__(self,
+                 request_id: str = None,
+                 http_status_code: int = None,
+                 retry_attempts: int = None,
+                 http_headers: THttpHeaders = None):
         self.__request_id = request_id
         self.__http_status_code = http_status_code
         self.__retry_attempts = retry_attempts
@@ -317,15 +395,19 @@ class TResponseMetadata():
     @property
     def request_id(self):
         return self.__request_id
+
     @property
     def http_status_code(self):
         return self.__http_status_code
+
     @property
     def retry_attempts(self):
         return self.__retry_attempts
+
     @property
     def http_headers(self):
         return self.__http_headers
+
 
 class TDocument():
     def __init__(self,
@@ -336,8 +418,8 @@ class TDocument():
                  status_message: str = None,
                  warnings: TWarnings = None,
                  job_status: str = None,
-                 response_metadata: TResponseMetadata = None
-                 ):
+                 response_metadata: TResponseMetadata = None,
+                 custom: dict = None):
         self.__document_metatdata = document_metadata
         self.__blocks = blocks
         self.__analyze_document_model_version = analyze_document_model_version
@@ -346,6 +428,7 @@ class TDocument():
         self.__warnings = warnings
         self.__job_status = job_status
         self.__response_metadata = response_metadata
+        self.__custom = custom
 
     @property
     def document_metadata(self):
@@ -356,51 +439,75 @@ class TDocument():
         return self.__blocks
 
     @blocks.setter
-    def blocks(self, value:List[TBlock]):
+    def blocks(self, value: List[TBlock]):
         self.__blocks = value
 
     @property
     def analyze_document_model_version(self):
         return self.__analyze_document_model_version
+
     @property
     def detect_document_text_model_version(self):
         return self.__detect_document_text_model_version
+
     @property
     def status_message(self):
         return self.__status_message
+
     @property
     def warnings(self):
         return self.__warnings
+
     @property
     def job_status(self):
         return self.__job_status
+
     @property
     def response_metadata(self):
         return self.__response_metadata
 
-    def get_block_by_id(self, id:str)->Optional[TBlock]:
+    @property
+    def custom(self):
+        return self.__custom
+
+    @custom.setter
+    def custom(self, value: dict):
+        self.__custom = value
+
+    def get_block_by_id(self, id: str) -> Optional[TBlock]:
         for b in self.__blocks:
             if b.id == id:
                 return b
+
     @property
-    def pages(self)->List[TBlock]:
-        page_list:List[TBlock] = list()
+    def pages(self) -> List[TBlock]:
+        page_list: List[TBlock] = list()
         for b in self.blocks:
             if b.block_type == TextractBlockTypes.PAGE.name:
                 page_list.append(b)
         return page_list
 
-    def get_child_relations(self, page):
+    @staticmethod
+    def filter_blocks_by_type(
+            block_list: List[TBlock],
+            textract_block_type: List[TextractBlockTypes] = None) -> List[TBlock]:
+        block_type_names = [ x.name for x in textract_block_type]
+        return [
+            b for b in block_list if b.block_type in block_type_names
+        ]
+
+    def get_child_relations(self, page: TBlock):
         return self.__get_blocks_by_type(page=page)
 
     # TODO: not ideal imho. customers want pages.tables or pages.forms like the current trp
-    def tables(self, page:TBlock)->List[TBlock]:
-        return self.__get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.TABLE)
+    def tables(self, page: TBlock) -> List[TBlock]:
+        return self.__get_blocks_by_type(
+            page=page, block_type_enum=TextractBlockTypes.TABLE)
 
     def __get_blocks_by_type(self,
-                             block_type_enum:TextractBlockTypes=None,
-                             page:TBlock=None)->List[TBlock]:
-        table_list:List[TBlock] = list()
+                             block_type_enum: TextractBlockTypes = None,
+                             page: TBlock = None) -> List[TBlock]:
+        table_list: List[TBlock] = list()
         if page:
             for r in page.relationships:
                 if r.type == "CHILD":
@@ -418,44 +525,88 @@ class TDocument():
                     table_list.append(b)
             return table_list
 
-
     # TODO: not ideal imho. customers want pages.tables or pages.forms like the current trp
-    def forms(self, page:TBlock)->List[TBlock]:
-        return self.__get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.KEY_VALUE_SET)
+    def forms(self, page: TBlock) -> List[TBlock]:
+        return self.__get_blocks_by_type(
+            page=page, block_type_enum=TextractBlockTypes.KEY_VALUE_SET)
 
-    def lines(self, page:TBlock)->List[TBlock]:
-        return self.__get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.LINE)
+    def lines(self, page: TBlock) -> List[TBlock]:
+        return self.__get_blocks_by_type(
+            page=page, block_type_enum=TextractBlockTypes.LINE)
 
 
 class THttpHeadersSchema(BaseSchema):
     date = m.fields.String(data_key="date", required=False)
-    x_amzn_request_id = m.fields.String(data_key="x-amzn-requestid", required=False, allow_none=False)
-    content_type = m.fields.String(data_key="content-type", required=False, allow_none=False)
-    content_length = m.fields.Int(data_key="content-length", required=False, allow_none=False)
+    x_amzn_request_id = m.fields.String(data_key="x-amzn-requestid",
+                                        required=False,
+                                        allow_none=False)
+    content_type = m.fields.String(data_key="content-type",
+                                   required=False,
+                                   allow_none=False)
+    content_length = m.fields.Int(data_key="content-length",
+                                  required=False,
+                                  allow_none=False)
+    connection = m.fields.String(data_key="connection",
+                                 required=False,
+                                 allow_none=False)
 
     @post_load
     def make_thttp_headers(self, data, **kwargs):
         return THttpHeaders(**data)
 
+
 class TResponseMetadataSchema(BaseSchema):
-    request_id = m.fields.String(data_key="RequestId", required=False, allow_none=False)
-    http_status_code = m.fields.Int(data_key="HTTPStatusCode", required=False, allow_none=False)
-    retry_attempts = m.fields.Int(data_key="RetryAttempts", required=False, allow_none=False)
-    http_headers = m.fields.Nested(THttpHeadersSchema, data_key="HTTPHeaders", required=False, allow_none=False)
+    request_id = m.fields.String(data_key="RequestId",
+                                 required=False,
+                                 allow_none=False)
+    http_status_code = m.fields.Int(data_key="HTTPStatusCode",
+                                    required=False,
+                                    allow_none=False)
+    retry_attempts = m.fields.Int(data_key="RetryAttempts",
+                                  required=False,
+                                  allow_none=False)
+    http_headers = m.fields.Nested(THttpHeadersSchema,
+                                   data_key="HTTPHeaders",
+                                   required=False,
+                                   allow_none=False)
 
     @post_load
     def make_tresponse_metadata(self, data, **kwargs):
         return TResponseMetadata(**data)
 
+
 class TDocumentSchema(BaseSchema):
-    document_metadata = m.fields.Nested(TDocumentMetadataSchema, data_key="DocumentMetadata", required=False, allow_none=False)
-    blocks = m.fields.List(m.fields.Nested(TBlockSchema), data_key="Blocks", required=False, allow_none=False)
-    analyze_document_model_version = m.fields.String(data_key="AnalyzeDocumentModelVersion", required=False, allow_none=False)
-    detect_document_text_model_version = m.fields.String(data_key="DetectDocumentTextModelVersion", required=False, allow_none=False)
-    status_message = m.fields.String(data_key="StatusMessage", required=False, allow_none=False)
-    warnings = m.fields.Nested(TWarningsSchema, data_key="Warnings", required=False, allow_none=False)
-    job_status = m.fields.String(data_key="JobStatus", required=False, allow_none=False)
-    response_metadata = m.fields.Nested(TResponseMetadataSchema, data_key="ResponseMetadata", required=False, allow_none=False)
+    document_metadata = m.fields.Nested(TDocumentMetadataSchema,
+                                        data_key="DocumentMetadata",
+                                        required=False,
+                                        allow_none=False)
+    blocks = m.fields.List(m.fields.Nested(TBlockSchema),
+                           data_key="Blocks",
+                           required=False,
+                           allow_none=False)
+    analyze_document_model_version = m.fields.String(
+        data_key="AnalyzeDocumentModelVersion",
+        required=False,
+        allow_none=False)
+    detect_document_text_model_version = m.fields.String(
+        data_key="DetectDocumentTextModelVersion",
+        required=False,
+        allow_none=False)
+    status_message = m.fields.String(data_key="StatusMessage",
+                                     required=False,
+                                     allow_none=False)
+    warnings = m.fields.Nested(TWarningsSchema,
+                               data_key="Warnings",
+                               required=False,
+                               allow_none=False)
+    job_status = m.fields.String(data_key="JobStatus",
+                                 required=False,
+                                 allow_none=False)
+    response_metadata = m.fields.Nested(TResponseMetadataSchema,
+                                        data_key="ResponseMetadata",
+                                        required=False,
+                                        allow_none=False)
+    custom = m.fields.Dict(data_key="Custom", required=False, allow_none=False)
 
     @post_load
     def make_tdocument(self, data, **kwargs):

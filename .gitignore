@@ -24,3 +24,6 @@ share/python-wheels/
 MANIFEST
 .#*
 .python-version
+.venv
+.venv/
+.vscode/
