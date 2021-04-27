@@ -6,7 +6,7 @@ from setuptools import setup
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
-requirements = ['marshmallow']
+requirements = ['boto3', 'marshmallow==3.11.1']
 
 if sys.argv[-1] == 'publish-test':
     os.system(f"cd {os.path.dirname(__file__)}")
@@ -29,6 +29,7 @@ setup(
     packages=['trp', 'a2i'],
     version='0.1.4',
     description='Easily parse JSON returned by Amazon Textract.',
+    install_requires=requirements,
     long_description_content_type='text/markdown',
     long_description=read('README.md'),
     author='Amazon Rekognition Textract Demoes',

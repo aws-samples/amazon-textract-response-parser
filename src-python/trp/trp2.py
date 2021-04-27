@@ -419,12 +419,14 @@ class TDocument():
                  warnings: TWarnings = None,
                  job_status: str = None,
                  response_metadata: TResponseMetadata = None,
-                 custom: dict = None):
+                 custom: dict = None,
+                 next_token: str = None):
         self.__document_metatdata = document_metadata
         self.__blocks = blocks
         self.__analyze_document_model_version = analyze_document_model_version
         self.__detect_document_text_model_version = detect_document_text_model_version
         self.__status_message = status_message
+        self.__next_token = next_token
         self.__warnings = warnings
         self.__job_status = job_status
         self.__response_metadata = response_metadata
@@ -465,6 +467,10 @@ class TDocument():
     @property
     def response_metadata(self):
         return self.__response_metadata
+
+    @property
+    def next_token(self):
+        return self.__next_token
 
     @property
     def custom(self):
@@ -602,6 +608,9 @@ class TDocumentSchema(BaseSchema):
     job_status = m.fields.String(data_key="JobStatus",
                                  required=False,
                                  allow_none=False)
+    next_token = m.fields.String(data_key="NextToken",
+                                required=False,
+                                allow_none=False)
     response_metadata = m.fields.Nested(TResponseMetadataSchema,
                                         data_key="ResponseMetadata",
                                         required=False,

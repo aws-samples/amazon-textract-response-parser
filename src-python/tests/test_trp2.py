@@ -141,3 +141,15 @@ def test_filter_blocks_by_type():
     block_list = [t2.TBlock(block_type=t2.TextractBlockTypes.WORD.name)]
     assert t2.TDocument.filter_blocks_by_type(block_list=block_list, textract_block_type=[t2.TextractBlockTypes.WORD]) == block_list
 
+def test_next_token_response():
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/gib.json"))
+    j = json.load(f)
+    assert j['NextToken']
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document = add_page_orientation(t_document)
+    assert t_document.pages[0].custom
+
+    doc = t1.Document(t2.TDocumentSchema().dump(t_document))
+    for page in doc.pages:
+        print(page.custom['Orientation'])
