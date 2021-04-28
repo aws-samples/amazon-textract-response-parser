@@ -12,7 +12,7 @@ python -m pip install amazon-textract-response-parser
 
 ### Serializer/Deserializer
 
-Based on the [marshmallow] (https://marshmallow.readthedocs.io/en/stable/) framework, the serializer/deserializer allows for creating an object represenation of the Textract JSON response.
+Based on the [marshmallow](https://marshmallow.readthedocs.io/en/stable/) framework, the serializer/deserializer allows for creating an object represenation of the Textract JSON response.
 
 #### Deserialize Textract JSON
 ```python

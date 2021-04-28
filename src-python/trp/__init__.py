@@ -200,6 +200,7 @@ class FieldKey(BaseBlock):
 
 class FieldValue(BaseBlock):
     def __init__(self, block, children, blockMap):
+        super().__init__(block, blockMap)
         self._content = []
 
         t = []
