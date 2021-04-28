@@ -7,7 +7,7 @@ logging.getLogger(__name__).addHandler(NullHandler())
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.1.5'
+__version__ = '0.1.6'
 
 class BaseBlock():
     def __init__(self, block, blockMap):
