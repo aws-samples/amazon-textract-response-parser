@@ -28,7 +28,11 @@ t_doc = TDocumentSchema().dump(t_doc)
 ```
 
 
-### Pipeline order blocks
+### Pipeline 
+
+We added some commonly requested features as easily consumable components that modify the Textract JSON Schema and ideally don't require big changes to any  existing workflow.
+
+#### Order blocks (WORDS, LINES, TABLE, KEY_VALUE_SET) by geometry y-axis
 
 By default Textract does not put the elements identified in an order in the JSON response.
 
@@ -55,6 +59,25 @@ ordered_doc = order_blocks_by_geo(t_doc)
 trp_doc = trp.Document(TDocumentSchema().dump(ordered_doc))
 ```
 
+#### Page orientation in degrees
+
+Amazon Textract supports all in-plane document rotations. However the response does not include a single number for the degree, but instead each word and line does have polygon points which can be used to calculate the degree of rotation. The following code adds this information as a custom field to Amazon Textract JSON response.
+
+```
+from trp.t_pipeline import add_page_orientation
+import trp.trp2 as t2
+import trp as t1
+
+# assign the Textract JSON dict to j
+j = <call_textract(input_document="path_to_some_document (PDF, JPEG, PNG)") or your JSON dict>
+t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+t_document = add_page_orientation(t_document)
+
+doc = t1.Document(t2.TDocumentSchema().dump(t_document))
+# page orientation can be read now for each page
+for page in doc.pages:
+    print(page.custom['Orientation'])
+```
 
 ## Python Usage
 
