@@ -732,7 +732,7 @@ class Page {
   //get id() { return this._id; }
 }
 
-class TextractDocument {
+export class TextractDocument {
   _blockMap: { [blockId: string]: ApiBlock };
   _pages: Page[];
   _responseDocumentPages: Array<{ PageBlock: ApiPageBlock; Blocks: ApiBlock[] }>;
