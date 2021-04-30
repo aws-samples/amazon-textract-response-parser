@@ -1,9 +1,11 @@
+#!/usr/bin/env python
+
 import json
-from os import name
 import sys
 from trp.trp2 import TDocumentSchema
 from trp.t_pipeline import order_blocks_by_geo, add_page_orientation
 import argparse
+from trp import __version__
 from enum import Enum, auto
 
 class TPipelineComponents(Enum):
@@ -15,6 +17,11 @@ class TPipelineComponents(Enum):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--components", nargs='+', choices=[TPipelineComponents.add_page_orientation.name, TPipelineComponents.order_blocks_by_geo.name], help="define which components to call", required=True)
+parser.add_argument("--version",
+                    action='version',
+                    version='%(prog)s {version}'.format(version=__version__),
+                    help="print version information")
+
 
 args = parser.parse_args()
 components = [TPipelineComponents[x] for x in args.components]
