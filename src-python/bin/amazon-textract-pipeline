@@ -1,5 +1,4 @@
 import json
-from os import name
 import sys
 from trp.trp2 import TDocumentSchema
 from trp.t_pipeline import order_blocks_by_geo, add_page_orientation
