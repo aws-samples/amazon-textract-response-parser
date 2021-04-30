@@ -63,7 +63,7 @@ trp_doc = trp.Document(TDocumentSchema().dump(ordered_doc))
 
 Amazon Textract supports all in-plane document rotations. However the response does not include a single number for the degree, but instead each word and line does have polygon points which can be used to calculate the degree of rotation. The following code adds this information as a custom field to Amazon Textract JSON response.
 
-```
+```python
 from trp.t_pipeline import add_page_orientation
 import trp.trp2 as t2
 import trp as t1
@@ -79,7 +79,43 @@ for page in doc.pages:
     print(page.custom['Orientation'])
 ```
 
-## Python Usage
+
+#### Using the pipeline on command line
+
+The amazon-textract-response-parser package also includes a command line tool to test pipeline components like the add_page_orientation or the order_blocks_by_geo.
+
+Here is one example of the usage (in combination with the ```amazon-textract``` command from amazon-textract-helper and the ```jq``` tool (https://stedolan.github.io/jq/))
+
+```bash
+> amazon-textract --input-document "s3://somebucket/some-multi-page-pdf.pdf" | amazon-textract-pipeline --components add_page_orientation | jq '.Blocks[] | select(.BlockType=="PAGE") | .Custom'm
+
+{
+  "Orientation": 7
+}
+{
+  "Orientation": 11
+}
+{
+  "Orientation": 18
+}
+{
+  "Orientation": 90
+}
+{
+  "Orientation": 180
+}
+{
+  "Orientation": -90
+}
+{
+  "Orientation": -7
+}
+{
+  "Orientation": 0
+}
+```
+
+## Textract Response Parser Python Usage
 
 ```
 # the sample code below makes use of the amazon-textract-caller
