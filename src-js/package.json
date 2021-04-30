@@ -2,11 +2,16 @@
   "name": "textract-trp",
   "version": "0.1.1",
   "description": "Parse API responses from Amazon Textract",
-  "main": "lib/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "directories": {
     "lib": "lib"
   },
   "scripts": {
+    "build": "tsc",
+    "prepublish": "npm run build",
+    "prettify": "prettier --config .prettierrc.js 'src/**/*.{js,ts,tsx}' --write",
+    "lint": "eslint 'src/**/*.{js,ts,tsx}' --quiet --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -18,5 +23,24 @@
   "bugs": {
     "url": "https://github.com/aws-samples/amazon-textract-response-parser/issues"
   },
-  "homepage": "https://github.com/aws-samples/amazon-textract-response-parser#readme"
+  "homepage": "https://github.com/aws-samples/amazon-textract-response-parser#readme",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^4.22.0",
+    "@typescript-eslint/parser": "^4.22.0",
+    "eslint": "^7.25.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-prettier": "^3.4.0",
+    "husky": "^6.0.0",
+    "lint-staged": "^10.5.4",
+    "prettier": "^2.2.1",
+    "typescript": "^4.2.4"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx}": ["eslint --fix"]
+  }
 }
