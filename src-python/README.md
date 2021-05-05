@@ -38,7 +38,7 @@ By default Textract does not put the elements identified in an order in the JSON
 
 The sample implementation ```order_blocks_by_geo``` of a function using the Serializer/Deserializer shows how to change the structure and order the elements while maintaining the schema. This way no change is necessary to integrate with existing processing.
 
-```python
+```bash
 # the sample code below makes use of the amazon-textract-caller
 python -m pip install amazon-textract-caller
 ```
@@ -115,16 +115,9 @@ Here is one example of the usage (in combination with the ```amazon-textract``` 
 }
 ```
 
-## Textract Response Parser Python Usage
-
-```
-# the sample code below makes use of the amazon-textract-caller
-python -m pip install amazon-textract-caller
-```
-from textractcaller.t_call import call_textract, Textract_Features
-
-
 # Parse JSON response from Textract
+
+```python
 from trp import Document
 doc = Document(response)
 
@@ -164,7 +157,7 @@ for page in doc.pages:
 
 - Clone the repo and run pytest
 
-```
+```bash
 python -m pip install pytest
 git clone https://github.com/aws-samples/amazon-textract-response-parser.git
 cd amazon-textract-response-parser
