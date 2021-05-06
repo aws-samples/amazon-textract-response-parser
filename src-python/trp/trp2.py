@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Set
 import marshmallow as m
 from marshmallow import post_load
 from enum import Enum, auto
@@ -484,6 +484,20 @@ class TDocument():
         for b in self.__blocks:
             if b.id == id:
                 return b
+
+    def __relationships_recursive(self, block:TBlock)->List[TBlock]:
+        import itertools
+        if block and block.relationships:
+            all_relations = list(itertools.chain(*[ r.ids for r in block.relationships if r]))
+            all_block = [self.get_block_by_id(id) for id in all_relations if id] 
+            for b in all_block:
+                yield b
+                for child in self.__relationships_recursive(block=b):
+                    yield child
+
+
+    def relationships_recursive(self, block:TBlock)->Optional[Set[TBlock]]:
+        return set(self.__relationships_recursive(block=block))
 
     @property
     def pages(self) -> List[TBlock]:
