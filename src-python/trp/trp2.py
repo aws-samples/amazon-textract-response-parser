@@ -1,7 +1,10 @@
-from typing import List, Optional
+from __future__ import annotations
+from types import new_class
+from typing import List, Set, Optional
 import marshmallow as m
 from marshmallow import post_load
 from enum import Enum, auto
+import math
 
 
 class BaseSchema(m.Schema):
@@ -29,6 +32,61 @@ class TextractBlockTypes(Enum):
     KEY_VALUE_SET = auto()
     PAGE = auto()
 
+class TPoint():
+    def __init__(self, x: float, y: float):
+        self.__x = x
+        self.__y = y
+
+    @property
+    def x(self):
+        return self.__x
+
+    @property
+    def y(self):
+        return self.__y
+
+    @x.setter
+    def x(self, value):
+        self.__x = value
+
+    @y.setter
+    def y(self, value):
+        self.__y = value
+
+    def __str__(self) -> str:
+        return f"Point: x: {self.__x}, y: {self.__y}"
+
+    def __repr__(self) -> str:
+        return f"Point: x: {self.__x}, y: {self.__y}"
+
+    def __eq__(self, o: object) -> bool:
+        return isinstance(o, TPoint) and self.__x == o.__x and self.__y == o.__y
+
+    def __ne__(self, o: object) -> bool:
+        return not self == o
+
+    # TODO: add optimization for rotation of 90, 270, 180, -90, -180, -270 degrees
+    def rotate(self, origin_x:float=0.5, origin_y:float=0.5, degrees:float=180, force_limits:bool=True)->TPoint:
+        """
+        rotating this point around an origin point
+        force_limits enforces max 1 and min 0 values for the x and y coordinates (similar to min/max for Textract Schema Geometry)
+        """
+        angle = math.radians(degrees)
+        ox = origin_x
+        oy = origin_y
+        px = self.__x
+        py = self.__y
+        cos_result = math.cos(angle)
+        sin_result = math.sin(angle)
+        new_x = ox + cos_result * (px - ox) - sin_result * (py - oy)
+        new_y = oy + sin_result * (px - ox) + cos_result * (py - oy)
+        if force_limits:
+            new_x = max(min(new_x, 1), 0)
+            new_y = max(min(new_y, 1), 0) 
+        self.__x = new_x 
+        self.__y = new_y 
+        return self
+
 
 class TBoundingBox():
     def __init__(self, width: float, height: float, left: float, top: float):
@@ -53,6 +111,34 @@ class TBoundingBox():
     def top(self):
         return self.__top
 
+    def rotate(self, origin:TPoint=TPoint(0,0), degrees:float=180)->TBoundingBox:
+        """
+        rotate bounding box
+        a bounding box sides are always parallel to x and y axis
+        """
+        points = []
+        points.append(TPoint(x=self.left, y=self.top).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
+        points.append(TPoint(x=self.left + self.width, y = self.top).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
+        points.append(TPoint(x=self.left, y=self.top + self.height).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
+        points.append(TPoint(x=self.left + self.width, y = self.top + self.height).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
+        xmin = min([p.x for p in points])
+        ymin = min([p.y for p in points])
+        xmax = max([p.x for p in points])
+        ymax = max([p.y for p in points])
+
+        new_width = xmax - xmin
+        new_height = ymax - ymin
+        new_left = xmin
+        new_top = ymin
+        self.__width = new_width
+        self.__height = new_height
+        self.__left = new_left
+        self.__top = new_top
+        return self
+
+    def __str__(self) -> str:
+        return f"width: {self.width}, height: {self.height}, left: {self.left}, top: {self.top}"
+
 
 class TBoundingBoxSchema(BaseSchema):
     width = m.fields.Float(data_key="Width", required=False, allow_none=False)
@@ -65,23 +151,6 @@ class TBoundingBoxSchema(BaseSchema):
     @post_load
     def make_tbounding_box(self, data, **kwargs):
         return TBoundingBox(**data)
-
-
-class TPoint():
-    def __init__(self, x: float, y: float):
-        self.__x = x
-        self.__y = y
-
-    @property
-    def x(self):
-        return self.__x
-
-    @property
-    def y(self):
-        return self.__y
-
-    def __str__(self) -> str:
-        return f"Point: x: {self.__x}, y: {self.__y}"
 
 
 class TPointSchema(BaseSchema):
@@ -108,6 +177,9 @@ class TGeometry():
     def polygon(self):
         return self.__polygon
 
+    def rotate(self, origin:TPoint=TPoint(0,0), degrees:float=180):
+        self.__bounding_box.rotate(origin=origin, degrees=degrees)
+        [p.rotate(origin_x=origin.x, origin_y=origin.y) for p in self.__polygon ]
 
 class TGeometrySchema(BaseSchema):
     bounding_box = m.fields.Nested(TBoundingBoxSchema,
@@ -257,6 +329,12 @@ class TBlock():
     @custom.setter
     def custom(self, value: dict):
         self.__custom = value
+
+    def rotate(self, origin:TPoint=TPoint(0,0), degrees:float=180):
+        if self.__geometry:
+            self.__geometry.rotate(origin=origin, degrees=degrees)
+        else:
+            print(f"no geometry: {self.text}")
 
 
 class TBlockSchema(BaseSchema):
@@ -480,10 +558,34 @@ class TDocument():
     def custom(self, value: dict):
         self.__custom = value
 
-    def get_block_by_id(self, id: str) -> Optional[TBlock]:
+    def rotate(self, page:TBlock=None, origin:TPoint=TPoint(x=0.5, y=0.5), degrees:float=None)->None:
+        # FIXME: add dimension. the relative scale messes up the new coordinates, have to use the actual image scale
+        """atm no way to get back from Block to list of other blocks, hence get_block_by_id is only available on document level and quite some processing has to be here"""
+        if not page:
+            raise ValueError("need a page to rotate")
+        if not degrees:
+            raise ValueError("need degrees to rotate")
+        [b.rotate(origin=origin, degrees=degrees) for b in self.relationships_recursive(block=page)]
+
+    def get_block_by_id(self, id: str) -> TBlock:
         for b in self.__blocks:
             if b.id == id:
                 return b
+        raise ValueError(f"no block for id: {id}")
+
+    def __relationships_recursive(self, block:TBlock)->List[TBlock]:
+        import itertools
+        if block and block.relationships:
+            all_relations = list(itertools.chain(*[ r.ids for r in block.relationships if r]))
+            all_block = [self.get_block_by_id(id) for id in all_relations if id] 
+            for b in all_block:
+                yield b
+                for child in self.__relationships_recursive(block=b):
+                    yield child
+
+
+    def relationships_recursive(self, block:TBlock)->Optional[Set[TBlock]]:
+        return set(self.__relationships_recursive(block=block))
 
     @property
     def pages(self) -> List[TBlock]:

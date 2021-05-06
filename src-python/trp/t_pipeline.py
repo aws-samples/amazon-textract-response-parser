@@ -6,7 +6,6 @@ import statistics
 
 logger = logging.getLogger(__name__)
 
-
 def order_blocks_by_geo(t_document: t2.TDocument) -> t2.TDocument:
     """
     takes in a Textract JSON response and outputs a Textract JSON response schema which has the elements sorted by geometry (top coordinate of bounding box)"""
@@ -27,10 +26,10 @@ def __get_degree_from_polygon(poly: List[t2.TPoint] = None) -> float:
         math.atan2(point_1.y - point_0.y, point_1.x - point_0.x))
     return orientation
 
-
 def add_page_orientation(t_document: t2.TDocument) -> t2.TDocument:
     """adds orientation as Custom attribute to Textract Schema
        is available in trp as """
+    logger.debug("add_page_orientation")
     for page in t_document.pages:
         words = t2.TDocument.filter_blocks_by_type(
             block_list=t_document.get_child_relations(page=page),
@@ -41,4 +40,22 @@ def add_page_orientation(t_document: t2.TDocument) -> t2.TDocument:
             page.custom['Orientation'] = orientation
         else:
             page.custom = {'Orientation': orientation}
+    return t_document
+
+def add_image_size(t_document: t2.TDocument) -> t2.TDocument:
+    raise Exception("not implemented yet")
+
+def rotate_points_to_page_orientation(t_document:t2.TDocument)->t2.TDocument:
+    # TODO add rotation information to document (degree and center)
+    logger.debug("rotate_points_to_page_orientation")
+    for page in t_document.pages:
+        logger.debug(page)
+        if page.custom:
+            logger.debug("page.custom")
+            page_rotation = - page.custom['Orientation'] 
+            logger.debug(f"page_rotation: {page_rotation}")
+            t_document.rotate(page=page, origin=t2.TPoint(0.5,0.5), degrees=float(page_rotation))
+            page.custom['Rotation'] = {'Degrees': page_rotation,
+                                       'RotationPointX': 0.5,
+                                       'RotationPointY': 0.5}
     return t_document
