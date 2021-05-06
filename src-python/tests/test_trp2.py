@@ -54,23 +54,6 @@ def test_tblock_order_blocks_by_geo():
     assert "Value 3.1.1" == doc.pages[0].tables[2].rows[0].cells[0].text.strip(
     )
 
-def convert_table_to_list(trp_table: t1.Table,
-                          with_confidence: bool = False,
-                          with_geo: bool = False) -> List:
-    rows_list = list()
-    for _, row in enumerate(trp_table.rows):
-        one_row = list()
-        for _, cell in enumerate(row.cells):
-            add_text = ""
-            if with_confidence:
-                add_text = f"({cell.confidence:.1f})"
-            if with_geo:
-                add_text = f"({cell.geometry.boundingBox})"
-            print_text = [cell.text + add_text]
-            one_row = one_row + print_text
-        rows_list.append(one_row)
-    return rows_list
-
 def test_tblock_order_block_by_geo_multi_page():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
@@ -78,11 +61,6 @@ def test_tblock_order_block_by_geo_multi_page():
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)
     t_document = order_blocks_by_geo(t_document)
     doc = t1.Document(t2.TDocumentSchema().dump(t_document))
-    for page in doc.pages:
-        for table in page.tables:
-            table_list = convert_table_to_list(table)
-            print(tabulate(table_list) + "\n\n")
-
     assert "Page 1 - Value 1.1.1" == doc.pages[0].tables[0].rows[0].cells[0].text.strip()
     assert "Page 1 - Value 2.1.1" == doc.pages[0].tables[1].rows[0].cells[0].text.strip()
 
