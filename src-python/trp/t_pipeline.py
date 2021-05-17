@@ -8,9 +8,17 @@ logger = logging.getLogger(__name__)
 
 def order_blocks_by_geo(t_document: t2.TDocument) -> t2.TDocument:
     """
-    takes in a Textract JSON response and outputs a Textract JSON response schema which has the elements sorted by geometry (top coordinate of bounding box)"""
-    t_document.blocks = sorted(t_document.blocks,
-                               key=lambda b: b.geometry.bounding_box.top)
+    takes in a Textract JSON response and outputs a Textract JSON response schema which has the elements sorted by geometry (top coordinate of bounding box)
+    """
+    new_order:List[t2.TBlock] = list()
+    for page in t_document.pages:
+        new_order.append(page)
+        r = t_document.relationships_recursive(page)
+        page_relationships = list(r) if r else list()
+        page_blocks = sorted(page_relationships,
+                                key=lambda b: b.geometry.bounding_box.top if not b.text_type=="PAGE" and b.geometry and b.geometry.bounding_box else 1)
+        new_order.extend(page_blocks)
+    t_document.blocks=new_order
     return t_document
 
 

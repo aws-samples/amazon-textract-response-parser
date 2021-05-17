@@ -1,5 +1,4 @@
 from __future__ import annotations
-from types import new_class
 from typing import List, Set, Optional
 import marshmallow as m
 from marshmallow import post_load
@@ -82,9 +81,9 @@ class TPoint():
         new_y = oy + sin_result * (px - ox) + cos_result * (py - oy)
         if force_limits:
             new_x = max(min(new_x, 1), 0)
-            new_y = max(min(new_y, 1), 0) 
-        self.__x = new_x 
-        self.__y = new_y 
+            new_y = max(min(new_y, 1), 0)
+        self.__x = new_x
+        self.__y = new_y
         return self
 
 
@@ -577,7 +576,7 @@ class TDocument():
         import itertools
         if block and block.relationships:
             all_relations = list(itertools.chain(*[ r.ids for r in block.relationships if r]))
-            all_block = [self.get_block_by_id(id) for id in all_relations if id] 
+            all_block = [self.get_block_by_id(id) for id in all_relations if id]
             for b in all_block:
                 yield b
                 for child in self.__relationships_recursive(block=b):

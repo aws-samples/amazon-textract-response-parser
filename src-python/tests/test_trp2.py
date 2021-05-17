@@ -39,6 +39,31 @@ def test_serialization():
     s: str = geo_s.dumps(geo)
     assert not "null" in s
 
+def test_tblock_order_blocks_by_geo():
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/gib.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    new_order = order_blocks_by_geo(t_document)
+    doc = t1.Document(t2.TDocumentSchema().dump(new_order))
+    assert "Value 1.1.1" == doc.pages[0].tables[0].rows[0].cells[0].text.strip(
+    )
+    assert "Value 2.1.1" == doc.pages[0].tables[1].rows[0].cells[0].text.strip(
+    )
+    assert "Value 3.1.1" == doc.pages[0].tables[2].rows[0].cells[0].text.strip(
+    )
+
+def test_tblock_order_block_by_geo_multi_page():
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document = order_blocks_by_geo(t_document)
+    doc = t1.Document(t2.TDocumentSchema().dump(t_document))
+    assert "Page 1 - Value 1.1.1" == doc.pages[0].tables[0].rows[0].cells[0].text.strip()
+    assert "Page 1 - Value 2.1.1" == doc.pages[0].tables[1].rows[0].cells[0].text.strip()
+
+
 
 def test_tblock_order_blocks_by_geo():
     p = os.path.dirname(os.path.realpath(__file__))
