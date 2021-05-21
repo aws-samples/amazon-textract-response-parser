@@ -801,6 +801,9 @@ export class TextractDocument {
   get pageBlocks() {
     return this._responseDocumentPages;
   }
+  get pages() {
+    return this._pages;
+  }
 
   getBlockById(blockId: string) {
     return this._blockMap && this._blockMap[blockId];
