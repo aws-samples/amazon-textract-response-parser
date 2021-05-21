@@ -4,51 +4,7 @@ You can use Textract response parser library to easily parser JSON returned by A
 
 ## Python Usage
 
-To install 
-
-```
-python -m pip install amazon-textract-response-parser
-```
-
-```
-# Call Amazon Textract and get JSON response
-#  client = boto3.client('textract')
-#  response = client.analyze_document(Document={...}, FeatureTypes=[...])
-
-# Parse JSON response from Textract
-doc = Document(response)
-
-# Iterate over elements in the document
-for page in doc.pages:
-    # Print lines and words
-    for line in page.lines:
-        print("Line: {}--{}".format(line.text, line.confidence))
-        for word in line.words:
-            print("Word: {}--{}".format(word.text, word.confidence))
-
-    # Print tables
-    for table in page.tables:
-        for r, row in enumerate(table.rows):
-            for c, cell in enumerate(row.cells):
-                print("Table[{}][{}] = {}-{}".format(r, c, cell.text, cell.confidence))
-
-    # Print fields
-    for field in page.form.fields:
-        print("Field: Key: {}, Value: {}".format(field.key.text, field.value.text))
-
-    # Get field by key
-    key = "Phone Number:"
-    field = page.form.getFieldByKey(key)
-    if(field):
-        print("Field: Key: {}, Value: {}".format(field.key, field.value))
-
-    # Search fields by key
-    key = "address"
-    fields = page.form.searchFieldsByKey(key)
-    for field in fields:
-        print("Field: Key: {}, Value: {}".format(field.key, field.value))
-
-```
+For documentation on usage see: [src-python/README.md](src-python/README.md)
 
 ## C# Usage
 
@@ -96,22 +52,6 @@ document.Pages.ForEach(page => {
 
 Check out the `src-csharp` folder for instructions on how to run [.NET Core C#](src-csharp/readme.md) samples
 
-## Test
-
-- Install pytest (```python -m pip install pytest```)
-- Run pytest (```pytest```)
-- You should see an output like
-
-```
-collected 3 items
-
-src-python/tests/test_trp.py ...                                         [100%]
-
-============================== 3 passed in 0.02s ===============================
-```
-
-Indicating successful tests.
-
 ## Other Resources
 
 - [Large scale document processing with Amazon Textract - Reference Architecture](https://github.com/aws-samples/amazon-textract-serverless-large-scale-document-processing)
@@ -120,4 +60,4 @@ Indicating successful tests.
 
 ## License Summary
 
-This sample code is made available under the MIT-0 license. See the LICENSE file.
+This sample code is made available under the Apache License V2.0 license. See the LICENSE file.

@@ -1,8 +1,52 @@
 # -*- coding: utf-8 -*-
 """Top-level package for amazon-textract-response-parser."""
+import logging
+from logging import NullHandler
 
-__version__ = '0.1.1'
+logging.getLogger(__name__).addHandler(NullHandler())
 
+logger = logging.getLogger(__name__)
+
+__version__ = '0.1.9'
+
+class BaseBlock():
+    def __init__(self, block, blockMap):
+        self._block = block
+        self._confidence = block['Confidence']
+        self._geometry = Geometry(block['Geometry'])
+        self._id = block['Id']
+        self._text = ""
+        if 'Text' in block:
+            self._text = block['Text']
+        if "Custom" in block:
+            self._custom = block["Custom"]
+
+    def __str__(self):
+        return self._text
+
+    @property
+    def custom(self):
+        return self._custom
+
+    @property
+    def confidence(self):
+        return self._confidence
+
+    @property
+    def geometry(self):
+        return self._geometry
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def text(self):
+        return self._text
+
+    @property
+    def block(self):
+        return self._block
 
 class BoundingBox:
     def __init__(self, width, height, left, top):
@@ -75,51 +119,14 @@ class Geometry:
         return self._polygon
 
 
-class Word:
+class Word(BaseBlock):
     def __init__(self, block, blockMap):
-        self._block = block
-        self._confidence = block['Confidence']
-        self._geometry = Geometry(block['Geometry'])
-        self._id = block['Id']
-        self._text = ""
-        if (block['Text']):
-            self._text = block['Text']
-
-    def __str__(self):
-        return self._text
-
-    @property
-    def confidence(self):
-        return self._confidence
-
-    @property
-    def geometry(self):
-        return self._geometry
-
-    @property
-    def id(self):
-        return self._id
-
-    @property
-    def text(self):
-        return self._text
-
-    @property
-    def block(self):
-        return self._block
+        super().__init__(block, blockMap)
 
 
-class Line:
+class Line(BaseBlock):
     def __init__(self, block, blockMap):
-
-        self._block = block
-        self._confidence = block['Confidence']
-        self._geometry = Geometry(block['Geometry'])
-        self._id = block['Id']
-
-        self._text = ""
-        if (block['Text']):
-            self._text = block['Text']
+        super().__init__(block, blockMap)
 
         self._words = []
         if ('Relationships' in block and block['Relationships']):
@@ -137,29 +144,11 @@ class Line:
             s = s + "[{}]".format(str(word))
         return s
 
-    @property
-    def confidence(self):
-        return self._confidence
-
-    @property
-    def geometry(self):
-        return self._geometry
-
-    @property
-    def id(self):
-        return self._id
 
     @property
     def words(self):
         return self._words
 
-    @property
-    def text(self):
-        return self._text
-
-    @property
-    def block(self):
-        return self._block
 
 
 class SelectionElement:
@@ -186,13 +175,9 @@ class SelectionElement:
         return self._selectionStatus
 
 
-class FieldKey:
+class FieldKey(BaseBlock):
     def __init__(self, block, children, blockMap):
-        self._block = block
-        self._confidence = block['Confidence']
-        self._geometry = Geometry(block['Geometry'])
-        self._id = block['Id']
-        self._text = ""
+        super().__init__(block, blockMap)
         self._content = []
 
         t = []
@@ -207,41 +192,15 @@ class FieldKey:
         if (t):
             self._text = ' '.join(t)
 
-    def __str__(self):
-        return self._text
-
-    @property
-    def confidence(self):
-        return self._confidence
-
-    @property
-    def geometry(self):
-        return self._geometry
-
-    @property
-    def id(self):
-        return self._id
 
     @property
     def content(self):
         return self._content
 
-    @property
-    def text(self):
-        return self._text
 
-    @property
-    def block(self):
-        return self._block
-
-
-class FieldValue:
+class FieldValue(BaseBlock):
     def __init__(self, block, children, blockMap):
-        self._block = block
-        self._confidence = block['Confidence']
-        self._geometry = Geometry(block['Geometry'])
-        self._id = block['Id']
-        self._text = ""
+        super().__init__(block, blockMap)
         self._content = []
 
         t = []
@@ -260,36 +219,15 @@ class FieldValue:
         if (t):
             self._text = ' '.join(t)
 
-    def __str__(self):
-        return self._text
-
-    @property
-    def confidence(self):
-        return self._confidence
-
-    @property
-    def geometry(self):
-        return self._geometry
-
-    @property
-    def id(self):
-        return self._id
 
     @property
     def content(self):
         return self._content
 
-    @property
-    def text(self):
-        return self._text
 
-    @property
-    def block(self):
-        return self._block
-
-
-class Field:
+class Field(BaseBlock):
     def __init__(self, block, blockMap):
+        super().__init__(block, blockMap)
         self._key = None
         self._value = None
 
@@ -360,18 +298,14 @@ class Form:
         return results
 
 
-class Cell:
+class Cell(BaseBlock):
     def __init__(self, block, blockMap):
-        self._block = block
-        self._confidence = block['Confidence']
+        super().__init__(block, blockMap)
         self._rowIndex = block['RowIndex']
         self._columnIndex = block['ColumnIndex']
         self._rowSpan = block['RowSpan']
         self._columnSpan = block['ColumnSpan']
-        self._geometry = Geometry(block['Geometry'])
-        self._id = block['Id']
         self._content = []
-        self._text = ""
         if ('Relationships' in block and block['Relationships']):
             for rs in block['Relationships']:
                 if (rs['Type'] == 'CHILD'):
@@ -385,13 +319,6 @@ class Cell:
                             se = SelectionElement(blockMap[cid], blockMap)
                             self._content.append(se)
                             self._text = self._text + se.selectionStatus + ', '
-
-    def __str__(self):
-        return self._text
-
-    @property
-    def confidence(self):
-        return self._confidence
 
     @property
     def rowIndex(self):
@@ -410,24 +337,9 @@ class Cell:
         return self._columnSpan
 
     @property
-    def geometry(self):
-        return self._geometry
-
-    @property
-    def id(self):
-        return self._id
-
-    @property
     def content(self):
         return self._content
 
-    @property
-    def text(self):
-        return self._text
-
-    @property
-    def block(self):
-        return self._block
 
 
 class Row:
@@ -445,17 +357,10 @@ class Row:
         return self._cells
 
 
-class Table:
+class Table(BaseBlock):
     def __init__(self, block, blockMap):
-
-        self._block = block
-
-        self._confidence = block['Confidence']
-        self._geometry = Geometry(block['Geometry'])
-
-        self._id = block['Id']
+        super().__init__(block, blockMap)
         self._rows = []
-
         ri = 1
         row = Row()
         cell = None
@@ -480,24 +385,8 @@ class Table:
         return s
 
     @property
-    def confidence(self):
-        return self._confidence
-
-    @property
-    def geometry(self):
-        return self._geometry
-
-    @property
-    def id(self):
-        return self._id
-
-    @property
     def rows(self):
         return self._rows
-
-    @property
-    def block(self):
-        return self._block
 
 
 class Page:
@@ -508,6 +397,7 @@ class Page:
         self._form = Form()
         self._tables = []
         self._content = []
+        self._custom = dict()
 
         self._parse(blockMap)
 
@@ -522,6 +412,8 @@ class Page:
             if item["BlockType"] == "PAGE":
                 self._geometry = Geometry(item['Geometry'])
                 self._id = item['Id']
+                if "Custom" in item:
+                    self._custom = item["Custom"]
             elif item["BlockType"] == "LINE":
                 l = Line(item, blockMap)
                 self._lines.append(l)
@@ -538,11 +430,10 @@ class Page:
                         self._form.addField(f)
                         self._content.append(f)
                     else:
-                        print(
-                            "WARNING: Detected K/V where key does not have content. Excluding key from output."
+                        logger.info(
+                            f"INFO: Detected K/V where key does not have content. Excluding key from output. {f} - {item}"
                         )
-                        print(f)
-                        print(item)
+
 
     def getLinesInReadingOrder(self):
         columns = []
@@ -612,6 +503,10 @@ class Page:
     @property
     def id(self):
         return self._id
+
+    @property
+    def custom(self):
+        return self._custom
 
 
 class Document:

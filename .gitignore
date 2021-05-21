@@ -1,5 +1,4 @@
 .DS_Store
-bin
 obj
 
 #Python
@@ -23,3 +22,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 .#*
+.python-version
+.venv
+.venv/
+.vscode/

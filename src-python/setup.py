@@ -6,16 +6,19 @@ from setuptools import setup
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
+requirements = ['boto3', 'marshmallow==3.11.1']
 
 if sys.argv[-1] == 'publish-test':
     os.system(f"cd {os.path.dirname(__file__)}")
-    os.system('rm dist/*')
+    os.system('rm -rf dist/ build/ amazon_textract_response_parser.egg-info/')
     os.system('python setup.py sdist bdist_wheel')
     os.system('twine check dist/*')
     os.system('twine upload --repository pypitest dist/*')
     sys.exit()
 
 if sys.argv[-1] == 'publish':
+    os.system(f"cd {os.path.dirname(__file__)}")
+    os.system('rm -rf dist/ build/ amazon_textract_response_parser.egg-info/')
     os.system('python setup.py sdist bdist_wheel')
     os.system('twine check dist/*')
     os.system('twine upload --repository pypi dist/*')
@@ -24,8 +27,10 @@ if sys.argv[-1] == 'publish':
 setup(
     name='amazon-textract-response-parser',
     packages=['trp', 'a2i'],
-    version='0.1.1',
+    version='0.1.9',
     description='Easily parse JSON returned by Amazon Textract.',
+    install_requires=requirements,
+    scripts=['bin/amazon-textract-pipeline'],
     long_description_content_type='text/markdown',
     long_description=read('README.md'),
     author='Amazon Rekognition Textract Demoes',

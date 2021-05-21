@@ -8,14 +8,116 @@ You can use Textract response parser library to easily parser JSON returned by A
 python -m pip install amazon-textract-response-parser
 ```
 
-## Python Usage
+## Pipeline and Serializer/Deserializer
 
+### Serializer/Deserializer
+
+Based on the [marshmallow](https://marshmallow.readthedocs.io/en/stable/) framework, the serializer/deserializer allows for creating an object represenation of the Textract JSON response.
+
+#### Deserialize Textract JSON
+```python
+# j holds the Textract JSON
+from trp.trp2 import TDocument, TDocumentSchema
+t_doc = TDocumentSchema().load(json.loads(j))
 ```
-# Call Amazon Textract and get JSON response
-#  client = boto3.client('textract')
-#  response = client.analyze_document(Document={...}, FeatureTypes=[...])
+
+#### Serialize Textract
+```python
+from trp.trp2 import TDocument, TDocumentSchema
+t_doc = TDocumentSchema().dump(t_doc)
+```
+
+
+### Pipeline 
+
+We added some commonly requested features as easily consumable components that modify the Textract JSON Schema and ideally don't require big changes to any  existing workflow.
+
+#### Order blocks (WORDS, LINES, TABLE, KEY_VALUE_SET) by geometry y-axis
+
+By default Textract does not put the elements identified in an order in the JSON response.
+
+The sample implementation ```order_blocks_by_geo``` of a function using the Serializer/Deserializer shows how to change the structure and order the elements while maintaining the schema. This way no change is necessary to integrate with existing processing.
+
+```bash
+# the sample code below makes use of the amazon-textract-caller
+python -m pip install amazon-textract-caller
+```
+
+```python
+from textractcaller.t_call import call_textract, Textract_Features
+from trp.trp2 import TDocument, TDocumentSchema
+from trp.t_pipeline import order_blocks_by_geo
+import trp
+import json
+
+j = call_textract(input_document="path_to_some_document (PDF, JPEG, PNG)", features=[Textract_Features.FORMS, Textract_Features.TABLES])
+# the t_doc will be not ordered
+t_doc = TDocumentSchema().load(json.loads(j))
+# the ordered_doc has elements ordered by y-coordinate (top to bottom of page)
+ordered_doc = order_blocks_by_geo(t_doc)
+# send to trp for further processing logic
+trp_doc = trp.Document(TDocumentSchema().dump(ordered_doc))
+```
+
+#### Page orientation in degrees
+
+Amazon Textract supports all in-plane document rotations. However the response does not include a single number for the degree, but instead each word and line does have polygon points which can be used to calculate the degree of rotation. The following code adds this information as a custom field to Amazon Textract JSON response.
+
+```python
+from trp.t_pipeline import add_page_orientation
+import trp.trp2 as t2
+import trp as t1
+
+# assign the Textract JSON dict to j
+j = <call_textract(input_document="path_to_some_document (PDF, JPEG, PNG)") or your JSON dict>
+t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+t_document = add_page_orientation(t_document)
+
+doc = t1.Document(t2.TDocumentSchema().dump(t_document))
+# page orientation can be read now for each page
+for page in doc.pages:
+    print(page.custom['Orientation'])
+```
+
+
+#### Using the pipeline on command line
+
+The amazon-textract-response-parser package also includes a command line tool to test pipeline components like the add_page_orientation or the order_blocks_by_geo.
+
+Here is one example of the usage (in combination with the ```amazon-textract``` command from amazon-textract-helper and the ```jq``` tool (https://stedolan.github.io/jq/))
+
+```bash
+> amazon-textract --input-document "s3://somebucket/some-multi-page-pdf.pdf" | amazon-textract-pipeline --components add_page_orientation | jq '.Blocks[] | select(.BlockType=="PAGE") | .Custom'm
+
+{
+  "Orientation": 7
+}
+{
+  "Orientation": 11
+}
+{
+  "Orientation": 18
+}
+{
+  "Orientation": 90
+}
+{
+  "Orientation": 180
+}
+{
+  "Orientation": -90
+}
+{
+  "Orientation": -7
+}
+{
+  "Orientation": 0
+}
+```
 
 # Parse JSON response from Textract
+
+```python
 from trp import Document
 doc = Document(response)
 
@@ -55,7 +157,7 @@ for page in doc.pages:
 
 - Clone the repo and run pytest
 
-```
+```bash
 python -m pip install pytest
 git clone https://github.com/aws-samples/amazon-textract-response-parser.git
 cd amazon-textract-response-parser
