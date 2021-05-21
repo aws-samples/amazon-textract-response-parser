@@ -7,6 +7,9 @@
   "directories": {
     "lib": "lib"
   },
+  "files": [
+    "/dist"
+  ],
   "scripts": {
     "build": "tsc",
     "prepublish": "npm run build",
