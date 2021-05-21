@@ -15,9 +15,25 @@ interface ApiGeometry {
   Polygon: ApiPoint[];
 }
 
+const enum ApiRelationshipType {
+  Child = "CHILD",
+  ComplexFeatures = "COMPLEX_FEATURES",
+  Value = "VALUE",
+}
+
 interface ApiRelationship {
   Ids: string[];
-  Type: "VALUE" | "CHILD" | "COMPLEX_FEATURES";
+  Type: ApiRelationshipType;
+}
+
+const enum ApiBlockType {
+  Cell = "CELL",
+  KeyValueSet = "KEY_VALUE_SET",
+  Line = "LINE",
+  Page = "PAGE",
+  SelectionElement = "SELECTION_ELEMENT",
+  Table = "TABLE",
+  Word = "WORD",
 }
 
 interface ApiPageBlock {
@@ -26,16 +42,22 @@ interface ApiPageBlock {
   Id: string;
 }
 
+const enum ApiTextType {
+  Handwriting = "HANDWRITING",
+  Printed = "PRINTED",
+}
+
 interface ApiWordBlock {
-  BlockType: "WORD";
+  BlockType: ApiBlockType.Word;
   Confidence: number;
   Geometry: ApiGeometry;
   Id: string;
   Text: string;
+  TextType: ApiTextType;
 }
 
 interface ApiLineBlock {
-  BlockType: "LINE";
+  BlockType: ApiBlockType.Line;
   Confidence: number;
   Geometry: ApiGeometry;
   Id: string;
@@ -43,17 +65,22 @@ interface ApiLineBlock {
   Text: string;
 }
 
+const enum ApiKeyValueEntityType {
+  Key = "KEY",
+  Value = "VALUE",
+}
+
 interface ApiKeyValueSetBlock {
-  BlockType: "KEY_VALUE_SET";
+  BlockType: ApiBlockType.KeyValueSet;
   Confidence: number;
-  EntityTypes: "KEY" | "VALUE";
+  EntityTypes: ApiKeyValueEntityType;
   Geometry: ApiGeometry;
   Id: string;
   Relationships: ApiRelationship[];
 }
 
 interface ApiTableBlock {
-  BlockType: "TABLE";
+  BlockType: ApiBlockType.Table;
   Confidence: number;
   Geometry: ApiGeometry;
   Id: string;
@@ -61,7 +88,7 @@ interface ApiTableBlock {
 }
 
 interface ApiCellBlock {
-  BlockType: "CELL";
+  BlockType: ApiBlockType.Cell;
   ColumnIndex: number;
   ColumnSpan: number;
   Confidence: number;
@@ -72,12 +99,17 @@ interface ApiCellBlock {
   RowSpan: number;
 }
 
+const enum ApiSelectionStatus {
+  Selected = "SELECTED",
+  NotSelected = "NOT_SELECTED",
+}
+
 interface ApiSelectionElementBlock {
-  BlockType: "SELECTION_ELEMENT";
+  BlockType: ApiBlockType.SelectionElement;
   Confidence: number;
   Geometry: ApiGeometry;
   Id: string;
-  SelectionStatus: "SELECTED" | "NOT_SELECTED";
+  SelectionStatus: ApiSelectionStatus;
 }
 
 type ApiBlock =
@@ -89,11 +121,18 @@ type ApiBlock =
   | ApiTableBlock
   | ApiWordBlock;
 
+const enum ApiJobStatus {
+  Failed = "FAILED",
+  InProgress = "IN_PROGRESS",
+  PartialSuccess = "PARTIAL_SUCCESS",
+  Succeeded = "SUCCEEDED",
+}
+
 interface ApiResponsePage {
   AnalyzeDocumentModelVersion?: string;
   Blocks: ApiBlock[];
   DocumentMetadata: { Pages: number };
-  JobStatus: "IN_PROGRESS" | "SUCCEEDED" | "FAILED" | "PARTIAL_SUCCESS";
+  JobStatus: ApiJobStatus;
   NextToken?: string;
   StatusMessage?: string;
   Warnings?: Array<{ ErrorCode: string; Pages: number[] }>;
@@ -230,9 +269,9 @@ class Line {
     this._words = [];
     if (block.Relationships) {
       block.Relationships.forEach((rs) => {
-        if (rs.Type == "CHILD") {
+        if (rs.Type == ApiRelationshipType.Child) {
           rs.Ids.forEach((cid) => {
-            if (blockMap[cid].BlockType == "WORD")
+            if (blockMap[cid].BlockType == ApiBlockType.Word)
               this._words.push(new Word(blockMap[cid] as ApiWordBlock, blockMap));
           });
         }
@@ -270,7 +309,7 @@ class SelectionElement {
   _confidence: number;
   _geometry: Geometry;
   _id: string;
-  _selectionStatus: "SELECTED" | "NOT_SELECTED";
+  _selectionStatus: ApiSelectionStatus;
 
   constructor(block: ApiSelectionElementBlock, blockMap: { [blockId: string]: ApiBlock }) {
     this._confidence = block.Confidence;
@@ -312,7 +351,7 @@ class FieldKey {
     const t: string[] = [];
     children.forEach((eid) => {
       const wb = blockMap[eid];
-      if (wb.BlockType == "WORD") {
+      if (wb.BlockType == ApiBlockType.Word) {
         const w = new Word(wb, blockMap);
         this._content.push(w);
         t.push(w.text);
@@ -363,11 +402,11 @@ class FieldValue {
     const t: string[] = [];
     children.forEach((eid) => {
       const wb = blockMap[eid];
-      if (wb.BlockType == "WORD") {
+      if (wb.BlockType == ApiBlockType.Word) {
         const w = new Word(wb, blockMap);
         this._content.push(w);
         t.push(w.text);
-      } else if (wb.BlockType == "SELECTION_ELEMENT") {
+      } else if (wb.BlockType == ApiBlockType.SelectionElement) {
         const se = new SelectionElement(wb, blockMap);
         this._content.push(se);
         t.push(se.selectionStatus);
@@ -407,12 +446,12 @@ class Field {
     this._key = null;
     this._value = null;
     block.Relationships.forEach((item) => {
-      if (item.Type == "CHILD") {
+      if (item.Type == ApiRelationshipType.Child) {
         this._key = new FieldKey(block, item.Ids, blockMap);
-      } else if (item.Type == "VALUE") {
+      } else if (item.Type == ApiRelationshipType.Value) {
         item.Ids.forEach((eid) => {
           const vkvs = blockMap[eid] as ApiKeyValueSetBlock;
-          if (vkvs.EntityTypes.indexOf("VALUE") >= 0 && vkvs.Relationships) {
+          if (vkvs.EntityTypes.indexOf(ApiKeyValueEntityType.Value) >= 0 && vkvs.Relationships) {
             vkvs.Relationships.forEach((vitem) => {
               this._value = new FieldValue(vkvs, vitem.Ids, blockMap);
             });
@@ -493,14 +532,14 @@ class Cell {
     this._text = "";
     if (block.Relationships) {
       block.Relationships.forEach((rs) => {
-        if (rs.Type == "CHILD") {
+        if (rs.Type == ApiRelationshipType.Child) {
           rs.Ids.forEach((cid) => {
             const blockType = blockMap[cid].BlockType;
-            if (blockType == "WORD") {
+            if (blockType == ApiBlockType.Word) {
               const w = new Word(blockMap[cid] as ApiWordBlock, blockMap);
               this._content.push(w);
               this._text += w.text + " ";
-            } else if (blockType == "SELECTION_ELEMENT") {
+            } else if (blockType == ApiBlockType.SelectionElement) {
               const se = new SelectionElement(blockMap[cid] as ApiSelectionElementBlock, blockMap);
               this._content.push(se);
               this._text += se.selectionStatus + ", ";
@@ -579,7 +618,7 @@ class Table {
     let cell = null;
     if (block.Relationships) {
       block.Relationships.forEach((rs) => {
-        if (rs.Type == "CHILD") {
+        if (rs.Type == ApiRelationshipType.Child) {
           rs.Ids.forEach((cid) => {
             cell = new Cell(blockMap[cid] as ApiCellBlock, blockMap);
             if (cell.rowIndex > ri) {
@@ -642,17 +681,17 @@ class Page {
 
   _parse(blockMap: { [blockId: string]: ApiBlock }) {
     this._blocks.forEach((item) => {
-      if (item.BlockType == "LINE") {
+      if (item.BlockType == ApiBlockType.Line) {
         const l = new Line(item, blockMap);
         this._lines.push(l);
         this._content.push(l);
         this._text += `${l.text}\n`;
-      } else if (item.BlockType == "TABLE") {
+      } else if (item.BlockType == ApiBlockType.Table) {
         const t = new Table(item, blockMap);
         this._tables.push(t);
         this._content.push(t);
-      } else if (item.BlockType == "KEY_VALUE_SET") {
-        if (item.EntityTypes.indexOf("KEY") >= 0) {
+      } else if (item.BlockType == ApiBlockType.KeyValueSet) {
+        if (item.EntityTypes.indexOf(ApiKeyValueEntityType.Key) >= 0) {
           const f = new Field(item, blockMap);
           if (f.key) {
             this._form.addField(f);
@@ -763,7 +802,7 @@ export class TextractDocument {
         if (block.BlockType && block.Id) {
           blockMap[block.Id] = block;
         }
-        if (block.BlockType == "PAGE") {
+        if (block.BlockType == ApiBlockType.Page) {
           if (currentPageBlock) {
             documentPages.push({
               PageBlock: currentPageBlock,
