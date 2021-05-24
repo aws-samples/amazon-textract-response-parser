@@ -15,7 +15,8 @@
     "prepublish": "npm run build",
     "prettify": "prettier --config .prettierrc.js 'src/**/*.{js,ts,tsx}' --write",
     "lint": "eslint 'src/**/*.{js,ts,tsx}' --quiet --fix",
-    "test": "jest --coverage"
+    "test": "jest --coverage",
+    "test:unit": "jest --coverage --testPathPattern=test/unit"
   },
   "repository": {
     "type": "git",
@@ -28,6 +29,7 @@
   },
   "homepage": "https://github.com/aws-samples/amazon-textract-response-parser#readme",
   "devDependencies": {
+    "@aws-sdk/client-textract": "^3.16.0",
     "@types/jest": "^26.0.23",
     "@typescript-eslint/eslint-plugin": "^4.22.0",
     "@typescript-eslint/parser": "^4.22.0",

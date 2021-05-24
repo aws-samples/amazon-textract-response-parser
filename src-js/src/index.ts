@@ -1,32 +1,32 @@
-interface ApiBoundingBox {
+export interface ApiBoundingBox {
   Height: number;
   Left: number;
   Top: number;
   Width: number;
 }
 
-interface ApiPoint {
+export interface ApiPoint {
   X: number;
   Y: number;
 }
 
-interface ApiGeometry {
+export interface ApiGeometry {
   BoundingBox: ApiBoundingBox;
   Polygon: ApiPoint[];
 }
 
-const enum ApiRelationshipType {
+export const enum ApiRelationshipType {
   Child = "CHILD",
   ComplexFeatures = "COMPLEX_FEATURES",
   Value = "VALUE",
 }
 
-interface ApiRelationship {
+export interface ApiRelationship {
   Ids: string[];
   Type: ApiRelationshipType;
 }
 
-const enum ApiBlockType {
+export const enum ApiBlockType {
   Cell = "CELL",
   KeyValueSet = "KEY_VALUE_SET",
   Line = "LINE",
@@ -36,18 +36,18 @@ const enum ApiBlockType {
   Word = "WORD",
 }
 
-interface ApiPageBlock {
+export interface ApiPageBlock {
   BlockType: "PAGE";
   Geometry: ApiGeometry;
   Id: string;
 }
 
-const enum ApiTextType {
+export const enum ApiTextType {
   Handwriting = "HANDWRITING",
   Printed = "PRINTED",
 }
 
-interface ApiWordBlock {
+export interface ApiWordBlock {
   BlockType: ApiBlockType.Word;
   Confidence: number;
   Geometry: ApiGeometry;
@@ -56,7 +56,7 @@ interface ApiWordBlock {
   TextType: ApiTextType;
 }
 
-interface ApiLineBlock {
+export interface ApiLineBlock {
   BlockType: ApiBlockType.Line;
   Confidence: number;
   Geometry: ApiGeometry;
@@ -65,12 +65,12 @@ interface ApiLineBlock {
   Text: string;
 }
 
-const enum ApiKeyValueEntityType {
+export const enum ApiKeyValueEntityType {
   Key = "KEY",
   Value = "VALUE",
 }
 
-interface ApiKeyValueSetBlock {
+export interface ApiKeyValueSetBlock {
   BlockType: ApiBlockType.KeyValueSet;
   Confidence: number;
   EntityTypes: ApiKeyValueEntityType;
@@ -79,7 +79,7 @@ interface ApiKeyValueSetBlock {
   Relationships: ApiRelationship[];
 }
 
-interface ApiTableBlock {
+export interface ApiTableBlock {
   BlockType: ApiBlockType.Table;
   Confidence: number;
   Geometry: ApiGeometry;
@@ -87,7 +87,7 @@ interface ApiTableBlock {
   Relationships: ApiRelationship[];
 }
 
-interface ApiCellBlock {
+export interface ApiCellBlock {
   BlockType: ApiBlockType.Cell;
   ColumnIndex: number;
   ColumnSpan: number;
@@ -99,12 +99,12 @@ interface ApiCellBlock {
   RowSpan: number;
 }
 
-const enum ApiSelectionStatus {
+export const enum ApiSelectionStatus {
   Selected = "SELECTED",
   NotSelected = "NOT_SELECTED",
 }
 
-interface ApiSelectionElementBlock {
+export interface ApiSelectionElementBlock {
   BlockType: ApiBlockType.SelectionElement;
   Confidence: number;
   Geometry: ApiGeometry;
@@ -112,7 +112,7 @@ interface ApiSelectionElementBlock {
   SelectionStatus: ApiSelectionStatus;
 }
 
-type ApiBlock =
+export type ApiBlock =
   | ApiCellBlock
   | ApiKeyValueSetBlock
   | ApiLineBlock
@@ -121,24 +121,24 @@ type ApiBlock =
   | ApiTableBlock
   | ApiWordBlock;
 
-const enum ApiJobStatus {
+export const enum ApiJobStatus {
   Failed = "FAILED",
   InProgress = "IN_PROGRESS",
   PartialSuccess = "PARTIAL_SUCCESS",
   Succeeded = "SUCCEEDED",
 }
 
-interface ApiResponsePage {
+export interface ApiResponsePage {
   AnalyzeDocumentModelVersion?: string;
   Blocks: ApiBlock[];
   DocumentMetadata: { Pages: number };
-  JobStatus: ApiJobStatus;
+  JobStatus?: ApiJobStatus;
   NextToken?: string;
   StatusMessage?: string;
   Warnings?: Array<{ ErrorCode: string; Pages: number[] }>;
 }
 
-class BoundingBox {
+export class BoundingBox {
   _width: number;
   _height: number;
   _left: number;
@@ -168,7 +168,7 @@ class BoundingBox {
   }
 }
 
-class Point {
+export class Point {
   _x: number;
   _y: number;
 
@@ -188,7 +188,7 @@ class Point {
   }
 }
 
-class Geometry {
+export class Geometry {
   _boundingBox: BoundingBox;
   _polygon: Point[];
 
@@ -215,7 +215,7 @@ class Geometry {
   }
 }
 
-class Word {
+export class Word {
   _block: ApiWordBlock;
   _confidence: number;
   _geometry: Geometry;
@@ -250,7 +250,7 @@ class Word {
   }
 }
 
-class Line {
+export class Line {
   _block: ApiLineBlock;
   _confidence: number;
   _geometry: Geometry;
@@ -305,7 +305,7 @@ class Line {
   }
 }
 
-class SelectionElement {
+export class SelectionElement {
   _confidence: number;
   _geometry: Geometry;
   _id: string;
@@ -332,7 +332,7 @@ class SelectionElement {
   }
 }
 
-class FieldKey {
+export class FieldKey {
   _block: ApiKeyValueSetBlock;
   _confidence: number;
   _geometry: Geometry;
@@ -383,7 +383,7 @@ class FieldKey {
   }
 }
 
-class FieldValue {
+export class FieldValue {
   _block: ApiKeyValueSetBlock;
   _confidence: number;
   _geometry: Geometry;
@@ -438,7 +438,7 @@ class FieldValue {
   }
 }
 
-class Field {
+export class Field {
   _key: FieldKey | null;
   _value: FieldValue | null;
 
@@ -475,7 +475,7 @@ class Field {
   }
 }
 
-class Form {
+export class Form {
   _fields: Field[];
   _fieldsMap: { [keyText: string]: Field };
 
@@ -507,7 +507,7 @@ class Form {
   }
 }
 
-class Cell {
+export class Cell {
   _block: ApiCellBlock;
   _confidence: number;
   _rowIndex: number;
@@ -585,7 +585,7 @@ class Cell {
   }
 }
 
-class Row {
+export class Row {
   _cells: Cell[];
 
   constructor() {
@@ -600,7 +600,7 @@ class Row {
   }
 }
 
-class Table {
+export class Table {
   _block: ApiTableBlock;
   _confidence: number;
   _geometry: Geometry;
@@ -655,7 +655,7 @@ class Table {
   }
 }
 
-class Page {
+export class Page {
   _blocks: ApiBlock[];
   _text: string;
   _lines: Line[];

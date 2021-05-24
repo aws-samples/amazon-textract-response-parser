@@ -35,13 +35,15 @@ TypeScript users can either **build** this package as described in the JavaScrip
 
 ## Usage
 
+If you're using TypeScript, you may need to typecast your input JSON while loading it. The `ApiResponsePage` interface exposed and expected by this module is subtly different from - but functionally compatible with - the output types produced by the [AWS SDK for JavaScript Textract Client](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-textract/index.html).
+
 For example, assuming you have the library in a local folder called `trp`:
 
 ```typescript
-import { TextractDocument } from "./trp";
+import { ApiResponsePage, TextractDocument } from "./trp";
 
 // Create a TextractDocument from your raw Textract response JSON:
-const doc = new TextractDocument(require("./my-textract-response.json"));
+const doc = new TextractDocument(require("./my-textract-response.json") as ApiResponsePage);
 
 // Navigate the document hierarchy:
 console.log(`Opened doc with ${doc.pages.length} pages`);
@@ -53,3 +55,15 @@ const addr = doc.pages[0].form.getFieldByKey("Address").value?.text;
 // ...and tables:
 const header_strs = doc.pages[0].tables[0].rows[0].cells.map(c => c.text);
 ```
+
+For more examples of how the library can be used, you can refer to the [tests](tests/) folder and/or the source code.
+
+
+## Development
+
+The integration tests for this library validate the end-to-end toolchain for calling Amazon Textract and parsing the result, so note that to run the full `npm run test` command:
+
+1. Your environment will need to be configured with a login to AWS (e.g. via the [AWS CLI](https://aws.amazon.com/cli/))
+2. Billable API requests may be made
+
+You can alternatively run just the local/unit tests via `npm run test:unit`.
