@@ -6,6 +6,10 @@ You can use Textract response parser library to easily parser JSON returned by A
 
 For documentation on usage see: [src-python/README.md](src-python/README.md)
 
+## JavaScript/TypeScript Usage
+
+For documentation on usage see: [src-js/README.md](src-js/README.md)
+
 ## C# Usage
 
 ### Forms
