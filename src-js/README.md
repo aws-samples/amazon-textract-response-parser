@@ -14,7 +14,7 @@ This draft package is not yet published to NPM. Depending on the nature of your 
 
 You'll need to download this source code (written in TypeScript) and then compile the JavaScript yourself.
 
-- Download this folder to an environment where [NodeJS](https://nodejs.org/en/) is installed, and then run the following in your terminal to build the library:
+Download this folder to an environment where [NodeJS](https://nodejs.org/en/) is installed, and then run the following in your terminal to build the library:
 
 ```sh
 # (Install the dev dependencies from package.json)
@@ -23,9 +23,29 @@ npm install --dev
 npm run build
 ```
 
-- You can now copy the contents of `dist/` into your JavaScript project. For example, copying in this folder as `trp` within your codebase.
+Once the build is complete, you can use either the files in:
 
-> ⚠️ **Note:** The built JS should support most modern browsers (it's [ES6](https://caniuse.com/?search=es6)) but it's **not minified** - so if you're planning to serve it direct to users at high volume, you might want to consider minifying to optimize your bandwidth usage and page load times.
+- `dist/umd`, for NodeJS or other [Universal Module Definition](https://github.com/umdjs/umd)-compatible environments, or
+- `dist/browser`, for use directly in the browser with no module framework.
+
+**NodeJS example:**
+
+```js
+const { TextractDocument } = require("./path/to/dist/umd"); // Probably rename the folder...
+```
+
+**Browser example:**
+
+```html
+<script src="path/to/dist/browser/trp.min.js"></script>
+<!-- or -->
+<script>{Contents of trp.min.js}</script>
+
+<script>
+  // Use via `trp`:
+  var doc = new trp.TextractDocument(...);
+</script>
+```
 
 
 ### For TypeScript projects
