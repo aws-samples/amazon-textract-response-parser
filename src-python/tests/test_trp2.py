@@ -1,4 +1,3 @@
-from trp import t_pipeline
 from trp.t_pipeline import add_page_orientation, order_blocks_by_geo
 import trp.trp2 as t2
 import trp as t1
@@ -6,8 +5,7 @@ import json
 import os
 import pytest
 from trp import Document
-from typing import List
-from tabulate import tabulate
+from uuid import uuid4
 
 current_folder = os.path.dirname(os.path.realpath(__file__))
 
@@ -64,32 +62,6 @@ def test_tblock_order_block_by_geo_multi_page():
     assert "Page 1 - Value 2.1.1" == doc.pages[0].tables[1].rows[0].cells[0].text.strip()
 
 
-
-def test_tblock_order_blocks_by_geo():
-    p = os.path.dirname(os.path.realpath(__file__))
-    f = open(os.path.join(p, "data/gib.json"))
-    j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
-    new_order = order_blocks_by_geo(t_document)
-    doc = t1.Document(t2.TDocumentSchema().dump(new_order))
-    assert "Value 1.1.1" == doc.pages[0].tables[0].rows[0].cells[0].text.strip(
-    )
-    assert "Value 2.1.1" == doc.pages[0].tables[1].rows[0].cells[0].text.strip(
-    )
-    assert "Value 3.1.1" == doc.pages[0].tables[2].rows[0].cells[0].text.strip(
-    )
-
-def test_tblock_order_block_by_geo_multi_page():
-    p = os.path.dirname(os.path.realpath(__file__))
-    f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
-    j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
-    t_document = order_blocks_by_geo(t_document)
-    doc = t1.Document(t2.TDocumentSchema().dump(t_document))
-    assert "Page 1 - Value 1.1.1" == doc.pages[0].tables[0].rows[0].cells[0].text.strip()
-    assert "Page 1 - Value 2.1.1" == doc.pages[0].tables[1].rows[0].cells[0].text.strip()
-
-
 def test_custom_tblock():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib.json"))
@@ -118,60 +90,60 @@ def test_custom_page_orientation(json_response):
     j = json.load(f)
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)
     t_document = add_page_orientation(t_document)
-    assert -1 < t_document.pages[0].custom['Orientation'] < 2
+    assert -1 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 2
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_10_degrees.json"))
     j = json.load(f)
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)
     t_document = add_page_orientation(t_document)
-    assert 5 < t_document.pages[0].custom['Orientation'] < 15
+    assert 5 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 15
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__15_degrees.json"))
     j = json.load(f)
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)
     t_document = add_page_orientation(t_document)
-    assert 10 < t_document.pages[0].custom['Orientation'] < 20
+    assert 10 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 20
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__25_degrees.json"))
     j = json.load(f)
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)
     t_document = add_page_orientation(t_document)
-    assert 17 < t_document.pages[0].custom['Orientation'] < 30
+    assert 17 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 30
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__180_degrees.json"))
     j = json.load(f)
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)
     t_document = add_page_orientation(t_document)
-    assert 170 < t_document.pages[0].custom['Orientation'] < 190
+    assert 170 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 190
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__270_degrees.json"))
     j = json.load(f)
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)
     t_document = add_page_orientation(t_document)
-    assert -100 < t_document.pages[0].custom['Orientation'] < -80
+    assert -100 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < -80
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__90_degrees.json"))
     j = json.load(f)
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)
     t_document = add_page_orientation(t_document)
-    assert 80 < t_document.pages[0].custom['Orientation'] < 100
+    assert 80 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 100
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__minus_10_degrees.json"))
     j = json.load(f)
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)
     t_document = add_page_orientation(t_document)
-    assert -10 < t_document.pages[0].custom['Orientation'] < 5
+    assert -10 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 5
 
     doc = t1.Document(t2.TDocumentSchema().dump(t_document))
     for page in doc.pages:
-        assert page.custom['Orientation']
+        assert page.custom['PageOrientationBasedOnWords']
 
 
 
@@ -188,23 +160,6 @@ def test_next_token_response():
     t_document = add_page_orientation(t_document)
     assert t_document.pages[0].custom
 
-    doc = t1.Document(t2.TDocumentSchema().dump(t_document))
-    for page in doc.pages:
-        print(page.custom['Orientation'])
-
-# def rotate(origin:t2.TPoint, point=t2.TPoint, angle_degrees:float=180)->t2.TPoint:
-#     import math
-#     angle_radians = math.radians(angle_degrees)
-#     qx = origin.x + math.cos(angle_radians) * (point.x - origin.x) - math.sin(angle_radians) * (point.y - origin.y)
-#     qy = origin.y + math.sin(angle_radians) * (point.x - origin.x) + math.cos(angle_radians) * (point.y - origin.y)
-#     return t2.TPoint(x=qx, y=qy)
-
-# def rotate(origin:t2.TPoint, point=t2.TPoint, angle_degrees:float=180)->t2.TPoint:
-#     import math
-#     angle_radians = math.radians(angle_degrees)
-#     qx = origin.y + math.cos(angle_radians) * (point.y - origin.y) - math.sin(angle_radians) * (point.x - origin.x)
-#     qy = origin.x + math.sin(angle_radians) * (point.y - origin.y) + math.cos(angle_radians) * (point.x - origin.x)
-#     return t2.TPoint(x=qx, y=qy)
 
 
 def test_rotate_point():
@@ -276,9 +231,9 @@ def test_adjust_bounding_boxes_and_polygons_to_orientation():
     t_document = add_page_orientation(t_document)
     new_order = order_blocks_by_geo(t_document)
     doc = t1.Document(t2.TDocumentSchema().dump(t_document))
-    for line in doc.pages[0].lines:
-        print("Line: {}".format(line.text))
-    print("=========================== after rotation ========================")
+    # for line in doc.pages[0].lines:
+    #     print("Line: {}".format(line.text))
+    # print("=========================== after rotation ========================")
     # doc = t1.Document(t2.TDocumentSchema().dump(t_document))
     # key = "Date:"
     # fields = doc.pages[0].form.searchFieldsByKey(key)
@@ -299,8 +254,8 @@ def test_adjust_bounding_boxes_and_polygons_to_orientation():
         out_file.write(t2.TDocumentSchema().dumps(t_document))
 
     doc = t1.Document(t2.TDocumentSchema().dump(t_document))
-    for line in doc.pages[0].lines:
-        print("Line: {}".format(line.text))
+    # for line in doc.pages[0].lines:
+    #     print("Line: {}".format(line.text))
 
 
     # p = t2.TPoint(x=0.75, y=0.03)
@@ -311,3 +266,60 @@ def test_adjust_bounding_boxes_and_polygons_to_orientation():
     # print(rotate(origin=t2.TPoint(x=0.5, y=0.5), point = t2.TPoint(x=.75, y=0.03)))
 
 
+def test_scale(caplog):
+    p1:t2.TPoint = t2.TPoint(x=0.5, y=0.5)
+    p1.scale(doc_width=10, doc_height=10)
+    assert(p1 == t2.TPoint(x=5, y=5))
+    b1:t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.5, top=0.5)
+    b1.scale(doc_width=10, doc_height=10)
+    assert(b1 == t2.TBoundingBox(width=1, height=1, left=5, top=5))
+
+    p1:t2.TPoint = t2.TPoint(x=0.5, y=0.5)
+    b1:t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.5, top=0.5)
+    g1:t2.TGeometry = t2.TGeometry(bounding_box=b1, polygon=[p1])
+    g1.scale(doc_width=10, doc_height=10)
+    assert (g1 == t2.TGeometry(bounding_box=t2.TBoundingBox(width=1, height=1, left=5, top=5), polygon=[t2.TPoint(x=5, y=5)]))
+
+
+def test_ratio(caplog):
+    p1:t2.TPoint = t2.TPoint(x=0.5, y=0.5)
+    p2:t2.TPoint = t2.TPoint(x=5, y=5)
+    p2.ratio(doc_width=10, doc_height=10)
+    assert(p1 == p2)
+
+    b1:t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.5, top=0.5)
+    b2:t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=5, top=5)
+    b2.ratio(doc_width=10, doc_height=10)
+    assert(b1 == b2)
+
+    p1:t2.TPoint = t2.TPoint(x=0.5, y=0.5)
+    p2:t2.TPoint = t2.TPoint(x=5, y=5)
+    b1:t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.5, top=0.5)
+    b2:t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=5, top=5)
+
+    g1:t2.TGeometry = t2.TGeometry(bounding_box=b1, polygon=[p1])
+    g2:t2.TGeometry = t2.TGeometry(bounding_box=b2, polygon=[p2])
+
+    g2.ratio(doc_width=10, doc_height=10)
+    assert (g1 == g2)
+
+def test_get_relationships_for_type(caplog):
+    # existing relationships
+    p = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(p, "data/gib.json")) as f:
+        j = json.load(f)
+        t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+        page = t_document.pages[0]
+        new_block = t2.TBlock(id=str(uuid4()))
+        t_document.add_block(new_block)
+        page.add_ids_to_relationships([new_block.id])
+        assert t_document.get_block_by_id(new_block.id) == new_block
+
+    #empty relationships
+    t_document:t2.TDocument = t2.TDocument()
+    t_document.add_block(t2.TBlock(id=str(uuid4()), block_type="PAGE"))
+    page = t_document.pages[0]
+    new_block = t2.TBlock(id=str(uuid4()))
+    t_document.add_block(new_block)
+    page.add_ids_to_relationships([new_block.id])
+    assert t_document.get_block_by_id(new_block.id) == new_block

@@ -1,10 +1,16 @@
 from __future__ import annotations
 from typing import List, Set, Optional
+from dataclasses import dataclass, field
 import marshmallow as m
 from marshmallow import post_load
 from enum import Enum, auto
+from uuid import uuid4
 import math
+import statistics
+import logging
 
+from marshmallow.fields import String
+logger = logging.getLogger(__name__)
 
 class BaseSchema(m.Schema):
     """
@@ -30,39 +36,20 @@ class TextractBlockTypes(Enum):
     CELL = auto()
     KEY_VALUE_SET = auto()
     PAGE = auto()
+    SELECTION_ELEMENT = auto()
 
+@dataclass(init=True, eq=True, repr=True)
 class TPoint():
-    def __init__(self, x: float, y: float):
-        self.__x = x
-        self.__y = y
+    x:float
+    y:float
 
-    @property
-    def x(self):
-        return self.__x
+    def scale(self, doc_width=None, doc_height=None):
+        self.x: float =  self.x * doc_width
+        self.y: float =  self.y * doc_height
 
-    @property
-    def y(self):
-        return self.__y
-
-    @x.setter
-    def x(self, value):
-        self.__x = value
-
-    @y.setter
-    def y(self, value):
-        self.__y = value
-
-    def __str__(self) -> str:
-        return f"Point: x: {self.__x}, y: {self.__y}"
-
-    def __repr__(self) -> str:
-        return f"Point: x: {self.__x}, y: {self.__y}"
-
-    def __eq__(self, o: object) -> bool:
-        return isinstance(o, TPoint) and self.__x == o.__x and self.__y == o.__y
-
-    def __ne__(self, o: object) -> bool:
-        return not self == o
+    def ratio(self, doc_width=None, doc_height=None):
+        self.x: float =  self.x / doc_width
+        self.y: float =  self.y / doc_height
 
     # TODO: add optimization for rotation of 90, 270, 180, -90, -180, -270 degrees
     def rotate(self, origin_x:float=0.5, origin_y:float=0.5, degrees:float=180, force_limits:bool=True)->TPoint:
@@ -73,8 +60,8 @@ class TPoint():
         angle = math.radians(degrees)
         ox = origin_x
         oy = origin_y
-        px = self.__x
-        py = self.__y
+        px = self.x
+        py = self.y
         cos_result = math.cos(angle)
         sin_result = math.sin(angle)
         new_x = ox + cos_result * (px - ox) - sin_result * (py - oy)
@@ -82,33 +69,38 @@ class TPoint():
         if force_limits:
             new_x = max(min(new_x, 1), 0)
             new_y = max(min(new_y, 1), 0)
-        self.__x = new_x
-        self.__y = new_y
+        self.x = new_x
+        self.y = new_y
         return self
 
 
+@dataclass(eq=True, init=True, repr=True, order=True, unsafe_hash=True)
 class TBoundingBox():
-    def __init__(self, width: float, height: float, left: float, top: float):
-        self.__width = width
-        self.__height = height
-        self.__left = left
-        self.__top = top
+    width:float
+    height:float
+    left:float
+    top:float
+
+    def scale(self, doc_width=None, doc_height=None):
+        self.top: float = self.top * doc_height
+        self.height: float = self.height * doc_height
+        self.left: float = self.left * doc_width
+        self.width: float = self.width * doc_width
+
+    def ratio(self, doc_width=None, doc_height=None):
+        self.top: float = self.top / doc_height
+        self.height: float = self.height / doc_height
+        self.left: float = self.left / doc_width
+        self.width: float = self.width / doc_width
 
     @property
-    def width(self):
-        return self.__width
-
-    @property
-    def height(self):
-        return self.__height
-
-    @property
-    def left(self):
-        return self.__left
-
-    @property
-    def top(self):
-        return self.__top
+    def points(self)->List[TPoint]:
+        points:List[TPoint] = list()
+        points.append(TPoint(x=self.left, y=self.top))
+        points.append(TPoint(x=self.left + self.width, y = self.top))
+        points.append(TPoint(x=self.left, y=self.top + self.height))
+        points.append(TPoint(x=self.left + self.width, y = self.top + self.height))
+        return points 
 
     def rotate(self, origin:TPoint=TPoint(0,0), degrees:float=180)->TBoundingBox:
         """
@@ -129,14 +121,11 @@ class TBoundingBox():
         new_height = ymax - ymin
         new_left = xmin
         new_top = ymin
-        self.__width = new_width
-        self.__height = new_height
-        self.__left = new_left
-        self.__top = new_top
+        self.width = new_width
+        self.height = new_height
+        self.left = new_left
+        self.top = new_top
         return self
-
-    def __str__(self) -> str:
-        return f"width: {self.width}, height: {self.height}, left: {self.left}, top: {self.top}"
 
 
 class TBoundingBoxSchema(BaseSchema):
@@ -160,25 +149,22 @@ class TPointSchema(BaseSchema):
     def make_tpoint(self, data, **kwargs):
         return TPoint(**data)
 
-
+@dataclass(eq=True, init=True, repr=True, order=True, unsafe_hash=True)
 class TGeometry():
-    def __init__(self,
-                 bounding_box: TBoundingBox = None,
-                 polygon: List[TPoint] = None):
-        self.__bounding_box = bounding_box
-        self.__polygon = polygon
+    bounding_box:TBoundingBox
+    polygon:List[TPoint]
 
-    @property
-    def bounding_box(self):
-        return self.__bounding_box
+    def scale(self, doc_width=None, doc_height=None):
+        self.bounding_box.scale(doc_width=doc_width, doc_height=doc_height)
+        [ x.scale(doc_width=doc_width, doc_height=doc_height) for x in self.polygon ]
 
-    @property
-    def polygon(self):
-        return self.__polygon
+    def ratio(self, doc_width=None, doc_height=None):
+        self.bounding_box.ratio(doc_width=doc_width, doc_height=doc_height)
+        [ x.ratio(doc_width=doc_width, doc_height=doc_height) for x in self.polygon ]
 
     def rotate(self, origin:TPoint=TPoint(0,0), degrees:float=180):
-        self.__bounding_box.rotate(origin=origin, degrees=degrees)
-        [p.rotate(origin_x=origin.x, origin_y=origin.y) for p in self.__polygon ]
+        self.bounding_box.rotate(origin=origin, degrees=degrees)
+        [p.rotate(origin_x=origin.x, origin_y=origin.y) for p in self.polygon ]
 
 class TGeometrySchema(BaseSchema):
     bounding_box = m.fields.Nested(TBoundingBoxSchema,
@@ -195,21 +181,10 @@ class TGeometrySchema(BaseSchema):
         return TGeometry(**data)
 
 
+@dataclass(eq=True, init=True, repr=True)
 class TRelationship():
-    def __init__(self, type: str = None, ids: List[str] = None):
-        self.__type = type
-        self.__ids = ids
-
-    @property
-    def type(self):
-        return self.__type
-
-    @property
-    def ids(self):
-        return self.__ids
-
-    def __repr__(self):
-        return f'type: {self.__type}, ids: {self.__ids}'
+    type: str  = field(default=None) #type: ignore
+    ids: List[str] = field(default=None) #type: ignore
 
 
 class TRelationshipSchema(BaseSchema):
@@ -223,118 +198,54 @@ class TRelationshipSchema(BaseSchema):
     def make_trelationship(self, data, **kwargs):
         return TRelationship(**data)
 
-
+@dataclass(eq=True, init=True, repr=True, order=True)
 class TBlock():
     """
     https://docs.aws.amazon.com/textract/latest/dg/API_Block.html
     as per this documentation none of the values is actually required
     """
-    def __init__(self,
-                 block_type: str = None,
-                 geometry: TGeometry = None,
-                 id: str = None,
-                 relationships: List[TRelationship] = None,
-                 confidence: float = None,
-                 text: str = None,
-                 column_index: int = None,
-                 column_span: int = None,
-                 entity_types: List[str] = None,
-                 page: int = None,
-                 row_index: int = None,
-                 row_span: int = None,
-                 selection_status: str = None,
-                 text_type: str = None,
-                 custom: dict = None):
-        self.__block_type = block_type
-        self.__geometry = geometry
-        self.__id = id
-        self.__relationships = relationships
-        self.__confidence = confidence
-        self.__text = text
-        self.__column_index = column_index
-        self.__column_span = column_span
-        self.__entity_types = entity_types
-        self.__page = page
-        self.__row_index = row_index
-        self.__row_span = row_span
-        self.__selection_status = selection_status
-        self.__text_type = text_type
-        self.__custom = custom
+    geometry: TGeometry = field(default=None) #type: ignore
+    id: str = field(default=None) #type: ignore
+    block_type: str = field(default="") #type: ignore
+    relationships: List[TRelationship] = field(default=None) #type: ignore
+    confidence: float  = field(default=None) #type: ignore
+    text: str = field(default=None) #type: ignore
+    column_index: int = field(default=None) #type: ignore
+    column_span: int = field(default=None) #type: ignore
+    entity_types: List[str] = field(default=None) #type: ignore
+    page: int = field(default=None) #type: ignore
+    row_index: int = field(default=None) #type: ignore
+    row_span: int = field(default=None) #type: ignore
+    selection_status: str = field(default=None) #type: ignore
+    text_type: str = field(default=None) #type: ignore
+    custom: dict = field(default=None) #type: ignore
 
-    @property
-    def block_type(self):
-        return self.__block_type
+    def __hash__(self):
+        return hash(id)
 
-    @property
-    def geometry(self):
-        return self.__geometry
-
-    @property
-    def id(self):
-        return self.__id
-
-    @property
-    def relationships(self):
-        return self.__relationships
-
-    @relationships.setter
-    def relationships(self, value: List[TRelationship]):
-        self.__relationships = value
-
-    @property
-    def confidence(self):
-        return self.__confidence
-
-    @property
-    def text(self):
-        return self.__text
-
-    @property
-    def column_index(self):
-        return self.__column_index
-
-    @property
-    def column_span(self):
-        return self.__column_span
-
-    @property
-    def entity_types(self):
-        return self.__entity_types
-
-    @property
-    def page(self):
-        return self.__page
-
-    @property
-    def row_index(self):
-        return self.__row_index
-
-    @property
-    def row_span(self):
-        return self.__row_span
-
-    @property
-    def selection_status(self):
-        return self.__selection_status
-
-    @property
-    def text_type(self):
-        return self.__text_type
-
-    @property
-    def custom(self):
-        return self.__custom
-
-    @custom.setter
-    def custom(self, value: dict):
-        self.__custom = value
-
-    def rotate(self, origin:TPoint=TPoint(0,0), degrees:float=180):
-        if self.__geometry:
-            self.__geometry.rotate(origin=origin, degrees=degrees)
+    def get_relationships_for_type(self, relationship_type_list=["CHILD"])->Optional[List[TRelationship]]:
+        if self.relationships:
+            return [r for r in self.relationships if r.type in relationship_type_list ]
         else:
-            print(f"no geometry: {self.text}")
+            return None
 
+    def add_ids_to_relationships(self, ids:List[str], relationships_type:str="CHILD"):
+        relationships = self.get_relationships_for_type(relationship_type_list=relationships_type)
+        if relationships and len(relationships) > 1:
+            raise ValueError(f"more than 1 relationship with same type: {len(relationships)}")
+        if relationships:
+            if not relationships[0].ids:
+                relationships[0].ids = list()
+            relationships[0].ids.extend(ids)
+        else:
+            # empty, set base
+            if not self.relationships:
+                self.relationships = list()
+            self.relationships.append(TRelationship(type=relationships_type, ids=ids))
+
+
+    def rotate(self, origin=TPoint(0.5, 0.5), degrees=180):
+        self.geometry.rotate(origin=origin, degrees=degrees)
 
 class TBlockSchema(BaseSchema):
     block_type = m.fields.String(data_key="BlockType", allow_none=False)
@@ -379,13 +290,9 @@ class TBlockSchema(BaseSchema):
         return TBlock(**data)
 
 
+@dataclass(eq=True, init=True, repr=True)
 class TDocumentMetadata():
-    def __init__(self, pages: int = None):
-        self.__pages = pages
-
-    @property
-    def pages(self):
-        return self.__pages
+    pages:int = field(default=None) #type: ignore
 
 
 class TDocumentMetadataSchema(BaseSchema):
@@ -396,19 +303,10 @@ class TDocumentMetadataSchema(BaseSchema):
         return TDocumentMetadata(**data)
 
 
+@dataclass(eq=True, init=True, repr=True)
 class TWarnings():
-    def __init__(self, error_code: str = None, pages: List[int] = None):
-        self.__pages = pages
-        self.__error_code = error_code
-
-    @property
-    def pages(self):
-        return self.__pages
-
-    @property
-    def error_code(self):
-        return self.__error_code
-
+    error_code: str = field(default=None) #type: ignore
+    pages: List[int] = field(default=None) #type: ignore
 
 class TWarningsSchema(BaseSchema):
     pages = m.fields.List(m.fields.Int,
@@ -424,138 +322,104 @@ class TWarningsSchema(BaseSchema):
         return TWarnings(**data)
 
 
+@dataclass(eq=True, init=True, repr=True)
 class THttpHeaders():
-    def __init__(self,
-                 x_amzn_request_id: str = None,
-                 content_type: str = None,
-                 content_length: int = None,
-                 connection: str = None,
-                 date: str = None):
-        self.__date = date
-        self.__x_amzn_request_id = x_amzn_request_id
-        self.__content_type = content_type
-        self.__content_length = content_length
-        self.__connection = connection
-
-    @property
-    def date(self):
-        return self.__date
-
-    @property
-    def x_amzn_request_id(self):
-        return self.__x_amzn_request_id
-
-    @property
-    def content_type(self):
-        return self.__content_type
-
-    @property
-    def content_length(self):
-        return self.__content_length
-
-    @property
-    def connection(self):
-        return self.__connection
+    x_amzn_request_id: str = field(default=None) #type: ignore
+    content_type: str = field(default=None) #type: ignore
+    content_length: int = field(default=None) #type: ignore
+    connection: str = field(default=None) #type: ignore
+    date: str = field(default=None) #type: ignore
 
 
+@dataclass(eq=True, init=True, repr=True)
 class TResponseMetadata():
-    def __init__(self,
-                 request_id: str = None,
-                 http_status_code: int = None,
-                 retry_attempts: int = None,
-                 http_headers: THttpHeaders = None):
-        self.__request_id = request_id
-        self.__http_status_code = http_status_code
-        self.__retry_attempts = retry_attempts
-        self.__http_headers = http_headers
-
-    @property
-    def request_id(self):
-        return self.__request_id
-
-    @property
-    def http_status_code(self):
-        return self.__http_status_code
-
-    @property
-    def retry_attempts(self):
-        return self.__retry_attempts
-
-    @property
-    def http_headers(self):
-        return self.__http_headers
+    request_id: str = field(default=None) #type: ignore
+    http_status_code: int = field(default=None) #type: ignore
+    retry_attempts: int = field(default=None) #type: ignore
+    http_headers: THttpHeaders = field(default=None) #type: ignore
 
 
+@dataclass(eq=True, init=True, repr=True)
 class TDocument():
-    def __init__(self,
-                 document_metadata: TDocumentMetadata = None,
-                 blocks: List[TBlock] = None,
-                 analyze_document_model_version: str = None,
-                 detect_document_text_model_version: str = None,
-                 status_message: str = None,
-                 warnings: TWarnings = None,
-                 job_status: str = None,
-                 response_metadata: TResponseMetadata = None,
-                 custom: dict = None,
-                 next_token: str = None):
-        self.__document_metatdata = document_metadata
-        self.__blocks = blocks
-        self.__analyze_document_model_version = analyze_document_model_version
-        self.__detect_document_text_model_version = detect_document_text_model_version
-        self.__status_message = status_message
-        self.__next_token = next_token
-        self.__warnings = warnings
-        self.__job_status = job_status
-        self.__response_metadata = response_metadata
-        self.__custom = custom
+    document_metadata: TDocumentMetadata = field(default=None) #type: ignore
+    blocks: List[TBlock] = field(default=None) #type: ignore
+    analyze_document_model_version: str = field(default=None) #type: ignore
+    detect_document_text_model_version: str = field(default=None) #type: ignore
+    status_message: str = field(default=None) #type: ignore
+    warnings: TWarnings = field(default=None) #type: ignore
+    job_status: str = field(default=None) #type: ignore
+    response_metadata: TResponseMetadata = field(default=None) #type: ignore
+    custom: dict = field(default=None) #type: ignore
+    next_token: str = field(default=None) #type: ignore
 
-    @property
-    def document_metadata(self):
-        return self.__document_metatdata
+    def add_block(self, block:TBlock):
+        if not self.blocks:
+            self.blocks = list()
+        self.blocks.append(block)
 
-    @property
-    def blocks(self):
-        return self.__blocks
+    @staticmethod
+    def create_geometry_from_blocks(values:List[TBlock])->TGeometry:
+        all_points = [p.geometry.bounding_box.points for p in values]
+        all_points = [i for sublist in all_points for i in sublist]
+        ymin = min([p.y for p in all_points])
+        xmin = min([p.x for p in all_points])
+        ymax = max([p.y for p in all_points])
+        xmax = max([p.x for p in all_points])
+        new_bb = TBoundingBox(width=ymax-ymin, height=xmax-xmin, top=ymin, left=xmin)
+        new_poly = [TPoint(x=xmin, y=ymin),
+                    TPoint(x=xmax, y=ymin),
+                    TPoint(x=xmax, y=ymax),
+                    TPoint(x=xmin, y=ymax)]
+        return TGeometry(bounding_box=new_bb, polygon=new_poly)
 
-    @blocks.setter
-    def blocks(self, value: List[TBlock]):
-        self.__blocks = value
+    @staticmethod
+    def create_value_block(values:List[TBlock])->TBlock:
+        value_block = TBlock(id=str(uuid4()), block_type="KEY_VALUE_SET", entity_types=["VALUE"])
+        value_block.add_ids_to_relationships([b.id for b in values])
+        value_block.geometry = TDocument.create_geometry_from_blocks(values=values)
+        value_block.confidence = statistics.mean([b.confidence for b in values])
+        return value_block
 
-    @property
-    def analyze_document_model_version(self):
-        return self.__analyze_document_model_version
+    def create_virtual_block(self, text:str, page_block:TBlock)->TBlock:
+        tblock = TBlock(id=str(uuid4()),
+                                block_type="WORD",
+                                text=text,
+                                geometry=TGeometry(bounding_box=TBoundingBox(width=0, height=0, left=0, top=0),
+                                                        polygon=[TPoint(x=0,y=0), TPoint(x=0,y=0)]),
+                                confidence=99,
+                                text_type="VIRTUAL")
+        page_block.add_ids_to_relationships([tblock.id])
+        self.add_block(tblock)
+        return tblock
 
-    @property
-    def detect_document_text_model_version(self):
-        return self.__detect_document_text_model_version
 
-    @property
-    def status_message(self):
-        return self.__status_message
+    def add_key_values(self, key_name:str, values:List[TBlock], page_block:TBlock):
+        if not key_name:
+            raise ValueError("need values and key_name")
+        if not values:
+            logger.debug(f"add_key_values: empty values for key: {key_name}, will create virtual empty block")
+            values = [ self.create_virtual_block(text="", page_block=page_block) ]
 
-    @property
-    def warnings(self):
-        return self.__warnings
+        if values[0].page:
+            page_block = self.pages[values[0].page - 1]
+        else:
+            page_block = self.pages[0]
 
-    @property
-    def job_status(self):
-        return self.__job_status
+        value_block = TDocument.create_value_block(values=values)
+        self.add_block(value_block)
+        page_block.add_ids_to_relationships([value_block.id])
+        virtual_block = self.create_virtual_block(text=key_name, page_block=page_block)
 
-    @property
-    def response_metadata(self):
-        return self.__response_metadata
+        key_block = TBlock(id=str(uuid4()),
+                            block_type="KEY_VALUE_SET",
+                            entity_types=["KEY"],
+                            confidence=99,
+                            geometry=TGeometry(bounding_box=TBoundingBox(width=0, height=0, left=0, top=0),
+                                        polygon=[TPoint(x=0,y=0), TPoint(x=0,y=0)]),)
+        key_block.add_ids_to_relationships(relationships_type="VALUE", ids=[value_block.id])
+        key_block.add_ids_to_relationships(relationships_type="CHILD", ids=[virtual_block.id])
+        self.add_block(key_block)
 
-    @property
-    def next_token(self):
-        return self.__next_token
-
-    @property
-    def custom(self):
-        return self.__custom
-
-    @custom.setter
-    def custom(self, value: dict):
-        self.__custom = value
 
     def rotate(self, page:TBlock=None, origin:TPoint=TPoint(x=0.5, y=0.5), degrees:float=None)->None:
         # FIXME: add dimension. the relative scale messes up the new coordinates, have to use the actual image scale
@@ -567,7 +431,7 @@ class TDocument():
         [b.rotate(origin=origin, degrees=degrees) for b in self.relationships_recursive(block=page)]
 
     def get_block_by_id(self, id: str) -> TBlock:
-        for b in self.__blocks:
+        for b in self.blocks:
             if b.id == id:
                 return b
         raise ValueError(f"no block for id: {id}")
@@ -604,42 +468,35 @@ class TDocument():
         ]
 
     def get_child_relations(self, page: TBlock):
-        return self.__get_blocks_by_type(page=page)
+        return self.get_blocks_by_type(page=page)
 
     # TODO: not ideal imho. customers want pages.tables or pages.forms like the current trp
     def tables(self, page: TBlock) -> List[TBlock]:
-        return self.__get_blocks_by_type(
+        return self.get_blocks_by_type(
             page=page, block_type_enum=TextractBlockTypes.TABLE)
 
-    def __get_blocks_by_type(self,
+    def get_blocks_by_type(self,
                              block_type_enum: TextractBlockTypes = None,
                              page: TBlock = None) -> List[TBlock]:
-        table_list: List[TBlock] = list()
         if page:
-            for r in page.relationships:
-                if r.type == "CHILD":
-                    for id in r.ids:
-                        b = self.get_block_by_id(id)
-                        if b:
-                            if block_type_enum and b.block_type == block_type_enum.name:
-                                table_list.append(b)
-                            else:
-                                table_list.append(b)
-            return table_list
+            return [b for b in self.relationships_recursive(block=page) if b.block_type == block_type_enum.name]
         else:
-            for b in self.blocks:
-                if b.block_type == block_type_enum:
-                    table_list.append(b)
-            return table_list
+            return [b for b in self.blocks]
 
     # TODO: not ideal imho. customers want pages.tables or pages.forms like the current trp
     def forms(self, page: TBlock) -> List[TBlock]:
-        return self.__get_blocks_by_type(
+        return self.get_blocks_by_type(
             page=page, block_type_enum=TextractBlockTypes.KEY_VALUE_SET)
 
     def lines(self, page: TBlock) -> List[TBlock]:
-        return self.__get_blocks_by_type(
+        return self.get_blocks_by_type(
             page=page, block_type_enum=TextractBlockTypes.LINE)
+
+    def selection_elements(self, page:TBlock)->List[TBlock]:
+        return self.get_blocks_by_type(
+            page=page, block_type_enum=TextractBlockTypes.SELECTION_ELEMENT)
+
+        
 
 
 class THttpHeadersSchema(BaseSchema):
