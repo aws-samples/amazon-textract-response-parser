@@ -554,6 +554,45 @@ class TDocument():
         return self.__get_blocks_by_type(
             page=page, block_type_enum=TextractBlockTypes.LINE)
 
+    def merge_tables(self, table_ids):
+        child_tables = []
+        for page in self.pages:
+            tables = self.filter_blocks_by_type(
+                block_list=self.get_child_relations(page=page),
+                textract_block_type=[TextractBlockTypes.TABLE])
+        
+            for table in tables:
+                if table.id == table_ids[0]:
+                    parent_table = table
+                elif table.id in table_ids:
+                    child_tables.append(table)
+
+        for table in child_tables:
+            parent_table.relationships[0].ids.extend(r for r in table.relationships[0].ids if r not in parent_table.relationships[0].ids)
+
+        
+    def link_tables(self, table_ids):
+        for page in self.pages:
+            tables = self.filter_blocks_by_type(
+                block_list=self.get_child_relations(page=page),
+                textract_block_type=[TextractBlockTypes.TABLE])
+   
+            for table in tables:
+                for i in range(0,len(table_ids)):
+                    if table.id == table_ids[i]:
+                        if i>0:
+                            if table.custom:
+                                table.custom['previous_table']=table_ids[i-1]
+                            else:
+                                table.custom = {'previous_table':table_ids[i-1]}
+                    
+                        if i<len(table_ids)-1:
+                            if table.custom:
+                                table.custom['next_table']=table_ids[i+1]
+                            else:
+                                table.custom = {'next_table':table_ids[i+1]}
+
+
 
 class THttpHeadersSchema(BaseSchema):
     date = m.fields.String(data_key="date", required=False)
