@@ -554,7 +554,48 @@ class TDocument():
         return self.__get_blocks_by_type(
             page=page, block_type_enum=TextractBlockTypes.LINE)
 
-
+    def delete_blocks(self,block_id:List[str]):
+        for b in block_id:
+            block = self.get_block_by_id(b)
+            self.blocks.remove(block)
+    
+    def merge_tables(self, table_array_ids:List[List[str]]):
+        for table_ids in table_array_ids:
+            if len(table_ids)<2:
+                raise ValueError("no parent and child tables given")
+            parent_table = self.get_block_by_id(table_ids[0])
+            if type(parent_table) is not TBlock:
+                raise ValueError("parent table is invalid")
+            table_ids.pop(0)        
+            child_tables = []
+            parent_relationships: TRelationship
+            for r in parent_table.relationships:
+                if r.type == "CHILD":
+                    parent_relationships = r
+            for table_id in table_ids:
+                child_table = self.get_block_by_id(table_id)
+                for r in child_table.relationships:
+                    if r.type == "CHILD":
+                        parent_relationships.ids.extend(cell for cell in r.ids if cell not in parent_relationships.ids)
+                self.delete_blocks([table_id])
+        
+    def link_tables(self, table_array_ids:List[List[str]]):
+        for table_ids in table_array_ids:
+            if len(table_ids)<2:
+                raise ValueError("no parent and child tables given")
+            for i in range(0,len(table_ids)):
+                table = self.get_block_by_id(table_ids[i])
+                if i>0:
+                    if table.custom:
+                        table.custom['previous_table']=table_ids[i-1]
+                    else:
+                        table.custom = {'previous_table':table_ids[i-1]}
+                if i<len(table_ids)-1:
+                    if table.custom:
+                        table.custom['next_table']=table_ids[i+1]
+                    else:
+                        table.custom = {'next_table':table_ids[i+1]}
+                        
 class THttpHeadersSchema(BaseSchema):
     date = m.fields.String(data_key="date", required=False)
     x_amzn_request_id = m.fields.String(data_key="x-amzn-requestid",
