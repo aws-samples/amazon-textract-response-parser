@@ -3,7 +3,7 @@
 import json
 import sys
 from trp.trp2 import TDocumentSchema
-from trp.t_pipeline import order_blocks_by_geo, add_page_orientation
+from trp.t_pipeline import order_blocks_by_geo, add_page_orientation, pipeline_merge_tables
 import argparse
 from trp import __version__
 from enum import Enum, auto

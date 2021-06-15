@@ -1,5 +1,5 @@
 import logging
-from t_tables import ExecuteTableValidations
+from trp.t_tables import ExecuteTableValidations
 import trp.trp2 as t2
 from typing import List, Callable
 import math
