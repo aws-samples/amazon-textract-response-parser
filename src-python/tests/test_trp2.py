@@ -197,13 +197,14 @@ def test_merge_tables():
     post_merge_tbl1_lastcell = t_document.get_block_by_id(tbl_id1).relationships[0].ids[-1]
     post_merge_tbl1_last_row = t_document.get_block_by_id(post_merge_tbl1_lastcell).row_index
     assert post_merge_tbl1_cells_no == pre_merge_tbl1_cells_no + pre_merge_tbl2_cells_no
-    assert post_merge_tbl1_last_row == pre_merge_tbl1_last_row+ pre_merge_tbl2_last_row
-    
+    assert pre_merge_tbl2_last_row
+    assert post_merge_tbl1_last_row == pre_merge_tbl1_last_row + pre_merge_tbl2_last_row
+
 def test_delete_blocks():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)   
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
     tbl_id1 = 'fed02fb4-1996-4a15-98dc-29da193cc476'
     tbl_id2 = '47c6097f-02d5-4432-8423-13c05fbfacbd'
     pre_delete_block_no = len(t_document.blocks)

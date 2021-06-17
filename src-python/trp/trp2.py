@@ -2,6 +2,9 @@ from typing import List, Optional, Set
 import marshmallow as m
 from marshmallow import post_load
 from enum import Enum, auto
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class BaseSchema(m.Schema):
@@ -494,9 +497,10 @@ class TDocument():
             all_relations = list(itertools.chain(*[ r.ids for r in block.relationships if r]))
             all_block = [self.get_block_by_id(id) for id in all_relations if id] 
             for b in all_block:
-                yield b
-                for child in self.__relationships_recursive(block=b):
-                    yield child
+                if b:
+                    yield b
+                    for child in self.__relationships_recursive(block=b):
+                        yield child
 
 
     def relationships_recursive(self, block:TBlock)->Optional[Set[TBlock]]:
@@ -560,8 +564,11 @@ class TDocument():
     def delete_blocks(self,block_id:List[str]):
         for b in block_id:
             block = self.get_block_by_id(b)
-            self.blocks.remove(block)
-    
+            if block:
+                self.blocks.remove(block)
+            else:
+                logger.warning(f"delete_blocks: did not get block for id: {b}")
+
     def merge_tables(self, table_array_ids:List[List[str]]):
         for table_ids in table_array_ids:
             if len(table_ids)<2:
@@ -569,23 +576,24 @@ class TDocument():
             parent_table = self.get_block_by_id(table_ids[0])
             if type(parent_table) is not TBlock:
                 raise ValueError("parent table is invalid")
-            table_ids.pop(0)        
-            child_tables = []
-            parent_relationships: TRelationship
+            table_ids.pop(0)
+            parent_relationships: TRelationship = TRelationship()
             for r in parent_table.relationships:
                 if r.type == "CHILD":
                     parent_relationships = r
             for table_id in table_ids:
-                parent_last_row = self.get_block_by_id(parent_relationships.ids[-1]).row_index
-                child_table = self.get_block_by_id(table_id)
-                for r in child_table.relationships:
-                    if r.type == "CHILD":
-                        for cell_id in r.ids:
-                            cell_block = self.get_block_by_id(cell_id)
-                            cell_block.row_index= parent_last_row + cell_block.row_index
-                            if cell_id not in parent_relationships.ids:
-                                parent_relationships.ids.append(cell_id)
-                self.delete_blocks([table_id])
+                if parent_relationships:
+                    parent_last_row = self.get_block_by_id(parent_relationships.ids[-1]).row_index
+                    child_table = self.get_block_by_id(table_id)
+                    for r in child_table.relationships:
+                        if r.type == "CHILD":
+                            for cell_id in r.ids:
+                                cell_block = self.get_block_by_id(cell_id)
+                                if cell_block.row_index:
+                                    cell_block.row_index= parent_last_row + cell_block.row_index
+                                    if parent_relationships.ids and cell_id not in parent_relationships.ids:
+                                        parent_relationships.ids.append(cell_id)
+                    self.delete_blocks([table_id])
 
     def link_tables(self, table_array_ids:List[List[str]]):
         for table_ids in table_array_ids:
@@ -603,7 +611,7 @@ class TDocument():
                         table.custom['next_table']=table_ids[i+1]
                     else:
                         table.custom = {'next_table':table_ids[i+1]}
-                        
+
 class THttpHeadersSchema(BaseSchema):
     date = m.fields.String(data_key="date", required=False)
     x_amzn_request_id = m.fields.String(data_key="x-amzn-requestid",
