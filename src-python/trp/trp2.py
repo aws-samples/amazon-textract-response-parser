@@ -262,8 +262,6 @@ class TBlock():
     def row_index(self, value: int):
         self.__row_index = value
     
-
-
 class TBlockSchema(BaseSchema):
     block_type = m.fields.String(data_key="BlockType", allow_none=False)
     geometry = m.fields.Nested(TGeometrySchema,
