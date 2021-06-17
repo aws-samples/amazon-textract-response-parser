@@ -258,6 +258,11 @@ class TBlock():
     def custom(self, value: dict):
         self.__custom = value
 
+    @row_index.setter
+    def row_index(self, value: int):
+        self.__row_index = value
+    
+
 
 class TBlockSchema(BaseSchema):
     block_type = m.fields.String(data_key="BlockType", allow_none=False)
@@ -573,12 +578,17 @@ class TDocument():
                 if r.type == "CHILD":
                     parent_relationships = r
             for table_id in table_ids:
+                parent_last_row = self.get_block_by_id(parent_relationships.ids[-1]).row_index
                 child_table = self.get_block_by_id(table_id)
                 for r in child_table.relationships:
                     if r.type == "CHILD":
-                        parent_relationships.ids.extend(cell for cell in r.ids if cell not in parent_relationships.ids)
+                        for cell_id in r.ids:
+                            cell_block = self.get_block_by_id(cell_id)
+                            cell_block.row_index= parent_last_row + cell_block.row_index
+                            if cell_id not in parent_relationships.ids:
+                                parent_relationships.ids.append(cell_id)
                 self.delete_blocks([table_id])
-        
+
     def link_tables(self, table_array_ids:List[List[str]]):
         for table_ids in table_array_ids:
             if len(table_ids)<2:
