@@ -1,4 +1,5 @@
 from trp.t_pipeline import add_page_orientation, order_blocks_by_geo, pipeline_merge_tables
+from trp.t_tables import MergeOptions, HeaderFooterType
 import trp.trp2 as t2
 import trp as t1
 import json
@@ -227,6 +228,6 @@ def test_pipeline_merge_tables():
     pre_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)
     pre_merge_tbl2_cells_no = len(t_document.get_block_by_id(tbl_id2).relationships[0].ids)
     pre_merge_tbl3_cells_no = len(t_document.get_block_by_id(tbl_id3).relationships[0].ids)
-    t_document = pipeline_merge_tables(t_document, 'MERGE', None, 'NORMAL')
+    t_document = pipeline_merge_tables(t_document, MergeOptions.MERGE, None, HeaderFooterType.NONE)
     post_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)
     assert post_merge_tbl1_cells_no == pre_merge_tbl1_cells_no + pre_merge_tbl2_cells_no + pre_merge_tbl3_cells_no

@@ -1,25 +1,33 @@
 import logging
 import trp.trp2 as t2
 from typing import List
+from enum import Enum, auto
 from trp.trp2 import TDocument, TDocumentSchema
 import trp
 
+class MergeOptions(Enum):
+    MERGE = auto()
+    LINK = auto()
+
+class HeaderFooterType(Enum):
+    NONE = 0
+    NARROW = 0.5
+    NORMAL = 1
+
 logger = logging.getLogger(__name__)
 
-def __validate_objects_between_tables(page1, page1_table, page2, page2_table, header_type, footer_type):
+def __validate_objects_between_tables(page1, page1_table, page2, page2_table, header_footer_type: HeaderFooterType):
     """
     Step 1: Check if there is any lines between the first and second table except in the Footer and Header area
     """
-    header_map = {'NONE': 0, 'NARROW':0.5, 'NORMAL':1}
-    header_height = header_map[header_type]/11
-    footer_height = header_map[footer_type]/11
+    header_footer_height = header_footer_type.value/11
     # Validate table 1 with first page footer
     table1_end_y = page1_table.geometry.polygon[2].y
-    if any(1-footer_height > line.geometry.polygon[2].y > table1_end_y for line in page1.lines):
+    if any(1-header_footer_height > line.geometry.polygon[2].y > table1_end_y for line in page1.lines):
         return False
     # Validate table 2 with second page header
     table2_start_y = page2_table.geometry.boundingBox.top
-    if any(header_height < line.geometry.boundingBox.top < table2_start_y for line in page2.lines):
+    if any(header_footer_height < line.geometry.boundingBox.top < table2_start_y for line in page2.lines):
         return False
     return True
 
@@ -63,7 +71,7 @@ def __compare_table_dimensions(table_1, table_2, accuracy_percentage):
         return True
     return False
 
-def ExecuteTableValidations(t_doc: t2.TDocument, header_footer_type: ["NONE", "NARROW", "NORMAL"], accuracy_percentage: float):
+def ExecuteTableValidations(t_doc: t2.TDocument, header_footer_type: HeaderFooterType, accuracy_percentage: float):
     """
     Invoke validations for first and last tables on all pages recursively
     """
@@ -83,7 +91,7 @@ def ExecuteTableValidations(t_doc: t2.TDocument, header_footer_type: ["NONE", "N
         current_page_table = current_page.tables[len(current_page.tables)-1]
         next_page = trp_doc.pages[page_compare_proc+1]
         next_page_table = next_page.tables[0]
-        result_1 = __validate_objects_between_tables(current_page, current_page_table, next_page, next_page_table, header_footer_type, header_footer_type)
+        result_1 = __validate_objects_between_tables(current_page, current_page_table, next_page, next_page_table, header_footer_type)
         if(result_1):
             result_2_1 = __compare_table_column_numbers(current_page_table, next_page_table)
             result_2_2 = __compare_table_headers(current_page_table, next_page_table)
