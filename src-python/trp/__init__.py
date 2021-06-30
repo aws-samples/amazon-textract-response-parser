@@ -231,18 +231,22 @@ class Field(BaseBlock):
         self._key = None
         self._value = None
 
-        for item in block['Relationships']:
-            if (item["Type"] == "CHILD"):
-                self._key = FieldKey(block, item['Ids'], blockMap)
-            elif (item["Type"] == "VALUE"):
-                for eid in item['Ids']:
-                    vkvs = blockMap[eid]
-                    if 'VALUE' in vkvs['EntityTypes']:
-                        if ('Relationships' in vkvs):
-                            for vitem in vkvs['Relationships']:
-                                if (vitem["Type"] == "CHILD"):
-                                    self._value = FieldValue(
-                                        vkvs, vitem['Ids'], blockMap)
+        if 'Relationships' in block:
+            for item in block['Relationships']:
+                if (item["Type"] == "CHILD"):
+                    self._key = FieldKey(block, item['Ids'], blockMap)
+                elif (item["Type"] == "VALUE"):
+                    for eid in item['Ids']:
+                        vkvs = blockMap[eid]
+                        if 'VALUE' in vkvs['EntityTypes']:
+                            if ('Relationships' in vkvs):
+                                for vitem in vkvs['Relationships']:
+                                    if (vitem["Type"] == "CHILD"):
+                                        self._value = FieldValue(
+                                            vkvs, vitem['Ids'], blockMap)
+        else:
+            logger.warning(f"no 'Relationships' in block: {block}")
+
 
     def __str__(self):
         s = "\nField\n==========\n"

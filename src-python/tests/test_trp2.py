@@ -1,4 +1,5 @@
 from trp.t_pipeline import add_page_orientation, order_blocks_by_geo
+from typing import List
 import trp.trp2 as t2
 import trp as t1
 import json
@@ -6,6 +7,7 @@ import os
 import pytest
 from trp import Document
 from uuid import uuid4
+import logging
 
 current_folder = os.path.dirname(os.path.realpath(__file__))
 
@@ -302,6 +304,74 @@ def test_ratio(caplog):
 
     g2.ratio(doc_width=10, doc_height=10)
     assert (g1 == g2)
+
+
+def test_get_blocks_for_relationship(caplog):
+    caplog.set_level(logging.DEBUG)
+
+    # existing relationships
+    p = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(p, "data/gib.json")) as f:
+        j = json.load(f)
+        t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+        page = t_document.pages[0]
+        block = t_document.get_block_by_id("458a9301-8a9d-4eb2-9469-70302c62622e")
+        relationships = block.get_relationships_for_type()
+        relationships_value = block.get_relationships_for_type(relationship_type="VALUE")
+        if relationships and relationships_value:
+            rel = t_document.get_blocks_for_relationships(relationship=relationships)
+            assert len(rel) == 1
+            rel_value = t_document.get_blocks_for_relationships(relationship=relationships_value)
+            assert len(rel_value) == 1
+
+            child_rel:List[t2.TBlock] = list()
+            for value_block in rel_value:
+                child_rel.extend(t_document.get_blocks_for_relationships(value_block.get_relationships_for_type()))
+            assert len(child_rel) == 1
+        else:
+            assert False
+
+def test_add_ids_to_relationships(caplog):
+    tdocument = t2.TDocument()
+    page_block = t2.TBlock(id=str(uuid4()),
+                            block_type="PAGE",
+                            geometry=t2.TGeometry(bounding_box=t2.TBoundingBox(width=1, height=1, left=0, top=0),
+                                                    polygon=[t2.TPoint(x=0,y=0), t2.TPoint(x=1,y=1)]),
+                            )
+    tblock = t2.TBlock(id=str(uuid4()),
+                            block_type="WORD",
+                            text="sometest",
+                            geometry=t2.TGeometry(bounding_box=t2.TBoundingBox(width=0, height=0, left=0, top=0),
+                                                    polygon=[t2.TPoint(x=0,y=0), t2.TPoint(x=0,y=0)]),
+                            confidence=99,
+                            text_type="VIRTUAL")
+    tdocument.add_block(page_block)
+    tdocument.add_block(tblock)
+    page_block.add_ids_to_relationships([tblock.id])
+    tblock.add_ids_to_relationships(["1", "2"])
+    assert page_block.relationships and len(page_block.relationships) > 0
+    assert tblock.relationships and len(tblock.relationships) > 0
+
+
+def test_key_value_set_key_name(caplog):
+    caplog.set_level(logging.DEBUG)
+
+    # existing relationships
+    p = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(p, "data/gib.json")) as f:
+        j = json.load(f)
+        t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+        page = t_document.pages[0]
+        keys = list(t_document.keys(page=page))
+        assert keys and len(keys) > 0
+        for key_value in keys:
+            child_relationship = key_value.get_relationships_for_type('CHILD')
+            if child_relationship:
+                for id in child_relationship.ids:
+                    k_b = t_document.get_block_by_id(id=id)
+                    print(k_b.text)
+            print(' '.join([x.text for x in t_document.value_for_key(key_value)]))
+
 
 def test_get_relationships_for_type(caplog):
     # existing relationships
