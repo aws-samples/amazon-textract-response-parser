@@ -1,140 +1,88 @@
-from typing import List, Optional, Set
-import marshmallow as m
-from marshmallow import post_load
-from enum import Enum, auto
-
 """
 Author: dhawalkp@amazon.com
 (De)Serializer for Textract AnalyzeExpense Response JSON
 
+AnalyzeExpense’s JSON contains “ExpenseDocuments”, and each ExpenseDocument contains a
+“SummaryFields” and “LineItemGroups”.
+Anything detected in the document that is not a line item will be placed under
+“SummaryFields”.
+The lowest piece of data in the AnalyzeExpense response consists of “Type”,
+“ValueDetection” and “LabelDetection”(Optional).
+“LabelDetection” is optional. For the case where a piece of text is detected
+on a receipt/invoice that does not explicitly have a “key” to label what the
+value is, LabelDetection is omitted.
+
+“LabelDetection” - the “key” of the key-value pair
+“Type” - the normalized type of the key-value pair
+“ValueDetection” - the “value” of the key-value pair.
+
+Some other examples of AnalyzeExpense Elements that may not have “LabelDetection”
+are line items in receipts.
+Line items in receipts usually do not have explicit column headers to tell
+what the columns are.
+
+SummaryFields that are not normalized will have a Type of “OTHER”
+
+Below are some (not exhaustive listing) of the normalized summary fields
+AnalyzeExpense may detect per Expense Document -
+
+VENDOR_NAME
+VENDOR_ADDRESS
+VENDOR_URL
+VENDOR_PHONE
+CURRENCY
+PAYMENT_TERMS
+INVOICE_RECEIPT_ID
+INVOICE_RECEIPT_DATE
+RECEIVER_NAME
+RECEIVER_ADDRESS
+DUE_DATE
+TAX
+DISCOUNT
+SUBTOTAL
+TOTAL
+BANK_WIRING_INSTRUCTIONS
+VENDOR_VAT_REG_NO
+BILL_TO_VAT_REG_NO
+LOCAL_VAT_AMOUNT
+VAT_TOTAL
+VAT_RATE
+GST_NUMBER
+HST_NUMBER
+QST_NUMBER
+TAX_PAYER_ID
+
+Below are the normalized field types returned in the Line item -
+ITEM
+PRICE
+QUANTITY
+DESCRIPTION
+CATEGORY
 """
 
-class BaseSchema(m.Schema):
+from typing import List, Optional
+from enum import Enum, auto
+import marshmallow as m
+from marshmallow import post_load
+from trp.trp2 import (BaseSchema, TGeometry, TGeometrySchema, TDocumentMetadata,
+    TDocumentMetadataSchema, TWarnings, TWarningsSchema,
+    TResponseMetadata, TResponseMetadataSchema)
+
+
+
+
+class TextractAnalyzeExpenseSummaryFieldType(Enum):
     """
-    skip null values when generating JSON
-    https://github.com/marshmallow-code/marshmallow/issues/229#issuecomment-134387999
+    Class for FieldType Enum for AnalyzeExpense
     """
-    SKIP_VALUES = set([None])
-
-    @m.post_dump
-    def remove_skip_values(self, data, many, pass_many=False):
-        return {
-            key: value
-            for key, value in data.items()
-            if isinstance(value, (dict, list, set, tuple, range,
-                                  frozenset)) or value not in self.SKIP_VALUES
-        }
+    OTHER = auto()
 
 
-"""class TextractBlockTypes(Enum):
-    WORD = auto()
-    LINE = auto()
-    TABLE = auto()
-    CELL = auto()
-    KEY_VALUE_SET = auto()
-    PAGE = auto()"""
-
-
-class TBoundingBox():
-    def __init__(self, width: float, height: float, left: float, top: float):
-        self.__width = width
-        self.__height = height
-        self.__left = left
-        self.__top = top
-
-    @property
-    def width(self):
-        return self.__width
-
-    @property
-    def height(self):
-        return self.__height
-
-    @property
-    def left(self):
-        return self.__left
-
-    @property
-    def top(self):
-        return self.__top
-
-
-class TBoundingBoxSchema(BaseSchema):
-    width = m.fields.Float(data_key="Width", required=False, allow_none=False)
-    height = m.fields.Float(data_key="Height",
-                            required=False,
-                            allow_none=False)
-    left = m.fields.Float(data_key="Left", required=False, allow_none=False)
-    top = m.fields.Float(data_key="Top", required=False, allow_none=False)
-
-    @post_load
-    def make_tboundingbox(self, data, **kwargs):
-        return TBoundingBox(**data)
-
-
-class TPoint():
-    def __init__(self, x: float, y: float):
-        self.__x = x
-        self.__y = y
-
-    @property
-    def x(self):
-        return self.__x
-
-    @property
-    def y(self):
-        return self.__y
-
-    def __str__(self) -> str:
-        return f"Point: x: {self.__x}, y: {self.__y}"
-
-
-class TPointSchema(BaseSchema):
-    x = m.fields.Float(data_key="X", required=False, allow_none=False)
-    y = m.fields.Float(data_key="Y", required=False, allow_none=False)
-
-    @post_load
-    def make_tpoint(self, data, **kwargs):
-        return TPoint(**data)
-
-
-class TGeometry():
-    def __init__(self,
-                 boundingbox: TBoundingBox = None,
-                 polygon: List[TPoint] = None):
-        self.__boundingbox = boundingbox
-        self.__polygon = polygon
-
-    @property
-    def boundingbox(self):
-        return self.__boundingbox
-
-    @property
-    def polygon(self):
-        return self.__polygon
-
-
-class TGeometrySchema(BaseSchema):
-    boundingbox = m.fields.Nested(TBoundingBoxSchema,
-                                   data_key="BoundingBox",
-                                   required=False,
-                                   allow_none=False)
-    polygon = m.fields.List(m.fields.Nested(TPointSchema),
-                            data_key="Polygon",
-                            required=False,
-                            allow_none=False)
-
-    @post_load
-    def make_tgeometry(self, data, **kwargs):
-        return TGeometry(**data)
-
-
-"""
-dhawalkp: New Class for LabelDetection
-
-"""
 
 class TLabelDetection():
+    """
+    Class for LabelDetection in AnalyzeExpense API Response
+    """
     def __init__(self,text: str = None,geometry: TGeometry = None,confidence: float = None):
         self.__text = text
         self.__geometry = geometry
@@ -149,12 +97,11 @@ class TLabelDetection():
     def confidence(self):
         return self.__confidence
 
-"""
-dhawalkp: New Schema class for LabelDetection
-
-""" 
 
 class TLabelDetectionSchema(BaseSchema):
+    """
+    Class for LabelDetection Schema
+    """
     text = m.fields.String(data_key="Text", required=False, allow_none=False)
     geometry = m.fields.Nested(TGeometrySchema,
                                    data_key="Geometry",
@@ -167,12 +114,10 @@ class TLabelDetectionSchema(BaseSchema):
 
 
 
-"""
-dhawalkp: New Class for ValueDetection
-
-"""
-
 class TValueDetection():
+    """
+    Class for ValueDetection in AnalyzeExpense API Response
+    """
     def __init__(self,text: str = None,geometry: TGeometry = None,confidence: float = None):
         self.__text = text
         self.__geometry = geometry
@@ -187,12 +132,11 @@ class TValueDetection():
     def confidence(self):
         return self.__confidence
 
-"""
-dhawalkp: New Schema class for LabelDetection
-
-""" 
 
 class TValueDetectionSchema(BaseSchema):
+    """
+    Class for ValueDetection Schema
+    """
     text = m.fields.String(data_key="Text", required=False, allow_none=False)
     geometry = m.fields.Nested(TGeometrySchema,
                                    data_key="Geometry",
@@ -204,29 +148,28 @@ class TValueDetectionSchema(BaseSchema):
         return TValueDetection(**data)
 
 
-"""
-dhawalkp: New Class for FieldType
 
-"""
 class TFieldType():
+    """
+    Class for FieldType in AnalyzeExpense API Response
+    """
     def __init__(self,text: str = None,confidence: float = None):
         self.__text = text
         self.__confidence = confidence
     @property
     def text(self):
         return self.__text
- 
+
     @property
     def confidence(self):
         return self.__confidence
 
 
-"""
-dhawalkp: New Schema class for SummaryFieldType
-
-""" 
 
 class TFieldTypeSchema(BaseSchema):
+    """
+    Class for FieldType Schema
+    """
     text = m.fields.String(data_key="Text", required=False, allow_none=False)
     confidence = m.fields.Float(data_key="Confidence", required=False, allow_none=False)
     @post_load
@@ -235,21 +178,19 @@ class TFieldTypeSchema(BaseSchema):
 
 
 
-
-"""
-dhawalkp: New Class for SummaryFieldType
-
-"""
 class TSummaryField():
-    def __init__(self,type: TFieldType = None,labeldetection: TLabelDetection = None,valuedetection: TValueDetection = None,pagenumber: int = None):
-        self.__type = type
+    """
+    Class for SummaryField in AnalyzeExpense API Response
+    """
+    def __init__(self,ftype: TFieldType = None,labeldetection: TLabelDetection = None,valuedetection: TValueDetection = None,pagenumber: int = None):
+        self.__type = ftype
         self.__labeldetection = labeldetection
         self.__valuedetection = valuedetection
         self.__pagenumber = pagenumber
     @property
-    def type(self):
+    def ftype(self):
         return self.__type
- 
+
     @property
     def labeldetection(self):
         return self.__labeldetection
@@ -261,15 +202,13 @@ class TSummaryField():
     @property
     def pagenumber(self):
         return self.__pagenumber
-    
 
-"""
-dhawalkp: New Schema class for SummaryField
-
-""" 
 
 class TSummaryFieldSchema(BaseSchema):
-    type = m.fields.Nested(TFieldTypeSchema,
+    """
+    Class for SummaryField Schema
+    """
+    ftype = m.fields.Nested(TFieldTypeSchema,
                                    data_key="Type",
                                    required=False,
                                    allow_none=False)
@@ -287,20 +226,20 @@ class TSummaryFieldSchema(BaseSchema):
         return TSummaryField(**data)
 
 
-"""
-dhawalkp: New Class for ExpenseField
 
-"""
 class TExpenseField():
-    def __init__(self,type: TFieldType = None,labeldetection: TLabelDetection = None,valuedetection: TValueDetection = None,pagenumber: int = None):
-        self.__type = type
+    """
+    Class for ExpenseField in AnalyzeExpense Response
+    """
+    def __init__(self,ftype: TFieldType = None, labeldetection: TLabelDetection = None,valuedetection: TValueDetection = None,pagenumber: int = None):
+        self.__type = ftype
         self.__labeldetection = labeldetection
         self.__valuedetection = valuedetection
         self.__pagenumber = pagenumber
+
     @property
-    def type(self):
+    def ftype(self):
         return self.__type
- 
     @property
     def labeldetection(self):
         return self.__labeldetection
@@ -312,22 +251,24 @@ class TExpenseField():
     @property
     def pagenumber(self):
         return self.__pagenumber
-    
 
-"""
-dhawalkp: New Schema class for ExpenseField
 
-""" 
+
 
 class TExpenseFieldSchema(BaseSchema):
-    type = m.fields.Nested(TFieldTypeSchema,
+    """
+    Class for ExpenseField Schema
+    """
+    ftype = m.fields.Nested(TFieldTypeSchema,
                                    data_key="Type",
                                    required=False,
                                    allow_none=False)
+
     labeldetection = m.fields.Nested(TLabelDetectionSchema,
                                    data_key="LabelDetection",
                                    required=False,
                                    allow_none=False)
+
     valuedetection = m.fields.Nested(TValueDetectionSchema,
                                    data_key="ValueDetection",
                                    required=False,
@@ -337,11 +278,11 @@ class TExpenseFieldSchema(BaseSchema):
     def make_texpensefield(self, data, **kwargs):
         return TExpenseField(**data)
 
-"""
-dhawalkp: New Class for LineItem
 
-"""
 class TLineItem():
+    """
+    Class for LineItem in AnalyzeExpense Response
+    """
     def __init__(self,lineitem_expensefields: List[TExpenseField] = None):
         self.__lineitem_expensefields = lineitem_expensefields
 
@@ -349,12 +290,12 @@ class TLineItem():
     def lineitem_expensefields(self):
         return self.__lineitem_expensefields
 
-"""
-dhawalkp: New Class for LineItemSchema
 
-"""
- 
+
 class TLineItemSchema(BaseSchema):
+    """
+    Class for LineItem Schema
+    """
 
     lineitem_expensefields = m.fields.List(m.fields.Nested(TExpenseFieldSchema),
                             data_key="LineItemExpenseFields",
@@ -366,11 +307,11 @@ class TLineItemSchema(BaseSchema):
         return TLineItem(**data)
 
 
-"""
-dhawalkp: New Class for LineItemGroup
 
-"""
 class TLineItemGroup():
+    """
+    Class for LineItemGroup in AnalyzeExpense Response
+    """
     def __init__(self,lineitemgroupindex: int = None,lineitems: List[TLineItem] = None):
         self.__lineitems = lineitems
         self.__lineitemgroupindex = lineitemgroupindex
@@ -383,12 +324,12 @@ class TLineItemGroup():
         return self.__lineitemgroupindex
 
 
-"""
-dhawalkp: New Class for LineItemGroup
 
-"""
- 
+
 class TLineItemGroupSchema(BaseSchema):
+    """
+    Class for LineItemGroup Schema
+    """
 
     lineitemgroupindex =  m.fields.Int(data_key="LineItemGroupIndex", required=False, allow_none=False)
 
@@ -403,12 +344,12 @@ class TLineItemGroupSchema(BaseSchema):
         return TLineItemGroup(**data)
 
 
-"""
-dhawalkp: New Class for Expense
 
-"""
 
 class TExpense():
+    """
+    Class for Expense Document in AnalyzeExpense Response
+    """
     def __init__(self,expense_idx: int = None,summaryfields: List[TSummaryField] = None,lineitemgroups: List[TLineItemGroup] = None):
         self.__expense_idx = expense_idx
         self.__summaryfields = summaryfields
@@ -425,13 +366,12 @@ class TExpense():
     @property
     def lineitemgroups(self):
         return self.__lineitemgroups
-    
-"""
-dhawalkp: New Class for ExpenseSchema
 
-"""
  
 class TExpenseSchema(BaseSchema):
+    """
+    Class for ExpenseDocument Schema
+    """
 
     expense_idx = m.fields.Int(data_key="ExpenseIndex",
                                      required=False,
@@ -452,124 +392,10 @@ class TExpenseSchema(BaseSchema):
         return TExpense(**data)
 
 
-
-
-
-
-
-
-
-class TDocumentMetadata():
-    def __init__(self, pages: int = None):
-        self.__pages = pages
-
-    @property
-    def pages(self):
-        return self.__pages
-
-
-class TDocumentMetadataSchema(BaseSchema):
-    pages = m.fields.Int(data_key="Pages", required=False)
-
-    @post_load
-    def make_tdocument_metadat(self, data, **kwargs):
-        return TDocumentMetadata(**data)
-
-
-class TWarnings():
-    def __init__(self, error_code: str = None, pages: List[int] = None):
-        self.__pages = pages
-        self.__error_code = error_code
-
-    @property
-    def pages(self):
-        return self.__pages
-
-    @property
-    def error_code(self):
-        return self.__error_code
-
-
-class TWarningsSchema(BaseSchema):
-    pages = m.fields.List(m.fields.Int,
-                          data_key="Pages",
-                          required=False,
-                          allow_none=False)
-    error_code = m.fields.String(data_key="ErrorCode",
-                                 required=False,
-                                 allow_none=False)
-
-    @post_load
-    def make_twarnings(self, data, **kwargs):
-        return TWarnings(**data)
-
-
-
-
-
-class THttpHeaders():
-    def __init__(self,
-                 x_amzn_request_id: str = None,
-                 content_type: str = None,
-                 content_length: int = None,
-                 connection: str = None,
-                 date: str = None):
-        self.__date = date
-        self.__x_amzn_request_id = x_amzn_request_id
-        self.__content_type = content_type
-        self.__content_length = content_length
-        self.__connection = connection
-
-    @property
-    def date(self):
-        return self.__date
-
-    @property
-    def x_amzn_request_id(self):
-        return self.__x_amzn_request_id
-
-    @property
-    def content_type(self):
-        return self.__content_type
-
-    @property
-    def content_length(self):
-        return self.__content_length
-
-    @property
-    def connection(self):
-        return self.__connection
-
-
-class TResponseMetadata():
-    def __init__(self,
-                 request_id: str = None,
-                 http_status_code: int = None,
-                 retry_attempts: int = None,
-                 http_headers: THttpHeaders = None):
-        self.__request_id = request_id
-        self.__http_status_code = http_status_code
-        self.__retry_attempts = retry_attempts
-        self.__http_headers = http_headers
-
-    @property
-    def request_id(self):
-        return self.__request_id
-
-    @property
-    def http_status_code(self):
-        return self.__http_status_code
-
-    @property
-    def retry_attempts(self):
-        return self.__retry_attempts
-
-    @property
-    def http_headers(self):
-        return self.__http_headers
-
-
 class TAnalyzeExpenseDocument():
+    """
+    Class for AnalyzeExpenseDocument in AnalyzeExpense Response
+    """
     def __init__(self,
                  document_metadata: TDocumentMetadata = None,
                  expenses_documents: List[TExpense] = None,
@@ -635,50 +461,55 @@ class TAnalyzeExpenseDocument():
     def custom(self, value: dict):
         self.__custom = value
 
-    
+    def get_expensedocument_by_id(self, docid: int) -> Optional[TExpense]:
+        """
+        Returns an ExpenseDocument Object based on the ID.
+            Parameters:
+                docid (int): A Document Identifier
+            Returns:
+                ExpenseDocument (ExpenseDocument): ExpenseDocument Object
+        """
+        for doc in self.__expenses_documents:
+            if doc.expense_idx == docid:
+                return doc
 
+    def get_all_summaryfields_by_expense_id(self,docid: int) -> Optional[List[TSummaryField]]:
+        """
+        Returns all the summaryfields by Expense Document ID.
+            Parameters:
+                docid (int): A Document Identifier
+            Returns:
+                summaryFieldList (List): List of Summary Fields in Expense Document Object
+        """
+        summaryfields_list: List[TSummaryField] = list()
+        doc = self.get_expensedocument_by_id(docid)
+        if doc:
+            for field in doc.summaryfields:
+                summaryfields_list.append(field)
+            return summaryfields_list
 
-class THttpHeadersSchema(BaseSchema):
-    date = m.fields.String(data_key="date", required=False)
-    x_amzn_request_id = m.fields.String(data_key="x-amzn-requestid",
-                                        required=False,
-                                        allow_none=False)
-    content_type = m.fields.String(data_key="content-type",
-                                   required=False,
-                                   allow_none=False)
-    content_length = m.fields.Int(data_key="content-length",
-                                  required=False,
-                                  allow_none=False)
-    connection = m.fields.String(data_key="connection",
-                                 required=False,
-                                 allow_none=False)
+    def get_normalized_summaryfields_by_expense_id(self,docid: int) -> Optional[List[TSummaryField]]:
+        """
+        Returns only Normalized Summary Fields  based on the Expense Document ID.
+            Parameters:
+                docid (int): A Document Identifier
+            Returns:
+                implicitsummaryfields (List): Normalized Summary Fields List in the Expense Document Object
+        """
+        implicit_summaryfields_list: List[TSummaryField] = list()
+        doc = self.get_expensedocument_by_id(docid)
+        if doc:
+            for field in doc.summaryfields:
+                if field.ftype and field.ftype.text != 'OTHER':
+                    implicit_summaryfields_list.append(field)
+            return implicit_summaryfields_list
 
-    @post_load
-    def make_thttp_headers(self, data, **kwargs):
-        return THttpHeaders(**data)
-
-
-class TResponseMetadataSchema(BaseSchema):
-    request_id = m.fields.String(data_key="RequestId",
-                                 required=False,
-                                 allow_none=False)
-    http_status_code = m.fields.Int(data_key="HTTPStatusCode",
-                                    required=False,
-                                    allow_none=False)
-    retry_attempts = m.fields.Int(data_key="RetryAttempts",
-                                  required=False,
-                                  allow_none=False)
-    http_headers = m.fields.Nested(THttpHeadersSchema,
-                                   data_key="HTTPHeaders",
-                                   required=False,
-                                   allow_none=False)
-
-    @post_load
-    def make_tresponse_metadata(self, data, **kwargs):
-        return TResponseMetadata(**data)
 
 
 class TAnalyzeExpenseDocumentSchema(BaseSchema):
+    """
+    Class for AnalyzeExpenseDocument Schema
+    """
     document_metadata = m.fields.Nested(TDocumentMetadataSchema,
                                         data_key="DocumentMetadata",
                                         required=False,
@@ -687,13 +518,8 @@ class TAnalyzeExpenseDocumentSchema(BaseSchema):
                            data_key="ExpenseDocuments",
                            required=False,
                            allow_none=False)
-    """analyze_expense_model_version = m.fields.String(
-        data_key="AnalyzeDocumentModelVersion",
-        required=False,
-        allow_none=False)"""
 
 
-   
     status_message = m.fields.String(data_key="StatusMessage",
                                      required=False,
                                      allow_none=False)
