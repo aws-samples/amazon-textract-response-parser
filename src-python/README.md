@@ -79,6 +79,32 @@ for page in doc.pages:
     print(page.custom['Orientation'])
 ```
 
+#### Merge or link tables across pages
+
+Sometimes tables start on one page and continue across the next page or pages. This component identifies if that is the case based on the number of columns and if a header is present on the subsequent table and can modify the output Textract JSON schema for down-stream processing. Other custom-logic is possible to develop for specific use cases.
+
+The MergeOptions.MERGE combines the tables and makes them appear as one for post processing, with the drawback that the geometry information is not accuracy any longer. So overlaying with bounding boxes will not be accuracy.
+
+The MergeOptions.LINK maintains the geometric structure and enriches the table information with links between the table elements. There is a custom['previus_table'] and custom['next_table'] attribute added to the TABLE blocks in the Textract JSON schema.
+
+Usage is simple
+
+```python
+from trp.t_pipeline import pipeline_merge_tables
+import trp.trp2 as t2
+
+j = <call_textract(input_document="path_to_some_document (PDF, JPEG, PNG)") or your JSON dict>
+t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+t_document = pipeline_merge_tables(t_document, MergeOptions.MERGE, None, HeaderFooterType.NONE)
+```
+
+Using from command line example
+
+```bash
+# from the root of the repository
+cat src-python/tests/data/gib_multi_page_table_merge.json | amazon-textract-pipeline --components merge_tables | amazon-textract --stdin --pretty-print TABLES
+# compare to cat src-python/tests/data/gib_multi_page_table_merge.json | amazon-textract --stdin --pretty-print TABLES
+```
 
 #### Using the pipeline on command line
 

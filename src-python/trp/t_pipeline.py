@@ -1,6 +1,7 @@
 import logging
+from trp.t_tables import ExecuteTableValidations, MergeOptions, HeaderFooterType
 import trp.trp2 as t2
-from typing import List
+from typing import List, Callable
 import math
 import statistics
 
@@ -49,4 +50,25 @@ def add_page_orientation(t_document: t2.TDocument) -> t2.TDocument:
             page.custom['Orientation'] = orientation
         else:
             page.custom = {'Orientation': orientation}
+    return t_document
+
+def pipeline_merge_tables(t_document: t2.TDocument,
+                          merge_options: MergeOptions = MergeOptions.MERGE,
+                          customer_function: Callable = None,
+                          header_footer_type: HeaderFooterType = HeaderFooterType.NONE,
+                          accuracy_percentage: float = 99) -> t2.TDocument:
+    """
+    Checks if tables require to be merged using a customer function or built function 
+    and merges tables
+    """
+    if customer_function:
+        tables_merge_ids: List[
+            List[str]] = customer_function(t_document)
+    else:
+        tables_merge_ids: List[
+            List[str]] = ExecuteTableValidations(t_document, header_footer_type, accuracy_percentage)
+    if merge_options == MergeOptions.MERGE:
+        t_document.merge_tables(tables_merge_ids)
+    if merge_options == MergeOptions.LINK:
+        t_document.link_tables(tables_merge_ids)
     return t_document

@@ -1,4 +1,5 @@
-from trp.t_pipeline import add_page_orientation, order_blocks_by_geo
+from trp.t_pipeline import add_page_orientation, order_blocks_by_geo, pipeline_merge_tables
+from trp.t_tables import MergeOptions, HeaderFooterType
 import trp.trp2 as t2
 import trp as t1
 import json
@@ -178,3 +179,65 @@ def test_next_token_response():
     doc = t1.Document(t2.TDocumentSchema().dump(t_document))
     for page in doc.pages:
         print(page.custom['Orientation'])
+
+def test_merge_tables():
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    tbl_id1 = 'fed02fb4-1996-4a15-98dc-29da193cc476'
+    tbl_id2 = '47c6097f-02d5-4432-8423-13c05fbfacbd'
+    pre_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)
+    pre_merge_tbl2_cells_no = len(t_document.get_block_by_id(tbl_id2).relationships[0].ids)
+    pre_merge_tbl1_lastcell = t_document.get_block_by_id(tbl_id1).relationships[0].ids[-1]
+    pre_merge_tbl2_lastcell = t_document.get_block_by_id(tbl_id2).relationships[0].ids[-1]
+    pre_merge_tbl1_last_row = t_document.get_block_by_id(pre_merge_tbl1_lastcell).row_index
+    pre_merge_tbl2_last_row = t_document.get_block_by_id(pre_merge_tbl2_lastcell).row_index
+    t_document.merge_tables([[tbl_id1,tbl_id2]])
+    post_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)
+    post_merge_tbl1_lastcell = t_document.get_block_by_id(tbl_id1).relationships[0].ids[-1]
+    post_merge_tbl1_last_row = t_document.get_block_by_id(post_merge_tbl1_lastcell).row_index
+    assert post_merge_tbl1_cells_no == pre_merge_tbl1_cells_no + pre_merge_tbl2_cells_no
+    assert pre_merge_tbl2_last_row
+    assert post_merge_tbl1_last_row == pre_merge_tbl1_last_row + pre_merge_tbl2_last_row
+
+def test_delete_blocks():
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    tbl_id1 = 'fed02fb4-1996-4a15-98dc-29da193cc476'
+    tbl_id2 = '47c6097f-02d5-4432-8423-13c05fbfacbd'
+    pre_delete_block_no = len(t_document.blocks)
+    t_document.delete_blocks([tbl_id1,tbl_id2])
+    post_delete_block_no = len(t_document.blocks)
+    assert post_delete_block_no == pre_delete_block_no - 2
+
+
+def test_link_tables():
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    tbl_id1 = 'fed02fb4-1996-4a15-98dc-29da193cc476'
+    tbl_id2 = '47c6097f-02d5-4432-8423-13c05fbfacbd'   
+    t_document.link_tables([[tbl_id1,tbl_id2]])
+    assert t_document.get_block_by_id(tbl_id1).custom['next_table']== tbl_id2
+    assert t_document.get_block_by_id(tbl_id2).custom['previous_table']== tbl_id1
+
+
+def test_pipeline_merge_tables():
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/gib_multi_page_table_merge.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    tbl_id1 = '5685498d-d196-42a7-8b40-594d6d886ca9'
+    tbl_id2 = 'a9191a66-0d32-4d36-8fd6-58e6917f4ea6'
+    tbl_id3 = 'e0368543-c9c3-4616-bd6c-f25e66c859b2'
+    pre_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)
+    pre_merge_tbl2_cells_no = len(t_document.get_block_by_id(tbl_id2).relationships[0].ids)
+    pre_merge_tbl3_cells_no = len(t_document.get_block_by_id(tbl_id3).relationships[0].ids)
+    t_document = pipeline_merge_tables(t_document, MergeOptions.MERGE, None, HeaderFooterType.NONE)
+    post_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)
+    assert post_merge_tbl1_cells_no == pre_merge_tbl1_cells_no + pre_merge_tbl2_cells_no + pre_merge_tbl3_cells_no
+
