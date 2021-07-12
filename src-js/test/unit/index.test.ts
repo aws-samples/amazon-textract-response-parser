@@ -1,9 +1,25 @@
-import { ApiResponsePage, TextractDocument } from "../../src/index";
+import { ApiResponsePage, TextractDocument } from "../../src";
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const testFailedJson: ApiResponsePage = require("../data/test-failed-response.json");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const testInProgressJson: ApiResponsePage = require("../data/test-inprogress-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testResponseJson: ApiResponsePage = require("../data/test-response.json");
 
 describe("TextractDocument", () => {
+  it("should throw status error on failed async job JSON", () => {
+    expect(() => {
+      new TextractDocument(testFailedJson);
+    }).toThrowError(/status.*FAILED/);
+  });
+
+  it("should throw status error on still-in-progress async job JSON", () => {
+    expect(() => {
+      new TextractDocument(testInProgressJson);
+    }).toThrowError(/status.*PROGRESS/);
+  });
+
   it("should parse the test JSON without error", () => {
     expect(() => {
       new TextractDocument(testResponseJson);
@@ -35,7 +51,7 @@ describe("TextractDocument", () => {
 
   it("should retrieve form fields by key", () => {
     const doc = new TextractDocument(testResponseJson);
-    expect(doc.pages[0].form.getFieldByKey("Phone Number:").value?.text).toStrictEqual("555-0100");
+    expect(doc.pages[0].form.getFieldByKey("Phone Number:")?.value?.text).toStrictEqual("555-0100");
   });
 
   it("should search form fields by key", () => {
