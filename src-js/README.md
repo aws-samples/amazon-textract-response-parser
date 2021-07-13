@@ -66,14 +66,28 @@ import { ApiResponsePage, TextractDocument } from "./trp";
 const doc = new TextractDocument(require("./my-textract-response.json") as ApiResponsePage);
 
 // Navigate the document hierarchy:
-console.log(`Opened doc with ${doc.pages.length} pages`);
-console.log(`The first word of the first line is ${doc.pages[0].lines[0].words[0].text}`);
+console.log(`Opened doc with ${doc.nPages} pages`);
+console.log(`The first word of the first line is ${doc.pageNumber(1).lineAtIndex(0).wordAtIndex(0).text}`);
 
-// ...Including form key-value pairs:
-const addr = doc.pages[0].form.getFieldByKey("Address").value?.text;
+// Iterate through content:
+for (page of doc.iterPages()) {
+  // (In Textract's output order...)
+  for (line of page.iterLines()) {
+    for (word of line.iterWords()) {
+      console.log(word.text);
+    }
+  }
+  // (...Or approximate human reading order)
+  const inReadingOrder = page.getLineClustersInReadingOrder();
+}
+
+// Easily access form key-value pairs:
+const page = doc.pageNumber(1);
+const addr = page.form.getFieldByKey("Address").value?.text;
 
 // ...and tables:
-const header_strs = doc.pages[0].tables[0].rows[0].cells.map(c => c.text);
+const firstTable = page.nTables ? page.tableAtIndex(0) : null;
+const header_strs = firstTable.cellsAt(1, null).map(cell => cell.text);
 ```
 
 For more examples of how the library can be used, you can refer to the [tests](tests/) folder and/or the source code.

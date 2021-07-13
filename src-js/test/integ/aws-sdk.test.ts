@@ -5,9 +5,19 @@ import { promises as fs } from "fs";
 import { TextractClient, AnalyzeDocumentCommand, DetectDocumentTextCommand } from "@aws-sdk/client-textract";
 
 // Local Dependencies:
-import { ApiResponsePage, TextractDocument } from "../../src";
+import { ApiResponsePage, ApiResponsePages, TextractDocument } from "../../src";
 
 const textract = new TextractClient({});
+
+const runTestDocAssertions = (doc: TextractDocument, formsEnabled = true, tablesEnabled = true) => {
+  expect(doc.nPages).toStrictEqual(1);
+  const firstPage = doc.pageNumber(1);
+  expect(firstPage.nLines).toStrictEqual(31);
+  expect(firstPage.lineAtIndex(0).words.length).toStrictEqual(2);
+  expect([...firstPage.iterLines()].reduce((acc, next) => acc + next.words.length, 0)).toStrictEqual(71);
+  expect(firstPage.form.nFields).toStrictEqual(formsEnabled ? 9 : 0);
+  expect(firstPage.nTables).toStrictEqual(tablesEnabled ? 1 : 0);
+};
 
 describe("TextractDocument", () => {
   it(
@@ -21,13 +31,10 @@ describe("TextractDocument", () => {
           FeatureTypes: ["FORMS", "TABLES"],
         })
       );
-      const doc = new TextractDocument(textractResponse as ApiResponsePage);
-      expect(doc.pages.length).toStrictEqual(1);
-      expect(doc.pages[0].lines.length).toStrictEqual(31);
-      expect(doc.pages[0].lines[0].words.length).toStrictEqual(2);
-      expect(doc.pages[0].lines.reduce((acc, next) => acc + next.words.length, 0)).toStrictEqual(71);
-      expect(doc.pages[0].form.fields.length).toStrictEqual(9);
-      expect(doc.pages[0].tables.length).toStrictEqual(1);
+      let doc = new TextractDocument(textractResponse as ApiResponsePage);
+      runTestDocAssertions(doc);
+      doc = new TextractDocument([textractResponse] as ApiResponsePages);
+      runTestDocAssertions(doc);
     },
     60 * 1000 // 60sec timeout
   );
@@ -42,13 +49,10 @@ describe("TextractDocument", () => {
           },
         })
       );
-      const doc = new TextractDocument(textractResponse as ApiResponsePage);
-      expect(doc.pages.length).toStrictEqual(1);
-      expect(doc.pages[0].lines.length).toStrictEqual(31);
-      expect(doc.pages[0].lines[0].words.length).toStrictEqual(2);
-      expect(doc.pages[0].lines.reduce((acc, next) => acc + next.words.length, 0)).toStrictEqual(71);
-      expect(doc.pages[0].form.fields.length).toStrictEqual(0);
-      expect(doc.pages[0].tables.length).toStrictEqual(0);
+      let doc = new TextractDocument(textractResponse as ApiResponsePage);
+      runTestDocAssertions(doc, false, false);
+      doc = new TextractDocument([textractResponse] as ApiResponsePages);
+      runTestDocAssertions(doc, false, false);
     },
     60 * 1000 // 60sec timeout
   );

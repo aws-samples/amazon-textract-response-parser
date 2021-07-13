@@ -136,16 +136,18 @@ export const enum ApiJobStatus {
   Succeeded = "SUCCEEDED",
 }
 
+export interface ApiDocumentMetadata {
+  Pages: number;
+}
+
 export interface ApiResponseWithContent {
   Blocks: ApiBlock[];
-  DocumentMetadata: {
-    Pages: number;
-  };
+  DocumentMetadata: ApiDocumentMetadata;
 }
 
 export interface ApiAnalyzeDocumentResponse extends ApiResponseWithContent {
   AnalyzeDocumentModelVersion: string;
-  HumanLoopActivationOutput: {
+  HumanLoopActivationOutput?: {
     HumanLoopActivationConditionsEvaluationResults: string;
     HumanLoopActivationReasons: string[];
     HumanLoopArn: string;
@@ -167,39 +169,30 @@ export interface ApiAsyncJobOuputInProgress {
   ];
 }
 
+export interface ApiResultWarning {
+  ErrorCode: string;
+  Pages: number[];
+}
+
 export interface ApiAsyncJobOuputSucceded extends ApiResponseWithContent {
   JobStatus: "SUCCEEDED";
   NextToken?: string;
-  Warnings?: [
-    {
-      ErrorCode: string;
-      Pages: number[];
-    }
-  ];
+  StatusMessage?: string;
+  Warnings?: ApiResultWarning[];
 }
 
 export interface ApiAsyncJobOutputPartialSuccess extends ApiResponseWithContent {
   JobStatus: "PARTIAL_SUCCESS";
   NextToken?: string;
   StatusMessage?: string;
-  Warnings?: [
-    {
-      ErrorCode: string;
-      Pages: number[];
-    }
-  ];
+  Warnings?: ApiResultWarning[];
 }
 
 export interface ApiAsyncJobOutputFailed {
   JobStatus: "FAILED";
   NextToken?: string;
   StatusMessage?: string;
-  Warnings?: [
-    {
-      ErrorCode: string;
-      Pages: number[];
-    }
-  ];
+  Warnings?: ApiResultWarning[];
 }
 
 export type ApiAsyncDocumentAnalysis =
@@ -223,3 +216,9 @@ export type ApiResponsePage =
   | ApiAsyncDocumentAnalysis
   | ApiAsyncDocumentTextDetection
   | ApiDetectDocumentTextResponse;
+
+export type ApiResponsePages =
+  | ApiAnalyzeDocumentResponse[]
+  | ApiAsyncDocumentAnalysis[]
+  | ApiAsyncDocumentTextDetection[]
+  | ApiDetectDocumentTextResponse[];

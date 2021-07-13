@@ -1,135 +1,183 @@
 // Local Dependencies:
 import * as textract from "./api-models";
 
-export type ApiResponsePage = textract.ApiResponsePage;
+// Re-export the API types that users will most likely need to reference (for inputs):
+export { ApiResponsePage, ApiResponsePages } from "./api-models";
 
 export class BoundingBox {
-  _width: number;
-  _height: number;
-  _left: number;
-  _top: number;
+  _dict: textract.ApiBoundingBox;
 
-  constructor(width: number, height: number, left: number, top: number) {
-    this._width = width;
-    this._height = height;
-    this._left = left;
-    this._top = top;
+  constructor(dict: textract.ApiBoundingBox) {
+    this._dict = dict;
+  }
+
+  get bottom(): number {
+    return this.top + this.height;
+  }
+  get dict(): textract.ApiBoundingBox {
+    return this._dict;
+  }
+  get hCenter(): number {
+    return this.left + this.width / 2;
+  }
+  get height(): number {
+    return this._dict.Height;
+  }
+  get left(): number {
+    return this._dict.Left;
+  }
+  get top(): number {
+    return this._dict.Top;
+  }
+  get right(): number {
+    return this.left + this.width;
+  }
+  get vCenter(): number {
+    return this.top + this.height / 2;
+  }
+  get width(): number {
+    return this._dict.Width;
+  }
+
+  /**
+   * Calculate the minimum box enclosing both this and `other`.
+   * @returns A new BoundingBox object.
+   */
+  union(other: BoundingBox): BoundingBox {
+    const left = Math.min(this.left, other.left);
+    const top = Math.min(this.top, other.top);
+    const right = Math.max(this.right, other.right);
+    const bottom = Math.max(this.bottom, other.bottom);
+    return new BoundingBox({
+      Height: bottom - top,
+      Left: left,
+      Top: top,
+      Width: right - left,
+    });
   }
 
   str(): string {
-    return `width: ${this._width}, height: ${this._height}, left: ${this._left}, top: ${this._top}`;
-  }
-  get width(): number {
-    return this._width;
-  }
-  get height(): number {
-    return this._height;
-  }
-  get left(): number {
-    return this._left;
-  }
-  get top(): number {
-    return this._top;
+    return `width: ${this._dict.Width}, height: ${this._dict.Height}, left: ${this._dict.Left}, top: ${this._dict.Top}`;
   }
 }
 
 export class Point {
-  _x: number;
-  _y: number;
+  _dict: textract.ApiPoint;
 
-  constructor(x: number, y: number) {
-    this._x = x;
-    this._y = y;
+  constructor(dict: textract.ApiPoint) {
+    this._dict = dict;
+  }
+
+  get dict(): textract.ApiPoint {
+    return this._dict;
+  }
+  get x(): number {
+    return this._dict.X;
+  }
+  get y(): number {
+    return this._dict.Y;
   }
 
   str(): string {
-    return `x: ${this._x}, y: ${this._y}`;
-  }
-  get x(): number {
-    return this._x;
-  }
-  get y(): number {
-    return this._y;
+    return `x: ${this._dict.X}, y: ${this._dict.Y}`;
   }
 }
 
 export class Geometry {
   _boundingBox: BoundingBox;
+  _dict: textract.ApiGeometry;
   _polygon: Point[];
 
-  constructor(geometry: textract.ApiGeometry) {
-    const boundingBox = geometry.BoundingBox;
-    const polygon = geometry.Polygon;
-    this._boundingBox = new BoundingBox(
-      boundingBox.Width,
-      boundingBox.Height,
-      boundingBox.Left,
-      boundingBox.Top
-    );
-    this._polygon = polygon.map((pg) => new Point(pg.X, pg.Y));
+  constructor(dict: textract.ApiGeometry) {
+    this._dict = dict;
+    this._boundingBox = new BoundingBox(dict.BoundingBox);
+    this._polygon = dict.Polygon.map((pnt) => new Point(pnt));
+  }
+
+  get boundingBox(): BoundingBox {
+    return this._boundingBox;
+  }
+  get dict(): textract.ApiGeometry {
+    return this._dict;
+  }
+  get polygon(): Point[] {
+    return this._polygon.slice();
+  }
+
+  /**
+   * Get the slope (in radians -pi < x +pi) of the initial segment of the polygon.
+   *
+   * Because Textract constructs polygons with first two points as T-L and T-R corners, this yields the
+   * approximate (since it might not be completely rectangular) orientation of the object.
+   */
+  orientationRadians(): number | null {
+    if (!this._polygon || this._polygon.length < 2) return null;
+    const point0 = this._polygon[0];
+    const point1 = this._polygon[1];
+    return Math.atan2(point1.y - point0.y, point1.x - point0.x);
+  }
+
+  /**
+   * Wrapper over orientationRadians to translate result to degrees (-180 < x < 180).
+   */
+  orientationDegrees(): number | null {
+    const rads = this.orientationRadians();
+    if (rads == null) return rads;
+    return (rads * 180) / Math.PI;
   }
 
   str(): string {
     return `BoundingBox: ${this._boundingBox.str()}`;
   }
-  get boundingBox(): BoundingBox {
-    return this._boundingBox;
-  }
-  get polygon(): Point[] {
-    return this._polygon;
-  }
 }
 
 export class Word {
-  _block: textract.ApiWordBlock;
-  _confidence: number;
+  _dict: textract.ApiWordBlock;
   _geometry: Geometry;
-  _id: string;
-  _text: string;
 
   constructor(block: textract.ApiWordBlock) {
-    this._block = block;
-    this._confidence = block.Confidence;
+    this._dict = block;
     this._geometry = new Geometry(block.Geometry);
-    this._id = block.Id;
-    this._text = block.Text || "";
   }
 
-  str(): string {
-    return this._text;
-  }
   get confidence(): number {
-    return this._confidence;
+    return this._dict.Confidence;
+  }
+  set confidence(newVal: number) {
+    this._dict.Confidence = newVal;
+  }
+  get dict(): textract.ApiWordBlock {
+    return this._dict;
   }
   get geometry(): Geometry {
     return this._geometry;
   }
   get id(): string {
-    return this._id;
+    return this._dict.Id;
   }
   get text(): string {
-    return this._text;
+    return this._dict.Text;
   }
-  get block(): textract.ApiWordBlock {
-    return this._block;
+  get textType(): textract.ApiTextType {
+    return this._dict.TextType;
+  }
+  set textType(newVal: textract.ApiTextType) {
+    this._dict.TextType = newVal;
+  }
+
+  str(): string {
+    return this.text;
   }
 }
 
 export class Line {
-  _block: textract.ApiLineBlock;
-  _confidence: number;
+  _dict: textract.ApiLineBlock;
   _geometry: Geometry;
-  _id: string;
-  _text: string;
   _words: Word[];
 
   constructor(block: textract.ApiLineBlock, blockMap: { [blockId: string]: textract.ApiBlock }) {
-    this._block = block;
-    this._confidence = block.Confidence;
+    this._dict = block;
     this._geometry = new Geometry(block.Geometry);
-    this._id = block.Id;
-
-    this._text = block.Text || "";
 
     this._words = [];
     if (block.Relationships) {
@@ -144,194 +192,257 @@ export class Line {
     }
   }
 
-  str(): string {
-    return `Line\n==========\n${this._text}\nWords\n----------\n${this._words
-      .map((word) => `[${word.str()}]`)
-      .join("")}`;
-  }
-
   get confidence(): number {
-    return this._confidence;
+    return this._dict.Confidence;
+  }
+  set confidence(newVal: number) {
+    this._dict.Confidence = newVal;
+  }
+  get dict(): textract.ApiLineBlock {
+    return this._dict;
   }
   get geometry(): Geometry {
     return this._geometry;
   }
   get id(): string {
-    return this._id;
+    return this._dict.Id;
   }
   get words(): Word[] {
-    return this._words;
+    return this._words.slice();
   }
   get text(): string {
-    return this._text;
+    return this._dict.Text;
   }
-  get block(): textract.ApiLineBlock {
-    return this._block;
+
+  /**
+   * Iterate through the words in this line
+   * @example
+   * for (const word of line.iterWords) {
+   *   console.log(cell.text);
+   * }
+   * @example
+   * [...line.iterWords()].forEach(
+   *   (word) => console.log(word.text)
+   * );
+   */
+  iterWords(): Iterable<Word> {
+    const getIterator = (): Iterator<Word> => {
+      let ixWord = 0;
+      return {
+        next: (): IteratorResult<Word> => {
+          return ixWord < this._words.length
+            ? {
+                done: false,
+                value: this._words[ixWord++],
+              }
+            : {
+                done: true,
+                value: undefined,
+              };
+        },
+      };
+    };
+    return {
+      [Symbol.iterator]: getIterator,
+    };
+  }
+
+  wordAtIndex(ix: number): Word {
+    if (ix < 0 || ix > this._words.length) {
+      throw new Error(`Word index ${ix} must be >=0 and <${this._words.length}`);
+    }
+    return this._words[ix];
+  }
+
+  str(): string {
+    return `Line\n==========\n${this._dict.Text}\nWords\n----------\n${this._words
+      .map((word) => `[${word.str()}]`)
+      .join("")}`;
   }
 }
 
 export class SelectionElement {
-  _confidence: number;
+  _dict: textract.ApiSelectionElementBlock;
   _geometry: Geometry;
-  _id: string;
-  _selectionStatus: textract.ApiSelectionStatus;
 
   constructor(block: textract.ApiSelectionElementBlock) {
-    this._confidence = block.Confidence;
+    this._dict = block;
     this._geometry = new Geometry(block.Geometry);
-    this._id = block.Id;
-    this._selectionStatus = block.SelectionStatus;
   }
 
   get confidence(): number {
-    return this._confidence;
+    return this._dict.Confidence;
+  }
+  set confidence(newVal: number) {
+    this._dict.Confidence = newVal;
+  }
+  get dict(): textract.ApiSelectionElementBlock {
+    return this._dict;
   }
   get geometry(): Geometry {
     return this._geometry;
   }
   get id(): string {
-    return this._id;
+    return this._dict.Id;
   }
   get selectionStatus(): textract.ApiSelectionStatus {
-    return this._selectionStatus;
+    return this._dict.SelectionStatus;
+  }
+  set selectionStatus(newVal: textract.ApiSelectionStatus) {
+    this._dict.SelectionStatus = newVal;
   }
 }
 
 export class FieldKey {
-  _block: textract.ApiKeyValueSetBlock;
-  _confidence: number;
+  _dict: textract.ApiKeyValueSetBlock;
   _geometry: Geometry;
-  _id: string;
-  _text: string;
-  _content: Word[];
+  _words: Word[];
 
-  constructor(
-    block: textract.ApiKeyValueSetBlock,
-    children: string[],
-    blockMap: { [blockId: string]: textract.ApiBlock }
-  ) {
-    this._block = block;
-    this._confidence = block.Confidence;
+  constructor(block: textract.ApiKeyValueSetBlock, blockMap: { [blockId: string]: textract.ApiBlock }) {
+    this._dict = block;
     this._geometry = new Geometry(block.Geometry);
-    this._id = block.Id;
-    this._text = "";
-    this._content = [];
+    this._words = [];
 
-    const t: string[] = [];
-    children.forEach((eid) => {
-      const wb = blockMap[eid];
-      if (wb.BlockType == textract.ApiBlockType.Word) {
-        const w = new Word(wb);
-        this._content.push(w);
-        t.push(w.text);
+    let childIds: string[] = [];
+    (block.Relationships || []).forEach((rs) => {
+      if (rs.Type == textract.ApiRelationshipType.Child) {
+        childIds = childIds.concat(rs.Ids);
       }
     });
-    this._text = t.join(" ");
+
+    childIds
+      .map((id) => blockMap[id])
+      .forEach((block) => {
+        if (block.BlockType == textract.ApiBlockType.Word) {
+          this._words.push(new Word(block));
+        }
+      });
   }
 
-  str(): string {
-    return this._text;
-  }
   get confidence(): number {
-    return this._confidence;
+    return this._dict.Confidence;
+  }
+  get dict(): textract.ApiKeyValueSetBlock {
+    return this._dict;
   }
   get geometry(): Geometry {
     return this._geometry;
   }
   get id(): string {
-    return this._id;
-  }
-  get content(): Word[] {
-    return this._content;
+    return this._dict.Id;
   }
   get text(): string {
-    return this._text;
+    return this._words.map((w) => w.text).join(" ");
   }
-  get block(): textract.ApiKeyValueSetBlock {
-    return this._block;
+  get words(): Word[] {
+    return this._words.slice();
+  }
+
+  str(): string {
+    return this.text;
   }
 }
 
 export class FieldValue {
-  _block: textract.ApiKeyValueSetBlock;
-  _confidence: number;
-  _geometry: Geometry;
-  _id: string;
-  _text: string;
   _content: Array<SelectionElement | Word>;
+  _dict: textract.ApiKeyValueSetBlock;
+  _geometry: Geometry;
 
-  constructor(
-    block: textract.ApiKeyValueSetBlock,
-    children: string[],
-    blockMap: { [blockId: string]: textract.ApiBlock }
-  ) {
-    this._block = block;
-    this._confidence = block.Confidence;
-    this._geometry = new Geometry(block.Geometry);
-    this._id = block.Id;
-    this._text = "";
+  constructor(valueBlock: textract.ApiKeyValueSetBlock, blockMap: { [blockId: string]: textract.ApiBlock }) {
+    this._dict = valueBlock;
+    this._geometry = new Geometry(valueBlock.Geometry);
     this._content = [];
 
-    const t: string[] = [];
-    children.forEach((eid) => {
-      const wb = blockMap[eid];
-      if (wb.BlockType == textract.ApiBlockType.Word) {
-        const w = new Word(wb);
-        this._content.push(w);
-        t.push(w.text);
-      } else if (wb.BlockType == textract.ApiBlockType.SelectionElement) {
-        const se = new SelectionElement(wb);
-        this._content.push(se);
-        t.push(se.selectionStatus);
+    let childIds: string[] = [];
+    (valueBlock.Relationships || []).forEach((rs) => {
+      if (rs.Type == textract.ApiRelationshipType.Child) {
+        childIds = childIds.concat(rs.Ids);
       }
     });
-    this._text = t.join(" ");
+
+    childIds
+      .map((id) => blockMap[id])
+      .forEach((block) => {
+        if (block.BlockType == textract.ApiBlockType.Word) {
+          this._content.push(new Word(block));
+        } else if (block.BlockType == textract.ApiBlockType.SelectionElement) {
+          this._content.push(new SelectionElement(block));
+        }
+      });
   }
 
-  str(): string {
-    return this._text;
-  }
   get confidence(): number {
-    return this._confidence;
+    return this._dict.Confidence;
+  }
+  get content(): Array<SelectionElement | Word> {
+    return this._content.slice();
+  }
+  get dict(): textract.ApiKeyValueSetBlock {
+    return this._dict;
   }
   get geometry(): Geometry {
     return this._geometry;
   }
   get id(): string {
-    return this._id;
-  }
-  get content(): Array<SelectionElement | Word> {
-    return this._content;
+    return this._dict.Id;
   }
   get text(): string {
-    return this._text;
+    return this._content.map((c) => ("selectionStatus" in c ? c.selectionStatus : c.text)).join(" ");
   }
-  get block(): textract.ApiKeyValueSetBlock {
-    return this._block;
+
+  str(): string {
+    return this.text;
   }
 }
 
 export class Field {
-  _key: FieldKey | null;
+  _key: FieldKey;
   _value: FieldValue | null;
 
-  constructor(block: textract.ApiKeyValueSetBlock, blockMap: { [blockId: string]: textract.ApiBlock }) {
-    this._key = null;
+  constructor(keyBlock: textract.ApiKeyValueSetBlock, blockMap: { [blockId: string]: textract.ApiBlock }) {
     this._value = null;
-    block.Relationships.forEach((item) => {
-      if (item.Type == textract.ApiRelationshipType.Child) {
-        this._key = new FieldKey(block, item.Ids, blockMap);
-      } else if (item.Type == textract.ApiRelationshipType.Value) {
-        item.Ids.forEach((eid) => {
-          const vkvs = blockMap[eid] as textract.ApiKeyValueSetBlock;
-          if (vkvs.EntityTypes.indexOf(textract.ApiKeyValueEntityType.Value) >= 0 && vkvs.Relationships) {
-            vkvs.Relationships.forEach((vitem) => {
-              this._value = new FieldValue(vkvs, vitem.Ids, blockMap);
-            });
-          }
-        });
+    this._key = new FieldKey(keyBlock, blockMap);
+
+    let valueBlockIds: string[] = [];
+    (keyBlock.Relationships || []).forEach((rs) => {
+      if (rs.Type == textract.ApiRelationshipType.Value) {
+        valueBlockIds = valueBlockIds.concat(rs.Ids);
       }
     });
+
+    if (valueBlockIds.length > 1) {
+      const fieldLogName = this._key ? `field '${this._key.text}'` : "unnamed form field";
+      console.warn(
+        `Got ${valueBlockIds.length} value blocks for ${fieldLogName} (Expected 0-1). Including first only.`
+      );
+    }
+    if (valueBlockIds.length) {
+      this._value = new FieldValue(blockMap[valueBlockIds[0]] as textract.ApiKeyValueSetBlock, blockMap);
+    }
+  }
+
+  /**
+   * Return average confidence over whichever of {key, value} are present.
+   */
+  get confidence(): number {
+    const scores = [];
+    if (this._key) {
+      scores.push(this._key.confidence || 0);
+    }
+    if (this._value) {
+      scores.push(this._value.confidence || 0);
+    }
+    if (scores.length) {
+      return scores.reduce((acc, next) => acc + next, 0) / scores.length;
+    } else {
+      return 0;
+    }
+  }
+  get key(): FieldKey {
+    return this._key;
+  }
+  get value(): FieldValue | null {
+    return this._value;
   }
 
   str(): string {
@@ -339,401 +450,784 @@ export class Field {
       this._value ? this._value.str() : ""
     }`;
   }
-
-  get key(): FieldKey | null {
-    return this._key;
-  }
-  get value(): FieldValue | null {
-    return this._value;
-  }
 }
 
 export class Form {
   _fields: Field[];
   _fieldsMap: { [keyText: string]: Field };
 
-  constructor() {
+  constructor(keyBlocks: textract.ApiKeyValueSetBlock[], blockMap: { [blockId: string]: textract.ApiBlock }) {
     this._fields = [];
     this._fieldsMap = {};
+
+    keyBlocks.forEach((keyBlock) => {
+      const f = new Field(keyBlock, blockMap);
+      this._fields.push(f);
+      const fieldKeyText = f.key.text || "";
+      if (fieldKeyText) {
+        if (fieldKeyText in this._fieldsMap) {
+          if (f.confidence > this._fieldsMap[fieldKeyText].confidence) {
+            this._fieldsMap[fieldKeyText] = f;
+          }
+        } else {
+          this._fieldsMap[fieldKeyText] = f;
+        }
+      }
+    });
   }
 
-  addField(field: Field): void {
-    this._fields.push(field);
-    if (field.key) this._fieldsMap[field.key.text] = field;
-  }
-
-  str(): string {
-    return this._fields.map((f) => f.str()).join("\n");
-  }
-
-  get fields(): Field[] {
-    return this._fields;
+  get nFields(): number {
+    return this._fields.length;
   }
 
   getFieldByKey(key: string): Field | null {
     return this._fieldsMap[key] || null;
   }
 
+  /**
+   * Iterate through the Fields in the Form.
+   * @param skipFieldsWithoutKey Set `true` to skip fields with no field.key (Included by default)
+   * @example
+   * for (const field of form.iterFields()) {
+   *   console.log(field?.key.text);
+   * }
+   * @example
+   * const fields = [...form.iterFields()];
+   */
+  iterFields(skipFieldsWithoutKey = false): Iterable<Field> {
+    const getIterator = (): Iterator<Field> => {
+      const fieldList = skipFieldsWithoutKey ? this._fields.filter((f) => f.key) : this._fields;
+      let ixField = 0;
+      return {
+        next: (): IteratorResult<Field> => {
+          return ixField < fieldList.length
+            ? {
+                done: false,
+                value: fieldList[ixField++],
+              }
+            : {
+                done: true,
+                value: undefined,
+              };
+        },
+      };
+    };
+    return {
+      [Symbol.iterator]: getIterator,
+    };
+  }
+
   searchFieldsByKey(key: string): Field[] {
     const searchKey = key.toLowerCase();
     return this._fields.filter((field) => field.key && field.key.text.toLowerCase().indexOf(searchKey) >= 0);
   }
+
+  str(): string {
+    return this._fields.map((f) => f.str()).join("\n");
+  }
 }
 
 export class Cell {
-  _block: textract.ApiCellBlock;
-  _confidence: number;
-  _rowIndex: number;
-  _columnIndex: number;
-  _rowSpan: number;
-  _columnSpan: number;
+  _dict: textract.ApiCellBlock;
   _geometry: Geometry;
-  _id: string;
   _content: Array<SelectionElement | Word>;
   _text: string;
 
   constructor(block: textract.ApiCellBlock, blockMap: { [blockId: string]: textract.ApiBlock }) {
-    this._block = block;
-    this._confidence = block.Confidence;
-    this._rowIndex = block.RowIndex;
-    this._columnIndex = block.ColumnIndex;
-    this._rowSpan = block.RowSpan;
-    this._columnSpan = block.ColumnSpan;
+    this._dict = block;
     this._geometry = new Geometry(block.Geometry);
-    this._id = block.Id;
     this._content = [];
     this._text = "";
-    if (block.Relationships) {
-      block.Relationships.forEach((rs) => {
-        if (rs.Type == textract.ApiRelationshipType.Child) {
-          rs.Ids.forEach((cid) => {
-            const blockType = blockMap[cid].BlockType;
-            if (blockType == textract.ApiBlockType.Word) {
-              const w = new Word(blockMap[cid] as textract.ApiWordBlock);
-              this._content.push(w);
-              this._text += w.text + " ";
-            } else if (blockType == textract.ApiBlockType.SelectionElement) {
-              const se = new SelectionElement(blockMap[cid] as textract.ApiSelectionElementBlock);
-              this._content.push(se);
-              this._text += se.selectionStatus + ", ";
-            }
-          });
-        }
-      });
-    }
+    (block.Relationships || []).forEach((rs) => {
+      if (rs.Type == textract.ApiRelationshipType.Child) {
+        rs.Ids.forEach((cid) => {
+          const blockType = blockMap[cid].BlockType;
+          if (blockType == textract.ApiBlockType.Word) {
+            const w = new Word(blockMap[cid] as textract.ApiWordBlock);
+            this._content.push(w);
+            this._text += w.text + " ";
+          } else if (blockType == textract.ApiBlockType.SelectionElement) {
+            const se = new SelectionElement(blockMap[cid] as textract.ApiSelectionElementBlock);
+            this._content.push(se);
+            this._text += se.selectionStatus + ", ";
+          }
+        });
+      }
+    });
   }
 
-  str(): string {
-    return this._text;
-  }
-  get confidence(): number {
-    return this._confidence;
-  }
-  get rowIndex(): number {
-    return this._rowIndex;
-  }
   get columnIndex(): number {
-    return this._columnIndex;
-  }
-  get rowSpan(): number {
-    return this._rowSpan;
+    return this._dict.ColumnIndex;
   }
   get columnSpan(): number {
-    return this._columnSpan;
+    return this._dict.ColumnSpan || 1;
+  }
+  get confidence(): number {
+    return this._dict.Confidence;
+  }
+  set confidence(newVal: number) {
+    this._dict.Confidence = newVal;
+  }
+  get content(): Array<SelectionElement | Word> {
+    return this._content.slice();
+  }
+  get dict(): textract.ApiCellBlock {
+    return this._dict;
   }
   get geometry(): Geometry {
     return this._geometry;
   }
   get id(): string {
-    return this._id;
+    return this._dict.Id;
   }
-  get content(): Array<SelectionElement | Word> {
-    return this._content;
+  get rowIndex(): number {
+    return this._dict.RowIndex;
+  }
+  get rowSpan(): number {
+    return this._dict.RowSpan || 1;
   }
   get text(): string {
     return this._text;
   }
-  get block(): textract.ApiCellBlock {
-    return this._block;
+
+  str(): string {
+    return this._text;
   }
 }
 
 export class Row {
   _cells: Cell[];
 
-  constructor() {
-    this._cells = [];
+  constructor(cells: Cell[] = []) {
+    this._cells = cells;
+  }
+
+  get nCells(): number {
+    return this._cells.length;
+  }
+
+  /**
+   * Iterate through the cells in this row
+   * @example
+   * for (const cell of row.iterCells()) {
+   *   console.log(cell.text);
+   * }
+   * @example
+   * [...row.iterCells()].forEach(
+   *   (cell) => console.log(cell.text)
+   * );
+   */
+  iterCells(): Iterable<Cell> {
+    const getIterator = (): Iterator<Cell> => {
+      let ixCell = 0;
+      return {
+        next: (): IteratorResult<Cell> => {
+          return ixCell < this._cells.length
+            ? {
+                done: false,
+                value: this._cells[ixCell++],
+              }
+            : {
+                done: true,
+                value: undefined,
+              };
+        },
+      };
+    };
+    return {
+      [Symbol.iterator]: getIterator,
+    };
   }
 
   str(): string {
     return this._cells.map((cell) => `[${cell.str()}]`).join("");
   }
-  get cells(): Cell[] {
-    return this._cells;
-  }
 }
 
 export class Table {
-  _block: textract.ApiTableBlock;
-  _confidence: number;
+  _cells: Cell[];
+  _dict: textract.ApiTableBlock;
   _geometry: Geometry;
-  _id: string;
-  _rows: Row[];
+  _nCols: number;
+  _nRows: number;
 
   constructor(block: textract.ApiTableBlock, blockMap: { [blockId: string]: textract.ApiBlock }) {
-    this._block = block;
-    this._confidence = block.Confidence;
+    this._dict = block;
     this._geometry = new Geometry(block.Geometry);
-    this._id = block.Id;
-    this._rows = [];
-    let ri = 1;
-    let row = new Row();
-    let cell = null;
-    if (block.Relationships) {
-      block.Relationships.forEach((rs) => {
-        if (rs.Type == textract.ApiRelationshipType.Child) {
-          rs.Ids.forEach((cid) => {
-            cell = new Cell(blockMap[cid] as textract.ApiCellBlock, blockMap);
-            if (cell.rowIndex > ri) {
-              this._rows.push(row);
-              row = new Row();
-              ri = cell.rowIndex;
-            }
-            row.cells.push(cell);
-          });
-          if (row && row.cells) this._rows.push(row);
-        }
-      });
+
+    this._cells = ([] as Cell[]).concat(
+      ...(block.Relationships || [])
+        .filter((rs) => rs.Type == textract.ApiRelationshipType.Child)
+        .map((rs) => rs.Ids.map((cid) => new Cell(blockMap[cid] as textract.ApiCellBlock, blockMap)))
+    );
+
+    // This indexing could be moved to a utility function if supporting more mutation operations in future:
+    this._cells.sort((a, b) => a.rowIndex - b.rowIndex || a.columnIndex - b.columnIndex);
+    this._nCols = this._cells.reduce((acc, next) => Math.max(acc, next.columnIndex + next.columnSpan - 1), 0);
+    this._nRows = this._cells.reduce((acc, next) => Math.max(acc, next.rowIndex + next.rowSpan - 1), 0);
+  }
+
+  /**
+   * Get the Cell at a particular Y, X coordinate in the table.
+   * @param rowIndex 1-based index of the target row in the table
+   * @param columnIndex 1-based index of the target column in the table
+   * @param strict Set `true` to exclude cells rowspan/colspan cells which don't *start* at the target indices.
+   * @returns Cell at the specified row & column, or undefined if none is present.
+   */
+  cellAt(rowIndex: number, columnIndex: number, strict = false): Cell | undefined {
+    if (strict) {
+      return this._cells.find((c) => c.columnIndex === columnIndex && c.rowIndex === rowIndex);
+    } else {
+      return this._cells.find(
+        (c) =>
+          c.columnIndex <= columnIndex &&
+          c.columnIndex + c.columnSpan > columnIndex &&
+          c.rowIndex <= rowIndex &&
+          c.rowIndex + c.rowSpan > rowIndex
+      );
     }
   }
 
-  str(): string {
-    return "Table\n==========\n" + this._rows.map((row) => `Row\n==========\n${row.str()}`).join("\n");
+  /**
+   * List the cells at a particular {row, column, or combination} in the table
+   * @param rowIndex 1-based index of the target row in the table
+   * @param columnIndex 1-based index of the target column in the table
+   * @param strict Set `true` to exclude cells rowspan/colspan cells which don't *start* at the target indices.
+   * @returns Cell at the specified row & column, or undefined if none is present.
+   */
+  cellsAt(rowIndex: number | null, columnIndex: number | null, strict = false): Cell[] {
+    return this._cells.filter(
+      (c) =>
+        (rowIndex == null ||
+          (strict ? c.rowIndex === rowIndex : c.rowIndex <= rowIndex && c.rowIndex + c.rowSpan > rowIndex)) &&
+        (columnIndex == null ||
+          (strict
+            ? c.columnIndex === columnIndex
+            : c.columnIndex <= columnIndex && c.columnIndex + c.columnSpan > columnIndex))
+    );
+  }
+
+  /**
+   * Iterate through the rows of the table
+   * @param repeatMultiRowCells Set `true` to include rowspan>1 cells in every `Row` they intersect with.
+   * @example
+   * for (const row of table.iterRows()) {
+   *   for (const cell of row.iterCells()) {
+   *     console.log(cell.text);
+   *   }
+   * }
+   * @example
+   * [...table.iterRows()].forEach(
+   *   (row) => [...row.iterCells()].forEach(
+   *     (cell) => console.log(cell.text)
+   *   )
+   * );
+   */
+  iterRows(repeatMultiRowCells = false): Iterable<Row> {
+    const getIterator = (): Iterator<Row> => {
+      let ixRow = 0;
+      return {
+        next: (): IteratorResult<Row> => {
+          return ixRow < this._nRows
+            ? {
+                done: false,
+                value: new Row(this.cellsAt(++ixRow, null, !repeatMultiRowCells)),
+              }
+            : {
+                done: true,
+                value: undefined,
+              };
+        },
+      };
+    };
+    return {
+      [Symbol.iterator]: getIterator,
+    };
   }
 
   get confidence(): number {
-    return this._confidence;
+    return this._dict.Confidence;
+  }
+  set confidence(newVal: number) {
+    this._dict.Confidence = newVal;
+  }
+  get dict(): textract.ApiTableBlock {
+    return this._dict;
   }
   get geometry(): Geometry {
     return this._geometry;
   }
   get id(): string {
-    return this._id;
+    return this._dict.Id;
   }
-  get rows(): Row[] {
-    return this._rows;
+  get nCells(): number {
+    return this._cells.length;
   }
-  get block(): textract.ApiTableBlock {
-    return this._block;
+  get nColumns(): number {
+    return this._nCols;
+  }
+  get nRows(): number {
+    return this._nRows;
+  }
+
+  str(): string {
+    return (
+      "Table\n==========\n" + [...this.iterRows()].map((row) => `Row\n==========\n${row.str()}`).join("\n")
+    );
   }
 }
 
+/**
+ * Get the most common value in an Iterable of numbers
+ */
+const getMode = (arr: Iterable<number>): number | null => {
+  const freqs: { [key: number]: { value: number; freq: number } } = {};
+  for (const item of arr) {
+    if (freqs[item]) {
+      ++freqs[item].freq;
+    } else {
+      freqs[item] = { value: item, freq: 1 };
+    }
+  }
+
+  let maxFreq = 0;
+  let mode: number | null = null;
+  for (const item in freqs) {
+    if (freqs[item].freq > maxFreq) {
+      maxFreq = freqs[item].freq;
+      mode = freqs[item].value;
+    }
+  }
+  return mode;
+};
+
 export class Page {
   _blocks: textract.ApiBlock[];
-  _text: string;
-  _lines: Line[];
-  _form: Form;
-  _tables: Table[];
+  _dict: textract.ApiPageBlock;
   _content: Array<Line | Table | Field>;
+  _form: Form;
   _geometry: Geometry;
+  _lines: Line[];
+  _tables: Table[];
 
   constructor(
     pageBlock: textract.ApiPageBlock,
     blocks: textract.ApiBlock[],
     blockMap: { [blockId: string]: textract.ApiBlock }
   ) {
+    this._dict = pageBlock;
     this._blocks = blocks;
-    this._text = "";
-    this._lines = [];
-    this._form = new Form();
     this._geometry = new Geometry(pageBlock.Geometry);
-    this._tables = [];
+
+    // Placeholders pre-parsing to keep TypeScript happy:
     this._content = [];
-    this._parse(blockMap);
+    this._lines = [];
+    this._tables = [];
+    this._form = new Form([], {});
+    // Parse the content:
+    this._parse(blocks, blockMap);
   }
 
-  str(): string {
-    return `Page\n==========\n${this._content.join("\n")}\n`;
-  }
+  _parse(blocks: textract.ApiBlock[], blockMap: { [blockId: string]: textract.ApiBlock }): void {
+    this._content = [];
+    this._lines = [];
+    this._tables = [];
+    const formKeyBlocks: textract.ApiKeyValueSetBlock[] = [];
 
-  _parse(blockMap: { [blockId: string]: textract.ApiBlock }): void {
-    this._blocks.forEach((item) => {
+    blocks.forEach((item) => {
       if (item.BlockType == textract.ApiBlockType.Line) {
         const l = new Line(item, blockMap);
         this._lines.push(l);
         this._content.push(l);
-        this._text += `${l.text}\n`;
       } else if (item.BlockType == textract.ApiBlockType.Table) {
         const t = new Table(item, blockMap);
         this._tables.push(t);
         this._content.push(t);
       } else if (item.BlockType == textract.ApiBlockType.KeyValueSet) {
         if (item.EntityTypes.indexOf(textract.ApiKeyValueEntityType.Key) >= 0) {
-          const f = new Field(item, blockMap);
-          if (f.key) {
-            this._form.addField(f);
-            this._content.push(f);
-          } else {
-            console.warn(
-              "WARNING: Detected K/V where key does not have content. Excluding key from output.",
-              f,
-              item
-            );
-          }
+          formKeyBlocks.push(item);
         }
       }
     });
+
+    this._form = new Form(formKeyBlocks, blockMap);
   }
 
-  getLinesInReadingOrder(): Array<[number, string]> {
-    const columns: Array<{ left: number; right: number }> = [];
-    const lines: Array<[number, string]> = [];
-    this._lines.forEach((line) => {
-      let columnFound = false;
-      for (let index = 0; index < columns.length; ++index) {
-        const column = columns[index];
-        const bboxLeft = line.geometry.boundingBox.left;
-        const bboxRight = line.geometry.boundingBox.left + line.geometry.boundingBox.width;
-        const bboxCentre = line.geometry.boundingBox.left + line.geometry.boundingBox.width / 2;
-        const columnCentre = column.left + column.right / 2; // TODO: Isn't this an error?
+  /**
+   * Calculate the most common orientation (in whole degrees) of 'WORD' content in the page.
+   */
+  getModalWordOrientationDegrees(): number | null {
+    const wordDegreesByLine = [...this.iterLines()].map((line) =>
+      [...line.iterWords()].map((word) => word.geometry.orientationDegrees())
+    );
+
+    const wordDegrees = ([] as Array<number | null>)
+      .concat(...wordDegreesByLine)
+      .filter((n) => n != null) as number[];
+
+    return getMode(wordDegrees.map((n) => Math.round(n)));
+  }
+
+  /**
+   * List lines in reading order, grouped by 'cluster' (heuristically, almost a paragraph)
+   */
+  getLineClustersInReadingOrder(): Line[][] {
+    const colBoxes: BoundingBox[] = [];
+    const colLines: Line[][] = [];
+    const colTotalLineHeight: number[] = [];
+    const lineHCenters = this._lines.map((l) => l.geometry.boundingBox.hCenter);
+    this._lines.forEach((line, ixLine) => {
+      const lineBox = line.geometry.boundingBox;
+      const lineHCenter = lineHCenters[ixLine];
+      let ixColumn: number | null = null;
+      for (let ixCol = 0; ixCol < colBoxes.length; ++ixCol) {
+        const colBox = colBoxes[ixCol];
+        const colHCenter = colBox.hCenter;
+        const newTotalLineHeight = colTotalLineHeight[ixCol] + lineBox.height;
+        const newAvgLineHeight = newTotalLineHeight / (colLines[ixCol].length + 1);
+        // These distances can't both be >0, and will both be <0 if they overlap
+        const vDist = Math.max(0, lineBox.top - colBox.bottom, colBox.top - lineBox.bottom);
         if (
-          (bboxCentre > column.left && bboxCentre < column.right) ||
-          (columnCentre > bboxLeft && columnCentre < bboxRight)
+          ((lineHCenter > colBox.left && lineHCenter < colBox.right) ||
+            (colHCenter > lineBox.left && colHCenter < lineBox.right)) &&
+          vDist < newAvgLineHeight &&
+          Math.abs((newAvgLineHeight - lineBox.height) / newAvgLineHeight) < 0.3
         ) {
-          // Bbox appears inside the column
-          lines.push([index, line.text]);
-          columnFound = true;
+          ixColumn = ixCol;
+          colBoxes[ixCol] = colBox.union(lineBox);
+          colLines[ixCol].push(line);
+          colTotalLineHeight[ixCol] = newTotalLineHeight;
           break;
         }
       }
-      if (!columnFound) {
-        columns.push({
-          left: line.geometry.boundingBox.left,
-          right: line.geometry.boundingBox.left + line.geometry.boundingBox.width,
-        });
-        lines.push([columns.length - 1, line.text]);
+      if (ixColumn == null) {
+        colBoxes.push(new BoundingBox(lineBox.dict));
+        colLines.push([line]);
+        colTotalLineHeight.push(lineBox.height);
       }
     });
-
-    return lines.sort((a, b) => Number(a[0] < b[0]));
+    return colLines;
   }
 
   getTextInReadingOrder(): string {
-    return this.getLinesInReadingOrder()
-      .map((l) => l[1])
-      .join("\n");
+    return this.getLineClustersInReadingOrder()
+      .map((lines) => lines.map((l) => l.text).join("\n"))
+      .join("\n\n");
+  }
+
+  /**
+   * Iterate through the lines on the page in raw Textract order
+   *
+   * For reading order, see getLineClustersInReadingOrder instead.
+   *
+   * @example
+   * for (const line of page.iterLines()) {
+   *   console.log(line.text);
+   * }
+   * @example
+   * const lines = [...page.iterLines()];
+   */
+  iterLines(): Iterable<Line> {
+    const getIterator = (): Iterator<Line> => {
+      let ixLine = 0;
+      return {
+        next: (): IteratorResult<Line> => {
+          return ixLine < this._lines.length
+            ? {
+                done: false,
+                value: this._lines[ixLine++],
+              }
+            : {
+                done: true,
+                value: undefined,
+              };
+        },
+      };
+    };
+    return {
+      [Symbol.iterator]: getIterator,
+    };
+  }
+
+  /**
+   * Iterate through the tables on the page
+   * @example
+   * for (const table of page.iterTables()) {
+   *   console.log(table.str());
+   * }
+   * @example
+   * const tables = [...page.iterTables()];
+   */
+  iterTables(): Iterable<Table> {
+    const getIterator = (): Iterator<Table> => {
+      let ixTable = 0;
+      return {
+        next: (): IteratorResult<Table> => {
+          return ixTable < this._tables.length
+            ? {
+                done: false,
+                value: this._tables[ixTable++],
+              }
+            : {
+                done: true,
+                value: undefined,
+              };
+        },
+      };
+    };
+    return {
+      [Symbol.iterator]: getIterator,
+    };
+  }
+
+  lineAtIndex(ix: number): Line {
+    if (ix < 0 || ix > this._lines.length) {
+      throw new Error(`Line index ${ix} must be >=0 and <${this._lines.length}`);
+    }
+    return this._lines[ix];
+  }
+
+  tableAtIndex(ix: number): Table {
+    if (ix < 0 || ix > this._tables.length) {
+      throw new Error(`Table index ${ix} must be >=0 and <${this._tables.length}`);
+    }
+    return this._tables[ix];
   }
 
   get blocks(): textract.ApiBlock[] {
-    return this._blocks;
+    return this._blocks.slice();
   }
-  get text(): string {
-    return this._text;
-  }
-  get lines(): Line[] {
-    return this._lines;
+  get dict(): textract.ApiPageBlock {
+    return this._dict;
   }
   get form(): Form {
     return this._form;
   }
-  get tables(): Table[] {
-    return this._tables;
-  }
-  get content(): Array<Field | Line | Table> {
-    return this._content;
-  }
   get geometry(): Geometry {
     return this._geometry;
   }
-  //get id() { return this._id; }
+  get id(): string {
+    return this._dict.Id;
+  }
+  get nLines(): number {
+    return this._lines.length;
+  }
+  get nTables(): number {
+    return this._tables.length;
+  }
+  get text(): string {
+    return this._lines.map((l) => l.text).join("\n");
+  }
+
+  str(): string {
+    return `Page\n==========\n${this._content.join("\n")}\n`;
+  }
 }
 
 export class TextractDocument {
+  _dict: textract.ApiResponsePage & textract.ApiResponseWithContent;
   _blockMap: { [blockId: string]: textract.ApiBlock };
   _pages: Page[];
-  _responseDocumentPages: Array<{ PageBlock: textract.ApiPageBlock; Blocks: textract.ApiBlock[] }>;
-  _responsePages: textract.ApiResponsePage[];
 
-  constructor(responsePages: textract.ApiResponsePage | textract.ApiResponsePage[]) {
-    if (!Array.isArray(responsePages)) responsePages = [responsePages];
+  /**
+   * @param textractResults A (parsed) Textract response JSON, or an array of multiple from the same job
+   */
+  constructor(textractResults: textract.ApiResponsePage | textract.ApiResponsePages) {
+    if (Array.isArray(textractResults)) {
+      this._dict = this._consolidateMultipleResponses(textractResults);
+    } else {
+      if (!("Blocks" in textractResults && textractResults.Blocks?.length)) {
+        throw new Error(`Provided Textract JSON has no content! (.Blocks array)`);
+      }
+      this._dict = textractResults;
+    }
+
+    if ("NextToken" in this._dict) {
+      console.warn(`Provided Textract JSON contains a NextToken: Content may be truncated!`);
+    }
 
     this._blockMap = {};
-    this._responseDocumentPages = [];
-    this._responsePages = responsePages;
     this._pages = [];
     this._parse();
   }
 
-  str(): string {
-    return `\nDocument\n==========\n${this._pages.map((p) => p.str()).join("\n\n")}\n\n`;
-  }
+  _parse(): void {
+    this._blockMap = this._dict.Blocks.reduce((acc, next) => {
+      acc[next.Id] = next;
+      return acc;
+    }, {} as { [blockId: string]: textract.ApiBlock });
 
-  _parseDocumentPagesAndBlockMap() {
-    const blockMap: { [blockId: string]: textract.ApiBlock } = {};
-
-    const documentPages: Array<{ PageBlock: textract.ApiPageBlock; Blocks: textract.ApiBlock[] }> = [];
     let currentPageBlock: textract.ApiPageBlock | null = null;
     let currentPageContent: textract.ApiBlock[] = [];
-    this._responsePages.forEach((resp, ixResp) => {
-      if ("JobStatus" in resp) {
-        const statusUpper = (resp.JobStatus || "").toLocaleUpperCase();
-        if (statusUpper.indexOf("FAIL") >= 0) {
-          throw new Error(`Textract response ${ixResp} has failed status '${resp.JobStatus}'`);
-        } else if (statusUpper.indexOf("PROGRESS") >= 0) {
-          throw new Error(`Textract response ${ixResp} is not yet completed with status '${resp.JobStatus}'`);
+    this._pages = [];
+    this._dict.Blocks.forEach((block) => {
+      if (block.BlockType == textract.ApiBlockType.Page) {
+        if (currentPageBlock) {
+          this._pages.push(new Page(currentPageBlock, currentPageContent, this._blockMap));
         }
+        currentPageBlock = block;
+        currentPageContent = [block];
+      } else {
+        currentPageContent.push(block);
       }
-      if (!("Blocks" in resp)) {
-        console.warn(`Skipping Textract response ${ixResp} which has no content (status ${resp.JobStatus})`);
-        return;
-      }
-      (resp.Blocks || []).forEach((block) => {
-        if (block.BlockType && block.Id) {
-          blockMap[block.Id] = block;
-        }
-        if (block.BlockType == textract.ApiBlockType.Page) {
-          if (currentPageBlock) {
-            documentPages.push({
-              PageBlock: currentPageBlock,
-              Blocks: currentPageContent,
-            });
-          }
-          currentPageBlock = block;
-          currentPageContent = [block];
-        } else {
-          currentPageContent.push(block);
-        }
-      });
     });
     if (currentPageBlock) {
-      documentPages.push({
-        PageBlock: currentPageBlock,
-        Blocks: currentPageContent,
-      });
+      this._pages.push(new Page(currentPageBlock, currentPageContent, this._blockMap));
     }
-    return { documentPages, blockMap };
   }
 
-  _parse(): void {
-    const { documentPages, blockMap } = this._parseDocumentPagesAndBlockMap();
-    this._responseDocumentPages = documentPages;
-    this._blockMap = blockMap;
-    documentPages.forEach((documentPage) => {
-      this._pages.push(new Page(documentPage.PageBlock, documentPage.Blocks, this._blockMap));
-    });
+  _consolidateMultipleResponses(
+    textractResultArray: textract.ApiResponsePages
+  ): textract.ApiResponsePage & textract.ApiResponseWithContent {
+    if (!textractResultArray?.length) throw new Error(`Input Textract Results list empty!`);
+    let nPages = 0;
+    const docMetadata: textract.ApiDocumentMetadata = { Pages: 0 };
+    let blocks: textract.ApiBlock[] = [];
+    let modelVersion = "";
+    let analysisType: null | "AnalyzeDocument" | "DetectText" = null;
+    let jobStatus: null | "IN_PROGRESS" | "SUCCEEDED" | "PARTIAL_SUCCESS" = null;
+    let jobStatusMessage: null | string = null;
+    let warnings: null | textract.ApiResultWarning[] = null;
+    for (const textractResult of textractResultArray) {
+      if ("Blocks" in textractResult && textractResult.Blocks) {
+        blocks = blocks.concat(textractResult.Blocks);
+      } else {
+        console.warn("Found Textract response with no content");
+      }
+      if ("DocumentMetadata" in textractResult) {
+        Object.assign(docMetadata, textractResult["DocumentMetadata"]);
+        nPages = Math.max(nPages, textractResult.DocumentMetadata.Pages);
+      }
+      if ("AnalyzeDocumentModelVersion" in textractResult) {
+        if (analysisType && analysisType !== "AnalyzeDocument") {
+          throw new Error("Inconsistent textractResults contain both AnalyzeDocument and DetectText results");
+        }
+        analysisType = "AnalyzeDocument";
+        if (modelVersion && modelVersion !== textractResult.AnalyzeDocumentModelVersion) {
+          console.warn(
+            `Inconsistent Textract model versions ${modelVersion} and ${textractResult.AnalyzeDocumentModelVersion}: Ignoring latter`
+          );
+        } else {
+          modelVersion = textractResult.AnalyzeDocumentModelVersion;
+        }
+      }
+      if ("DetectDocumentTextModelVersion" in textractResult) {
+        if (analysisType && analysisType !== "DetectText") {
+          throw new Error("Inconsistent textractResults contain both AnalyzeDocument and DetectText results");
+        }
+        analysisType = "DetectText";
+        if (modelVersion && modelVersion !== textractResult.DetectDocumentTextModelVersion) {
+          console.warn(
+            `Inconsistent Textract model versions ${modelVersion} and ${textractResult.DetectDocumentTextModelVersion}: Ignoring latter`
+          );
+        } else {
+          modelVersion = textractResult.DetectDocumentTextModelVersion;
+        }
+      }
+      if ("JobStatus" in textractResult) {
+        if (
+          textractResult.JobStatus == "FAILED" ||
+          (textractResult.JobStatus || "").toLocaleUpperCase().indexOf("FAIL") >= 0
+        ) {
+          throw new Error(`Textract results contain failed job of status ${textractResult.JobStatus}`);
+        } else if (jobStatus && jobStatus !== textractResult.JobStatus) {
+          throw new Error(
+            `Textract results inconsistent JobStatus values ${jobStatus}, ${textractResult.JobStatus}`
+          );
+        }
+        jobStatus = textractResult.JobStatus;
+      }
+      if ("StatusMessage" in textractResult && textractResult.StatusMessage) {
+        if (jobStatusMessage && textractResult.StatusMessage !== jobStatusMessage) {
+          console.warn(`Multiple StatusMessages in Textract results - keeping longest`);
+          if (textractResult.StatusMessage.length > jobStatusMessage.length) {
+            jobStatusMessage = textractResult.StatusMessage;
+          }
+        } else {
+          jobStatusMessage = textractResult.StatusMessage;
+        }
+      }
+      if ("Warnings" in textractResult && textractResult.Warnings) {
+        warnings = warnings ? warnings.concat(textractResult.Warnings) : textractResult.Warnings;
+      }
+    }
+
+    const content: textract.ApiResponseWithContent = {
+      DocumentMetadata: docMetadata,
+      Blocks: blocks,
+    };
+    const modelVersionFields =
+      analysisType == "AnalyzeDocument"
+        ? { AnalyzeDocumentModelVersion: modelVersion }
+        : analysisType == "DetectText"
+        ? { DetectDocumentTextModelVersion: modelVersion }
+        : { AnalyzeDocumentModelVersion: modelVersion || "Unknown" };
+    const jobStatusFields = jobStatus ? { JobStatus: jobStatus } : {};
+    const statusMessageFields = jobStatusMessage ? { StatusMessage: jobStatusMessage } : {};
+    const warningFields = warnings ? { ArfBarf: warnings } : {};
+
+    return {
+      ...content,
+      ...modelVersionFields,
+      ...jobStatusFields,
+      ...statusMessageFields,
+      ...warningFields,
+    };
   }
 
-  get blocks(): textract.ApiResponsePage[] {
-    return this._responsePages;
+  get dict(): textract.ApiResponsePage & textract.ApiResponseWithContent {
+    return this._dict;
   }
-  get pageBlocks(): Array<{ PageBlock: textract.ApiPageBlock; Blocks: textract.ApiBlock[] }> {
-    return this._responseDocumentPages;
+  get blocks(): textract.ApiBlock[] {
+    return this._dict.Blocks;
   }
-  get pages(): Page[] {
-    return this._pages;
+  get nPages(): number {
+    return this._pages.length;
   }
 
   getBlockById(blockId: string): textract.ApiBlock | undefined {
     return this._blockMap && this._blockMap[blockId];
+  }
+
+  /**
+   * Iterate through the pages of the document
+   * @example
+   * for (const page of doc.iterPages()) {
+   *   console.log(page.str());
+   * }
+   * @example
+   * const pages = [...doc.iterPages()];
+   */
+  iterPages(): Iterable<Page> {
+    const getIterator = (): Iterator<Page> => {
+      let ixPage = 0;
+      return {
+        next: (): IteratorResult<Page> => {
+          return ixPage < this._pages.length
+            ? {
+                done: false,
+                value: this._pages[ixPage++],
+              }
+            : {
+                done: true,
+                value: undefined,
+              };
+        },
+      };
+    };
+    return {
+      [Symbol.iterator]: getIterator,
+    };
+  }
+
+  pageNumber(pageNum: number): Page {
+    if (!(pageNum >= 1 && pageNum <= this._pages.length)) {
+      throw new Error(`pageNum ${pageNum} must be between 1 and ${this._pages.length}`);
+    }
+    return this._pages[pageNum - 1];
+  }
+
+  str(): string {
+    return `\nDocument\n==========\n${this._pages.map((p) => p.str()).join("\n\n")}\n\n`;
   }
 }

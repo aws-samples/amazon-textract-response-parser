@@ -12,6 +12,7 @@ console.log("Checking built assets can be used with NodeJS...");
 
 // Quick smoke test:
 const doc = new TextractDocument(testResponse);
-assert.strictEqual(doc.pages.length, 1);
+assert.strictEqual(doc.nPages, 1);
+assert.strictEqual(doc.pageNumber(1).nTables, 1);
 
 console.log("Done!");
