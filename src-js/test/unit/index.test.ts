@@ -49,6 +49,18 @@ describe("TextractDocument", () => {
     expect([...firstPage.iterLines()].reduce((acc, next) => acc + next.words.length, 0)).toStrictEqual(53);
   });
 
+  it("should throw errors on out-of-bounds pages, words and lines", () => {
+    const doc = new TextractDocument(testResponseJson);
+    expect(() => doc.pageNumber(0)).toThrow(/must be between 1 and/);
+    expect(() => doc.pageNumber(doc.nPages + 1)).toThrow(/must be between 1 and/);
+    const page = doc.pageNumber(1);
+    expect(() => page.lineAtIndex(-1)).toThrow(/Line index/);
+    expect(() => page.lineAtIndex(page.nLines)).toThrow(/Line index/);
+    const line = page.lineAtIndex(0);
+    expect(() => line.wordAtIndex(-1)).toThrow(/Word index/);
+    expect(() => line.wordAtIndex(line.words.length)).toThrow(/Word index/);
+  });
+
   it("should correctly load table dimensions", () => {
     const doc = new TextractDocument(testResponseJson);
     expect(doc.pageNumber(1).nTables).toStrictEqual(1);
@@ -135,6 +147,25 @@ describe("TextractDocument", () => {
     const results = doc.pageNumber(1).form.searchFieldsByKey("Home Addr");
     expect(results.length).toStrictEqual(1);
     expect(results[0].value?.text).toMatch("123 Any Street");
+  });
+
+  it("should support traversal both down and up the tree", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const page = doc.pageNumber(1);
+    // Doc to LINE and back again:
+    expect(page.lineAtIndex(0).parentPage.parentDocument.dict).toStrictEqual(doc.dict);
+    // Word to BBox/Polygon and back again:
+    const aWord = doc.pageNumber(1).lineAtIndex(0).wordAtIndex(0);
+    expect(aWord.geometry.boundingBox.parentGeometry?.parentObject?.dict).toStrictEqual(aWord.dict);
+    expect(aWord.geometry.polygon[0].parentGeometry?.parentObject?.dict).toStrictEqual(aWord.dict);
+    // PAGE to table CELL and back again:
+    expect(page.tableAtIndex(0).cellAt(1, 1)?.parentTable.parentPage.dict).toStrictEqual(page.dict);
+    // PAGE to field value and back again:
+    const formKeys = page.form.searchFieldsByKey("");
+    expect(formKeys.length).toBeGreaterThan(0);
+    expect(formKeys.length && formKeys[0].value?.parentField.parentForm.parentPage.dict).toStrictEqual(
+      page.dict
+    );
   });
 
   it("should sort lines correctly for multi-column documents", () => {

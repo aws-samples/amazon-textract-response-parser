@@ -4,18 +4,42 @@ import * as textract from "./api-models";
 // Re-export the API types that users will most likely need to reference (for inputs):
 export { ApiResponsePage, ApiResponsePages } from "./api-models";
 
-export class BoundingBox {
-  _dict: textract.ApiBoundingBox;
+/**
+ * Base class for all classes which wrap over an actual Textract API object.
+ *
+ * Exposes the underlying object for access as `dict`.
+ */
+export class ApiObjectWrapper<T> {
+  _dict: T;
 
-  constructor(dict: textract.ApiBoundingBox) {
+  constructor(dict: T) {
     this._dict = dict;
+  }
+
+  get dict(): T {
+    return this._dict;
+  }
+}
+
+export class ApiBlockWrapper<T extends textract.ApiBlock> extends ApiObjectWrapper<T> {
+  get id(): string {
+    return this._dict.Id;
+  }
+}
+
+export class BoundingBox<
+  TParentBlock extends textract.ApiBlock,
+  TParent extends ApiBlockWrapper<TParentBlock>
+> extends ApiObjectWrapper<textract.ApiBoundingBox> {
+  _parentGeometry: Geometry<TParentBlock, TParent> | null;
+
+  constructor(dict: textract.ApiBoundingBox, parentGeometry: Geometry<TParentBlock, TParent> | null = null) {
+    super(dict);
+    this._parentGeometry = parentGeometry;
   }
 
   get bottom(): number {
     return this.top + this.height;
-  }
-  get dict(): textract.ApiBoundingBox {
-    return this._dict;
   }
   get hCenter(): number {
     return this.left + this.width / 2;
@@ -25,6 +49,9 @@ export class BoundingBox {
   }
   get left(): number {
     return this._dict.Left;
+  }
+  get parentGeometry(): Geometry<TParentBlock, TParent> | null {
+    return this._parentGeometry;
   }
   get top(): number {
     return this._dict.Top;
@@ -41,19 +68,24 @@ export class BoundingBox {
 
   /**
    * Calculate the minimum box enclosing both this and `other`.
-   * @returns A new BoundingBox object.
+   * @returns A new BoundingBox object with null `parentGeometry`.
    */
-  union(other: BoundingBox): BoundingBox {
+  union(
+    other: BoundingBox<textract.ApiBlock, ApiBlockWrapper<textract.ApiBlock>>
+  ): BoundingBox<textract.ApiBlock, ApiBlockWrapper<textract.ApiBlock>> {
     const left = Math.min(this.left, other.left);
     const top = Math.min(this.top, other.top);
     const right = Math.max(this.right, other.right);
     const bottom = Math.max(this.bottom, other.bottom);
-    return new BoundingBox({
-      Height: bottom - top,
-      Left: left,
-      Top: top,
-      Width: right - left,
-    });
+    return new BoundingBox(
+      {
+        Height: bottom - top,
+        Left: left,
+        Top: top,
+        Width: right - left,
+      },
+      null
+    );
   }
 
   str(): string {
@@ -61,15 +93,19 @@ export class BoundingBox {
   }
 }
 
-export class Point {
-  _dict: textract.ApiPoint;
+export class Point<
+  TParentBlock extends textract.ApiBlock,
+  TParent extends ApiBlockWrapper<TParentBlock>
+> extends ApiObjectWrapper<textract.ApiPoint> {
+  _parentGeometry: Geometry<TParentBlock, TParent> | null;
 
-  constructor(dict: textract.ApiPoint) {
-    this._dict = dict;
+  constructor(dict: textract.ApiPoint, parentGeometry: Geometry<TParentBlock, TParent> | null = null) {
+    super(dict);
+    this._parentGeometry = parentGeometry;
   }
 
-  get dict(): textract.ApiPoint {
-    return this._dict;
+  get parentGeometry(): Geometry<TParentBlock, TParent> | null {
+    return this._parentGeometry;
   }
   get x(): number {
     return this._dict.X;
@@ -83,24 +119,28 @@ export class Point {
   }
 }
 
-export class Geometry {
-  _boundingBox: BoundingBox;
-  _dict: textract.ApiGeometry;
-  _polygon: Point[];
+export class Geometry<
+  TParentBlock extends textract.ApiBlock,
+  TParent extends ApiBlockWrapper<TParentBlock>
+> extends ApiObjectWrapper<textract.ApiGeometry> {
+  _boundingBox: BoundingBox<TParentBlock, TParent>;
+  _parentObject: TParent | null;
+  _polygon: Point<TParentBlock, TParent>[];
 
-  constructor(dict: textract.ApiGeometry) {
-    this._dict = dict;
-    this._boundingBox = new BoundingBox(dict.BoundingBox);
-    this._polygon = dict.Polygon.map((pnt) => new Point(pnt));
+  constructor(dict: textract.ApiGeometry, parentObject: TParent | null) {
+    super(dict);
+    this._parentObject = parentObject;
+    this._boundingBox = new BoundingBox(dict.BoundingBox, this);
+    this._polygon = dict.Polygon.map((pnt) => new Point(pnt, this));
   }
 
-  get boundingBox(): BoundingBox {
+  get boundingBox(): BoundingBox<TParentBlock, TParent> {
     return this._boundingBox;
   }
-  get dict(): textract.ApiGeometry {
-    return this._dict;
+  get parentObject(): TParent | null {
+    return this._parentObject;
   }
-  get polygon(): Point[] {
+  get polygon(): Point<TParentBlock, TParent>[] {
     return this._polygon.slice();
   }
 
@@ -131,13 +171,12 @@ export class Geometry {
   }
 }
 
-export class Word {
-  _dict: textract.ApiWordBlock;
-  _geometry: Geometry;
+export class Word extends ApiBlockWrapper<textract.ApiWordBlock> {
+  _geometry: Geometry<textract.ApiWordBlock, Word>;
 
   constructor(block: textract.ApiWordBlock) {
-    this._dict = block;
-    this._geometry = new Geometry(block.Geometry);
+    super(block);
+    this._geometry = new Geometry(block.Geometry, this);
   }
 
   get confidence(): number {
@@ -146,14 +185,8 @@ export class Word {
   set confidence(newVal: number) {
     this._dict.Confidence = newVal;
   }
-  get dict(): textract.ApiWordBlock {
-    return this._dict;
-  }
-  get geometry(): Geometry {
+  get geometry(): Geometry<textract.ApiWordBlock, Word> {
     return this._geometry;
-  }
-  get id(): string {
-    return this._dict.Id;
   }
   get text(): string {
     return this._dict.Text;
@@ -170,22 +203,28 @@ export class Word {
   }
 }
 
-export class Line {
-  _dict: textract.ApiLineBlock;
-  _geometry: Geometry;
+export class Line extends ApiBlockWrapper<textract.ApiLineBlock> {
+  _geometry: Geometry<textract.ApiLineBlock, Line>;
+  _parentPage: Page;
   _words: Word[];
 
-  constructor(block: textract.ApiLineBlock, blockMap: { [blockId: string]: textract.ApiBlock }) {
-    this._dict = block;
-    this._geometry = new Geometry(block.Geometry);
-
+  constructor(block: textract.ApiLineBlock, parentPage: Page) {
+    super(block);
+    this._parentPage = parentPage;
     this._words = [];
+    this._geometry = new Geometry(block.Geometry, this);
+    const parentDocument = parentPage.parentDocument;
     if (block.Relationships) {
       block.Relationships.forEach((rs) => {
         if (rs.Type == textract.ApiRelationshipType.Child) {
           rs.Ids.forEach((cid) => {
-            if (blockMap[cid].BlockType == textract.ApiBlockType.Word)
-              this._words.push(new Word(blockMap[cid] as textract.ApiWordBlock));
+            const wordBlock = parentDocument.getBlockById(cid);
+            if (!wordBlock) {
+              console.warn(`Document missing word block ${cid} referenced by line ${this.id}`);
+              return;
+            }
+            if (wordBlock.BlockType == textract.ApiBlockType.Word)
+              this._words.push(new Word(wordBlock as textract.ApiWordBlock));
           });
         }
       });
@@ -198,20 +237,17 @@ export class Line {
   set confidence(newVal: number) {
     this._dict.Confidence = newVal;
   }
-  get dict(): textract.ApiLineBlock {
-    return this._dict;
-  }
-  get geometry(): Geometry {
+  get geometry(): Geometry<textract.ApiLineBlock, Line> {
     return this._geometry;
   }
-  get id(): string {
-    return this._dict.Id;
-  }
-  get words(): Word[] {
-    return this._words.slice();
+  get parentPage(): Page {
+    return this._parentPage;
   }
   get text(): string {
     return this._dict.Text;
+  }
+  get words(): Word[] {
+    return this._words.slice();
   }
 
   /**
@@ -248,7 +284,7 @@ export class Line {
   }
 
   wordAtIndex(ix: number): Word {
-    if (ix < 0 || ix > this._words.length) {
+    if (ix < 0 || ix >= this._words.length) {
       throw new Error(`Word index ${ix} must be >=0 and <${this._words.length}`);
     }
     return this._words[ix];
@@ -261,13 +297,12 @@ export class Line {
   }
 }
 
-export class SelectionElement {
-  _dict: textract.ApiSelectionElementBlock;
-  _geometry: Geometry;
+export class SelectionElement extends ApiBlockWrapper<textract.ApiSelectionElementBlock> {
+  _geometry: Geometry<textract.ApiSelectionElementBlock, SelectionElement>;
 
   constructor(block: textract.ApiSelectionElementBlock) {
-    this._dict = block;
-    this._geometry = new Geometry(block.Geometry);
+    super(block);
+    this._geometry = new Geometry(block.Geometry, this);
   }
 
   get confidence(): number {
@@ -276,14 +311,8 @@ export class SelectionElement {
   set confidence(newVal: number) {
     this._dict.Confidence = newVal;
   }
-  get dict(): textract.ApiSelectionElementBlock {
-    return this._dict;
-  }
-  get geometry(): Geometry {
+  get geometry(): Geometry<textract.ApiSelectionElementBlock, SelectionElement> {
     return this._geometry;
-  }
-  get id(): string {
-    return this._dict.Id;
   }
   get selectionStatus(): textract.ApiSelectionStatus {
     return this._dict.SelectionStatus;
@@ -293,15 +322,16 @@ export class SelectionElement {
   }
 }
 
-export class FieldKey {
-  _dict: textract.ApiKeyValueSetBlock;
-  _geometry: Geometry;
+export class FieldKey extends ApiBlockWrapper<textract.ApiKeyValueSetBlock> {
+  _geometry: Geometry<textract.ApiKeyValueSetBlock, FieldKey>;
+  _parentField: Field;
   _words: Word[];
 
-  constructor(block: textract.ApiKeyValueSetBlock, blockMap: { [blockId: string]: textract.ApiBlock }) {
-    this._dict = block;
-    this._geometry = new Geometry(block.Geometry);
+  constructor(block: textract.ApiKeyValueSetBlock, parentField: Field) {
+    super(block);
+    this._parentField = parentField;
     this._words = [];
+    this._geometry = new Geometry(block.Geometry, this);
 
     let childIds: string[] = [];
     (block.Relationships || []).forEach((rs) => {
@@ -310,9 +340,17 @@ export class FieldKey {
       }
     });
 
+    const parentDocument = parentField.parentForm.parentPage.parentDocument;
     childIds
-      .map((id) => blockMap[id])
+      .map((id) => {
+        const block = parentDocument.getBlockById(id);
+        if (!block) {
+          console.warn(`Document missing child block ${id} referenced by field key ${this.id}`);
+        }
+        return block;
+      })
       .forEach((block) => {
+        if (!block) return; // Already logged warning above
         if (block.BlockType == textract.ApiBlockType.Word) {
           this._words.push(new Word(block));
         }
@@ -322,14 +360,11 @@ export class FieldKey {
   get confidence(): number {
     return this._dict.Confidence;
   }
-  get dict(): textract.ApiKeyValueSetBlock {
-    return this._dict;
-  }
-  get geometry(): Geometry {
+  get geometry(): Geometry<textract.ApiKeyValueSetBlock, FieldKey> {
     return this._geometry;
   }
-  get id(): string {
-    return this._dict.Id;
+  get parentField(): Field {
+    return this._parentField;
   }
   get text(): string {
     return this._words.map((w) => w.text).join(" ");
@@ -343,15 +378,16 @@ export class FieldKey {
   }
 }
 
-export class FieldValue {
+export class FieldValue extends ApiBlockWrapper<textract.ApiKeyValueSetBlock> {
   _content: Array<SelectionElement | Word>;
-  _dict: textract.ApiKeyValueSetBlock;
-  _geometry: Geometry;
+  _geometry: Geometry<textract.ApiKeyValueSetBlock, FieldValue>;
+  _parentField: Field;
 
-  constructor(valueBlock: textract.ApiKeyValueSetBlock, blockMap: { [blockId: string]: textract.ApiBlock }) {
-    this._dict = valueBlock;
-    this._geometry = new Geometry(valueBlock.Geometry);
+  constructor(valueBlock: textract.ApiKeyValueSetBlock, parentField: Field) {
+    super(valueBlock);
     this._content = [];
+    this._parentField = parentField;
+    this._geometry = new Geometry(valueBlock.Geometry, this);
 
     let childIds: string[] = [];
     (valueBlock.Relationships || []).forEach((rs) => {
@@ -360,9 +396,17 @@ export class FieldValue {
       }
     });
 
+    const parentDocument = parentField.parentForm.parentPage.parentDocument;
     childIds
-      .map((id) => blockMap[id])
+      .map((id) => {
+        const block = parentDocument.getBlockById(id);
+        if (!block) {
+          console.warn(`Document missing child block ${id} referenced by field value ${this.id}`);
+        }
+        return block;
+      })
       .forEach((block) => {
+        if (!block) return; // Already logged warning above
         if (block.BlockType == textract.ApiBlockType.Word) {
           this._content.push(new Word(block));
         } else if (block.BlockType == textract.ApiBlockType.SelectionElement) {
@@ -377,14 +421,11 @@ export class FieldValue {
   get content(): Array<SelectionElement | Word> {
     return this._content.slice();
   }
-  get dict(): textract.ApiKeyValueSetBlock {
-    return this._dict;
-  }
-  get geometry(): Geometry {
+  get geometry(): Geometry<textract.ApiKeyValueSetBlock, FieldValue> {
     return this._geometry;
   }
-  get id(): string {
-    return this._dict.Id;
+  get parentField(): Field {
+    return this._parentField;
   }
   get text(): string {
     return this._content.map((c) => ("selectionStatus" in c ? c.selectionStatus : c.text)).join(" ");
@@ -397,11 +438,14 @@ export class FieldValue {
 
 export class Field {
   _key: FieldKey;
+  _parentForm: Form;
   _value: FieldValue | null;
 
-  constructor(keyBlock: textract.ApiKeyValueSetBlock, blockMap: { [blockId: string]: textract.ApiBlock }) {
+  constructor(keyBlock: textract.ApiKeyValueSetBlock, parentForm: Form) {
+    this._parentForm = parentForm;
     this._value = null;
-    this._key = new FieldKey(keyBlock, blockMap);
+
+    this._key = new FieldKey(keyBlock, this);
 
     let valueBlockIds: string[] = [];
     (keyBlock.Relationships || []).forEach((rs) => {
@@ -417,7 +461,16 @@ export class Field {
       );
     }
     if (valueBlockIds.length) {
-      this._value = new FieldValue(blockMap[valueBlockIds[0]] as textract.ApiKeyValueSetBlock, blockMap);
+      const parentDocument = parentForm.parentPage.parentDocument;
+      const valBlockId = valueBlockIds[0];
+      const valBlock = parentDocument.getBlockById(valBlockId);
+      if (!valBlock) {
+        console.warn(
+          `Document missing child block ${valBlockId} referenced by value for field key ${this.key.id}`
+        );
+      } else {
+        this._value = new FieldValue(valBlock as textract.ApiKeyValueSetBlock, this);
+      }
     }
   }
 
@@ -441,6 +494,9 @@ export class Field {
   get key(): FieldKey {
     return this._key;
   }
+  get parentForm(): Form {
+    return this._parentForm;
+  }
   get value(): FieldValue | null {
     return this._value;
   }
@@ -455,13 +511,15 @@ export class Field {
 export class Form {
   _fields: Field[];
   _fieldsMap: { [keyText: string]: Field };
+  _parentPage: Page;
 
-  constructor(keyBlocks: textract.ApiKeyValueSetBlock[], blockMap: { [blockId: string]: textract.ApiBlock }) {
+  constructor(keyBlocks: textract.ApiKeyValueSetBlock[], parentPage: Page) {
     this._fields = [];
     this._fieldsMap = {};
+    this._parentPage = parentPage;
 
     keyBlocks.forEach((keyBlock) => {
-      const f = new Field(keyBlock, blockMap);
+      const f = new Field(keyBlock, this);
       this._fields.push(f);
       const fieldKeyText = f.key.text || "";
       if (fieldKeyText) {
@@ -478,6 +536,9 @@ export class Form {
 
   get nFields(): number {
     return this._fields.length;
+  }
+  get parentPage(): Page {
+    return this._parentPage;
   }
 
   getFieldByKey(key: string): Field | null {
@@ -527,27 +588,34 @@ export class Form {
   }
 }
 
-export class Cell {
-  _dict: textract.ApiCellBlock;
-  _geometry: Geometry;
+export class Cell extends ApiBlockWrapper<textract.ApiCellBlock> {
+  _geometry: Geometry<textract.ApiCellBlock, Cell>;
   _content: Array<SelectionElement | Word>;
+  _parentTable: Table;
   _text: string;
 
-  constructor(block: textract.ApiCellBlock, blockMap: { [blockId: string]: textract.ApiBlock }) {
-    this._dict = block;
-    this._geometry = new Geometry(block.Geometry);
+  constructor(block: textract.ApiCellBlock, parentTable: Table) {
+    super(block);
+    const parentDocument = parentTable.parentPage.parentDocument;
+    this._geometry = new Geometry(block.Geometry, this);
     this._content = [];
+    this._parentTable = parentTable;
     this._text = "";
     (block.Relationships || []).forEach((rs) => {
       if (rs.Type == textract.ApiRelationshipType.Child) {
         rs.Ids.forEach((cid) => {
-          const blockType = blockMap[cid].BlockType;
+          const childBlock = parentDocument.getBlockById(cid);
+          if (!childBlock) {
+            console.warn(`Document missing child block ${cid} referenced by table cell ${this.id}`);
+            return;
+          }
+          const blockType = childBlock.BlockType;
           if (blockType == textract.ApiBlockType.Word) {
-            const w = new Word(blockMap[cid] as textract.ApiWordBlock);
+            const w = new Word(childBlock as textract.ApiWordBlock);
             this._content.push(w);
             this._text += w.text + " ";
           } else if (blockType == textract.ApiBlockType.SelectionElement) {
-            const se = new SelectionElement(blockMap[cid] as textract.ApiSelectionElementBlock);
+            const se = new SelectionElement(childBlock as textract.ApiSelectionElementBlock);
             this._content.push(se);
             this._text += se.selectionStatus + ", ";
           }
@@ -571,14 +639,11 @@ export class Cell {
   get content(): Array<SelectionElement | Word> {
     return this._content.slice();
   }
-  get dict(): textract.ApiCellBlock {
-    return this._dict;
-  }
-  get geometry(): Geometry {
+  get geometry(): Geometry<textract.ApiCellBlock, Cell> {
     return this._geometry;
   }
-  get id(): string {
-    return this._dict.Id;
+  get parentTable(): Table {
+    return this._parentTable;
   }
   get rowIndex(): number {
     return this._dict.RowIndex;
@@ -597,13 +662,18 @@ export class Cell {
 
 export class Row {
   _cells: Cell[];
+  _parentTable: Table;
 
-  constructor(cells: Cell[] = []) {
+  constructor(cells: Cell[] = [], parentTable: Table) {
     this._cells = cells;
+    this._parentTable = parentTable;
   }
 
   get nCells(): number {
     return this._cells.length;
+  }
+  get parentTable(): Table {
+    return this._parentTable;
   }
 
   /**
@@ -644,21 +714,33 @@ export class Row {
   }
 }
 
-export class Table {
+export class Table extends ApiBlockWrapper<textract.ApiTableBlock> {
   _cells: Cell[];
-  _dict: textract.ApiTableBlock;
-  _geometry: Geometry;
+  _geometry: Geometry<textract.ApiTableBlock, Table>;
   _nCols: number;
   _nRows: number;
+  _parentPage: Page;
 
-  constructor(block: textract.ApiTableBlock, blockMap: { [blockId: string]: textract.ApiBlock }) {
-    this._dict = block;
-    this._geometry = new Geometry(block.Geometry);
+  constructor(block: textract.ApiTableBlock, parentPage: Page) {
+    super(block);
+    this._parentPage = parentPage;
+    this._geometry = new Geometry(block.Geometry, this);
 
+    const parentDocument = parentPage.parentDocument;
     this._cells = ([] as Cell[]).concat(
       ...(block.Relationships || [])
         .filter((rs) => rs.Type == textract.ApiRelationshipType.Child)
-        .map((rs) => rs.Ids.map((cid) => new Cell(blockMap[cid] as textract.ApiCellBlock, blockMap)))
+        .map(
+          (rs) =>
+            rs.Ids.map((cid) => {
+              const cellBlock = parentDocument.getBlockById(cid);
+              if (!cellBlock) {
+                console.warn(`Document missing child block ${cid} referenced by table cell ${this.id}`);
+                return;
+              }
+              return new Cell(cellBlock as textract.ApiCellBlock, this);
+            }).filter((cell) => cell) as Cell[]
+        )
     );
 
     // This indexing could be moved to a utility function if supporting more mutation operations in future:
@@ -731,7 +813,7 @@ export class Table {
           return ixRow < this._nRows
             ? {
                 done: false,
-                value: new Row(this.cellsAt(++ixRow, null, !repeatMultiRowCells)),
+                value: new Row(this.cellsAt(++ixRow, null, !repeatMultiRowCells), this),
               }
             : {
                 done: true,
@@ -751,14 +833,8 @@ export class Table {
   set confidence(newVal: number) {
     this._dict.Confidence = newVal;
   }
-  get dict(): textract.ApiTableBlock {
-    return this._dict;
-  }
-  get geometry(): Geometry {
+  get geometry(): Geometry<textract.ApiTableBlock, Table> {
     return this._geometry;
-  }
-  get id(): string {
-    return this._dict.Id;
   }
   get nCells(): number {
     return this._cells.length;
@@ -768,6 +844,9 @@ export class Table {
   }
   get nRows(): number {
     return this._nRows;
+  }
+  get parentPage(): Page {
+    return this._parentPage;
   }
 
   str(): string {
@@ -801,34 +880,35 @@ const getMode = (arr: Iterable<number>): number | null => {
   return mode;
 };
 
-export class Page {
+export class Page extends ApiBlockWrapper<textract.ApiPageBlock> {
   _blocks: textract.ApiBlock[];
-  _dict: textract.ApiPageBlock;
   _content: Array<Line | Table | Field>;
   _form: Form;
-  _geometry: Geometry;
+  _geometry: Geometry<textract.ApiPageBlock, Page>;
   _lines: Line[];
+  _parentDocument: TextractDocument;
   _tables: Table[];
 
   constructor(
     pageBlock: textract.ApiPageBlock,
     blocks: textract.ApiBlock[],
-    blockMap: { [blockId: string]: textract.ApiBlock }
+    parentDocument: TextractDocument
   ) {
-    this._dict = pageBlock;
+    super(pageBlock);
     this._blocks = blocks;
-    this._geometry = new Geometry(pageBlock.Geometry);
+    this._parentDocument = parentDocument;
+    this._geometry = new Geometry(pageBlock.Geometry, this);
 
     // Placeholders pre-parsing to keep TypeScript happy:
     this._content = [];
     this._lines = [];
     this._tables = [];
-    this._form = new Form([], {});
+    this._form = new Form([], this);
     // Parse the content:
-    this._parse(blocks, blockMap);
+    this._parse(blocks);
   }
 
-  _parse(blocks: textract.ApiBlock[], blockMap: { [blockId: string]: textract.ApiBlock }): void {
+  _parse(blocks: textract.ApiBlock[]): void {
     this._content = [];
     this._lines = [];
     this._tables = [];
@@ -836,11 +916,11 @@ export class Page {
 
     blocks.forEach((item) => {
       if (item.BlockType == textract.ApiBlockType.Line) {
-        const l = new Line(item, blockMap);
+        const l = new Line(item, this);
         this._lines.push(l);
         this._content.push(l);
       } else if (item.BlockType == textract.ApiBlockType.Table) {
-        const t = new Table(item, blockMap);
+        const t = new Table(item, this);
         this._tables.push(t);
         this._content.push(t);
       } else if (item.BlockType == textract.ApiBlockType.KeyValueSet) {
@@ -850,7 +930,7 @@ export class Page {
       }
     });
 
-    this._form = new Form(formKeyBlocks, blockMap);
+    this._form = new Form(formKeyBlocks, this);
   }
 
   /**
@@ -872,7 +952,7 @@ export class Page {
    * List lines in reading order, grouped by 'cluster' (heuristically, almost a paragraph)
    */
   getLineClustersInReadingOrder(): Line[][] {
-    const colBoxes: BoundingBox[] = [];
+    const colBoxes: BoundingBox<textract.ApiBlock, ApiBlockWrapper<textract.ApiBlock>>[] = [];
     const colLines: Line[][] = [];
     const colTotalLineHeight: number[] = [];
     const lineHCenters = this._lines.map((l) => l.geometry.boundingBox.hCenter);
@@ -981,14 +1061,14 @@ export class Page {
   }
 
   lineAtIndex(ix: number): Line {
-    if (ix < 0 || ix > this._lines.length) {
+    if (ix < 0 || ix >= this._lines.length) {
       throw new Error(`Line index ${ix} must be >=0 and <${this._lines.length}`);
     }
     return this._lines[ix];
   }
 
   tableAtIndex(ix: number): Table {
-    if (ix < 0 || ix > this._tables.length) {
+    if (ix < 0 || ix >= this._tables.length) {
       throw new Error(`Table index ${ix} must be >=0 and <${this._tables.length}`);
     }
     return this._tables[ix];
@@ -997,23 +1077,20 @@ export class Page {
   get blocks(): textract.ApiBlock[] {
     return this._blocks.slice();
   }
-  get dict(): textract.ApiPageBlock {
-    return this._dict;
-  }
   get form(): Form {
     return this._form;
   }
-  get geometry(): Geometry {
+  get geometry(): Geometry<textract.ApiPageBlock, Page> {
     return this._geometry;
-  }
-  get id(): string {
-    return this._dict.Id;
   }
   get nLines(): number {
     return this._lines.length;
   }
   get nTables(): number {
     return this._tables.length;
+  }
+  get parentDocument(): TextractDocument {
+    return this._parentDocument;
   }
   get text(): string {
     return this._lines.map((l) => l.text).join("\n");
@@ -1024,8 +1101,9 @@ export class Page {
   }
 }
 
-export class TextractDocument {
-  _dict: textract.ApiResponsePage & textract.ApiResponseWithContent;
+export class TextractDocument extends ApiObjectWrapper<
+  textract.ApiResponsePage & textract.ApiResponseWithContent
+> {
   _blockMap: { [blockId: string]: textract.ApiBlock };
   _pages: Page[];
 
@@ -1033,14 +1111,16 @@ export class TextractDocument {
    * @param textractResults A (parsed) Textract response JSON, or an array of multiple from the same job
    */
   constructor(textractResults: textract.ApiResponsePage | textract.ApiResponsePages) {
+    let dict;
     if (Array.isArray(textractResults)) {
-      this._dict = this._consolidateMultipleResponses(textractResults);
+      dict = TextractDocument._consolidateMultipleResponses(textractResults);
     } else {
       if (!("Blocks" in textractResults && textractResults.Blocks?.length)) {
         throw new Error(`Provided Textract JSON has no content! (.Blocks array)`);
       }
-      this._dict = textractResults;
+      dict = textractResults;
     }
+    super(dict);
 
     if ("NextToken" in this._dict) {
       console.warn(`Provided Textract JSON contains a NextToken: Content may be truncated!`);
@@ -1063,7 +1143,7 @@ export class TextractDocument {
     this._dict.Blocks.forEach((block) => {
       if (block.BlockType == textract.ApiBlockType.Page) {
         if (currentPageBlock) {
-          this._pages.push(new Page(currentPageBlock, currentPageContent, this._blockMap));
+          this._pages.push(new Page(currentPageBlock, currentPageContent, this));
         }
         currentPageBlock = block;
         currentPageContent = [block];
@@ -1072,11 +1152,11 @@ export class TextractDocument {
       }
     });
     if (currentPageBlock) {
-      this._pages.push(new Page(currentPageBlock, currentPageContent, this._blockMap));
+      this._pages.push(new Page(currentPageBlock, currentPageContent, this));
     }
   }
 
-  _consolidateMultipleResponses(
+  static _consolidateMultipleResponses(
     textractResultArray: textract.ApiResponsePages
   ): textract.ApiResponsePage & textract.ApiResponseWithContent {
     if (!textractResultArray?.length) throw new Error(`Input Textract Results list empty!`);
@@ -1175,9 +1255,6 @@ export class TextractDocument {
     };
   }
 
-  get dict(): textract.ApiResponsePage & textract.ApiResponseWithContent {
-    return this._dict;
-  }
   get blocks(): textract.ApiBlock[] {
     return this._dict.Blocks;
   }
