@@ -2,10 +2,21 @@
 import { promises as fs } from "fs";
 
 // External Dependencies:
-import { TextractClient, AnalyzeDocumentCommand, DetectDocumentTextCommand } from "@aws-sdk/client-textract";
+import {
+  TextractClient,
+  AnalyzeDocumentCommand,
+  AnalyzeExpenseCommand,
+  DetectDocumentTextCommand,
+} from "@aws-sdk/client-textract";
 
 // Local Dependencies:
-import { ApiResponsePage, ApiResponsePages, TextractDocument } from "../../src";
+import {
+  ApiResponsePage,
+  ApiResponsePages,
+  TextractExpense,
+  TextractDocument,
+  ApiAnalyzeExpenseResponse,
+} from "../../src";
 
 const textract = new TextractClient({});
 
@@ -53,6 +64,29 @@ describe("TextractDocument", () => {
       runTestDocAssertions(doc, false, false);
       doc = new TextractDocument([textractResponse] as ApiResponsePages);
       runTestDocAssertions(doc, false, false);
+    },
+    60 * 1000 // 60sec timeout
+  );
+
+  it(
+    "should work with AWS SDK AnalyzeExpense",
+    async () => {
+      const textractResponse = await textract.send(
+        new AnalyzeExpenseCommand({
+          Document: {
+            Bytes: await fs.readFile("./test/data/default_invoice_1.png"),
+          },
+        })
+      );
+      const expense = new TextractExpense((textractResponse as unknown) as ApiAnalyzeExpenseResponse);
+      expect(expense.nDocs).toStrictEqual(1);
+      const expenseDoc = [...expense.iterDocs()][0];
+
+      const vendorNameField = expenseDoc.getSummaryFieldByType("VENDOR_NAME");
+      expect(vendorNameField).toBeTruthy();
+      if (!vendorNameField) return;
+      expect(vendorNameField.fieldType.text).toStrictEqual("VENDOR_NAME");
+      expect(vendorNameField.value.text).toStrictEqual("Amazon.com");
     },
     60 * 1000 // 60sec timeout
   );
