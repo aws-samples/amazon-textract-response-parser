@@ -1,6 +1,6 @@
 # Textract Response Parser
 
-You can use Textract response parser library to easily parser JSON returned by Amazon Textract. Library parses JSON and provides programming language specific constructs to work with different parts of the document. [textractor](https://github.com/aws-samples/amazon-textract-textractor) is an example of PoC batch processing tool that takes advantage of Textract response parser library and generate output in multiple formats.
+You can use Textract response parser library to easily parse JSON returned by Amazon Textract. The library parses JSON and provides programming language specific constructs to work with different parts of the document. [textractor](https://github.com/aws-samples/amazon-textract-textractor) is an example of a PoC batch processing tool that takes advantage of the Textract response parser library and generates output in multiple formats.
 
 ## Python Usage
 
