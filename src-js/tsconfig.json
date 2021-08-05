@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["dom", "es2016"],
+    "module": "umd",
+    "moduleResolution": "node",
+    "outDir": "dist/umd",
+    "sourceMap": true,
+    "strict": true,
+    "target": "ES6"
+  },
+  "include": [
+    "src/**/*.ts"
+  ]
+}

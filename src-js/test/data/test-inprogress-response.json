@@ -1,0 +1,16 @@
+{
+  "JobStatus": "IN_PROGRESS",
+  "StatusMessage": "Dummy still in progress message",
+  "ResponseMetadata": {
+    "RequestId": "24bf72b5-8670-409a-893e-f06f5c107e49",
+    "HTTPStatusCode": 200,
+    "HTTPHeaders": {
+        "date": "Fri, 29 Mar 2019 23:44:17 GMT",
+        "content-type": "application/x-amz-json-1.1",
+        "content-length": "59930",
+        "connection": "keep-alive",
+        "x-amzn-requestid": "24bf72b5-8670-409a-893e-f06f5c107e49"
+    },
+    "RetryAttempts": 0
+  }
+}
