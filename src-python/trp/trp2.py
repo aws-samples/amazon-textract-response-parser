@@ -19,8 +19,7 @@ class BaseSchema(m.Schema):
         return {
             key: value
             for key, value in data.items()
-            if isinstance(value, (dict, list, set, tuple, range,
-                                  frozenset)) or value not in self.SKIP_VALUES
+            if isinstance(value, (dict, list, set, tuple, range, frozenset)) or value not in self.SKIP_VALUES
         }
 
 
@@ -59,9 +58,7 @@ class TBoundingBox():
 
 class TBoundingBoxSchema(BaseSchema):
     width = m.fields.Float(data_key="Width", required=False, allow_none=False)
-    height = m.fields.Float(data_key="Height",
-                            required=False,
-                            allow_none=False)
+    height = m.fields.Float(data_key="Height", required=False, allow_none=False)
     left = m.fields.Float(data_key="Left", required=False, allow_none=False)
     top = m.fields.Float(data_key="Top", required=False, allow_none=False)
 
@@ -97,9 +94,7 @@ class TPointSchema(BaseSchema):
 
 
 class TGeometry():
-    def __init__(self,
-                 bounding_box: TBoundingBox = None,
-                 polygon: List[TPoint] = None):
+    def __init__(self, bounding_box: TBoundingBox = None, polygon: List[TPoint] = None):
         self.__bounding_box = bounding_box
         self.__polygon = polygon
 
@@ -113,14 +108,8 @@ class TGeometry():
 
 
 class TGeometrySchema(BaseSchema):
-    bounding_box = m.fields.Nested(TBoundingBoxSchema,
-                                   data_key="BoundingBox",
-                                   required=False,
-                                   allow_none=False)
-    polygon = m.fields.List(m.fields.Nested(TPointSchema),
-                            data_key="Polygon",
-                            required=False,
-                            allow_none=False)
+    bounding_box = m.fields.Nested(TBoundingBoxSchema, data_key="BoundingBox", required=False, allow_none=False)
+    polygon = m.fields.List(m.fields.Nested(TPointSchema), data_key="Polygon", required=False, allow_none=False)
 
     @post_load
     def make_tgeometry(self, data, **kwargs):
@@ -146,10 +135,7 @@ class TRelationship():
 
 class TRelationshipSchema(BaseSchema):
     type = m.fields.String(data_key="Type", required=False, allow_none=False)
-    ids = m.fields.List(m.fields.String,
-                        data_key="Ids",
-                        required=False,
-                        allow_none=False)
+    ids = m.fields.List(m.fields.String, data_key="Ids", required=False, allow_none=False)
 
     @post_load
     def make_trelationship(self, data, **kwargs):
@@ -264,43 +250,23 @@ class TBlock():
     @row_index.setter
     def row_index(self, value: int):
         self.__row_index = value
-    
+
+
 class TBlockSchema(BaseSchema):
     block_type = m.fields.String(data_key="BlockType", allow_none=False)
-    geometry = m.fields.Nested(TGeometrySchema,
-                               data_key="Geometry",
-                               allow_none=False)
+    geometry = m.fields.Nested(TGeometrySchema, data_key="Geometry", allow_none=False)
     id = m.fields.String(data_key="Id", allow_none=False)
-    relationships = m.fields.List(m.fields.Nested(TRelationshipSchema),
-                                  data_key="Relationships",
-                                  allow_none=False)
-    confidence = m.fields.Float(data_key="Confidence",
-                                required=False,
-                                allow_none=False)
+    relationships = m.fields.List(m.fields.Nested(TRelationshipSchema), data_key="Relationships", allow_none=False)
+    confidence = m.fields.Float(data_key="Confidence", required=False, allow_none=False)
     text = m.fields.String(data_key="Text", required=False, allow_none=False)
-    column_index = m.fields.Int(data_key="ColumnIndex",
-                                required=False,
-                                allow_none=False)
-    column_span = m.fields.Int(data_key="ColumnSpan",
-                               required=False,
-                               allow_none=False)
-    entity_types = m.fields.List(m.fields.String,
-                                 data_key="EntityTypes",
-                                 required=False,
-                                 allow_none=False)
+    column_index = m.fields.Int(data_key="ColumnIndex", required=False, allow_none=False)
+    column_span = m.fields.Int(data_key="ColumnSpan", required=False, allow_none=False)
+    entity_types = m.fields.List(m.fields.String, data_key="EntityTypes", required=False, allow_none=False)
     page = m.fields.Int(data_key="Page", required=False, allow_none=False)
-    row_index = m.fields.Int(data_key="RowIndex",
-                             required=False,
-                             allow_none=False)
-    row_span = m.fields.Int(data_key="RowSpan",
-                            required=False,
-                            allow_none=False)
-    selection_status = m.fields.String(data_key="SelectionStatus",
-                                       required=False,
-                                       allow_none=False)
-    text_type = m.fields.String(data_key="TextType",
-                                required=False,
-                                allow_none=False)
+    row_index = m.fields.Int(data_key="RowIndex", required=False, allow_none=False)
+    row_span = m.fields.Int(data_key="RowSpan", required=False, allow_none=False)
+    selection_status = m.fields.String(data_key="SelectionStatus", required=False, allow_none=False)
+    text_type = m.fields.String(data_key="TextType", required=False, allow_none=False)
     custom = m.fields.Dict(data_key="Custom", required=False, allow_none=False)
 
     @post_load
@@ -340,13 +306,8 @@ class TWarnings():
 
 
 class TWarningsSchema(BaseSchema):
-    pages = m.fields.List(m.fields.Int,
-                          data_key="Pages",
-                          required=False,
-                          allow_none=False)
-    error_code = m.fields.String(data_key="ErrorCode",
-                                 required=False,
-                                 allow_none=False)
+    pages = m.fields.List(m.fields.Int, data_key="Pages", required=False, allow_none=False)
+    error_code = m.fields.String(data_key="ErrorCode", required=False, allow_none=False)
 
     @post_load
     def make_twarnings(self, data, **kwargs):
@@ -487,145 +448,145 @@ class TDocument():
         self.__custom = value
 
     def get_block_by_id(self, id: str) -> Optional[TBlock]:
-        for b in self.__blocks:
-            if b.id == id:
-                return b
+        if self.__blocks:
+            for b in self.__blocks:
+                if b.id == id:
+                    return b
 
-    def __relationships_recursive(self, block:TBlock)->List[TBlock]:
+    def __relationships_recursive(self, block: TBlock) -> List[TBlock]:
         import itertools
         if block and block.relationships:
-            all_relations = list(itertools.chain(*[ r.ids for r in block.relationships if r]))
-            all_block = [self.get_block_by_id(id) for id in all_relations if id] 
+            all_relations = list(itertools.chain(*[r.ids for r in block.relationships if r and r.ids]))
+            all_block = [self.get_block_by_id(id) for id in all_relations if id]
             for b in all_block:
                 if b:
                     yield b
                     for child in self.__relationships_recursive(block=b):
                         yield child
 
-
-    def relationships_recursive(self, block:TBlock)->Optional[Set[TBlock]]:
+    def relationships_recursive(self, block: TBlock) -> Optional[Set[TBlock]]:
         return set(self.__relationships_recursive(block=block))
 
     @property
     def pages(self) -> List[TBlock]:
         page_list: List[TBlock] = list()
-        for b in self.blocks:
-            if b.block_type == TextractBlockTypes.PAGE.name:
-                page_list.append(b)
+        if self.blocks:
+            for b in self.blocks:
+                if b.block_type == TextractBlockTypes.PAGE.name:
+                    page_list.append(b)
+            return page_list
         return page_list
 
     @staticmethod
-    def filter_blocks_by_type(
-            block_list: List[TBlock],
-            textract_block_type: List[TextractBlockTypes] = None) -> List[TBlock]:
-        block_type_names = [ x.name for x in textract_block_type]
-        return [
-            b for b in block_list if b.block_type in block_type_names
-        ]
+    def filter_blocks_by_type(block_list: List[TBlock],
+                              textract_block_type: List[TextractBlockTypes] = None) -> List[TBlock]:
+        if textract_block_type:
+            block_type_names = [x.name for x in textract_block_type]
+            return [b for b in block_list if b.block_type in block_type_names]
+        else:
+            return list()
 
+    # TODO: this is more generic and not limited to page, should change the parameter from "page" to "block"
     def get_child_relations(self, page: TBlock):
         return self.__get_blocks_by_type(page=page)
 
     # TODO: not ideal imho. customers want pages.tables or pages.forms like the current trp
     def tables(self, page: TBlock) -> List[TBlock]:
-        return self.__get_blocks_by_type(
-            page=page, block_type_enum=TextractBlockTypes.TABLE)
+        return self.__get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.TABLE)
 
-    def __get_blocks_by_type(self,
-                             block_type_enum: TextractBlockTypes = None,
-                             page: TBlock = None) -> List[TBlock]:
+    def __get_blocks_by_type(self, block_type_enum: TextractBlockTypes = None, page: TBlock = None) -> List[TBlock]:
         table_list: List[TBlock] = list()
-        if page:
+        if page and page.relationships:
             for r in page.relationships:
-                if r.type == "CHILD":
+                if r.type == "CHILD" and r.ids:
                     for id in r.ids:
                         b = self.get_block_by_id(id)
                         if b:
-                            if block_type_enum and b.block_type == block_type_enum.name:
-                                table_list.append(b)
+                            if block_type_enum:
+                                if b.block_type == block_type_enum.name:
+                                    table_list.append(b)
                             else:
                                 table_list.append(b)
             return table_list
         else:
-            for b in self.blocks:
-                if b.block_type == block_type_enum:
-                    table_list.append(b)
-            return table_list
+            if self.blocks:
+                for b in self.blocks:
+                    if b.block_type == block_type_enum:
+                        table_list.append(b)
+                return table_list
+            else:
+                return list()
 
     # TODO: not ideal imho. customers want pages.tables or pages.forms like the current trp
     def forms(self, page: TBlock) -> List[TBlock]:
-        return self.__get_blocks_by_type(
-            page=page, block_type_enum=TextractBlockTypes.KEY_VALUE_SET)
+        return self.__get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.KEY_VALUE_SET)
 
     def lines(self, page: TBlock) -> List[TBlock]:
-        return self.__get_blocks_by_type(
-            page=page, block_type_enum=TextractBlockTypes.LINE)
+        return self.__get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.LINE)
 
-    def delete_blocks(self,block_id:List[str]):
+    def delete_blocks(self, block_id: List[str]):
         for b in block_id:
             block = self.get_block_by_id(b)
-            if block:
+            if block and self.blocks:
                 self.blocks.remove(block)
             else:
                 logger.warning(f"delete_blocks: did not get block for id: {b}")
 
-    def merge_tables(self, table_array_ids:List[List[str]]):
+    def merge_tables(self, table_array_ids: List[List[str]]):
         for table_ids in table_array_ids:
-            if len(table_ids)<2:
+            if len(table_ids) < 2:
                 raise ValueError("no parent and child tables given")
             parent_table = self.get_block_by_id(table_ids[0])
             if type(parent_table) is not TBlock:
                 raise ValueError("parent table is invalid")
             table_ids.pop(0)
             parent_relationships: TRelationship = TRelationship()
-            for r in parent_table.relationships:
-                if r.type == "CHILD":
-                    parent_relationships = r
+            if parent_table.relationships:
+                for r in parent_table.relationships:
+                    if r.type == "CHILD":
+                        parent_relationships = r
             for table_id in table_ids:
-                if parent_relationships:
-                    parent_last_row = self.get_block_by_id(parent_relationships.ids[-1]).row_index
+                if parent_relationships and parent_relationships.ids:
+                    parent_last_row = None
+                    parent_last_row_block = self.get_block_by_id(parent_relationships.ids[-1])
+                    if parent_last_row_block:
+                        parent_last_row = parent_last_row_block.row_index
                     child_table = self.get_block_by_id(table_id)
-                    for r in child_table.relationships:
-                        if r.type == "CHILD":
-                            for cell_id in r.ids:
-                                cell_block = self.get_block_by_id(cell_id)
-                                if cell_block.row_index:
-                                    cell_block.row_index= parent_last_row + cell_block.row_index
-                                    if parent_relationships.ids and cell_id not in parent_relationships.ids:
-                                        parent_relationships.ids.append(cell_id)
+                    if child_table and child_table.relationships:
+                        for r in child_table.relationships:
+                            if r.type == "CHILD" and r.ids:
+                                for cell_id in r.ids:
+                                    cell_block = self.get_block_by_id(cell_id)
+                                    if cell_block and cell_block.row_index and parent_last_row:
+                                        cell_block.row_index = parent_last_row + cell_block.row_index
+                                        if parent_relationships.ids and cell_id not in parent_relationships.ids:
+                                            parent_relationships.ids.append(cell_id)
                     self.delete_blocks([table_id])
 
-    def link_tables(self, table_array_ids:List[List[str]]):
+    def link_tables(self, table_array_ids: List[List[str]]):
         for table_ids in table_array_ids:
-            if len(table_ids)<2:
+            if len(table_ids) < 2:
                 raise ValueError("no parent and child tables given")
-            for i in range(0,len(table_ids)):
+            for i in range(0, len(table_ids)):
                 table = self.get_block_by_id(table_ids[i])
-                if i>0:
+                if i > 0 and table:
                     if table.custom:
-                        table.custom['previous_table']=table_ids[i-1]
+                        table.custom['previous_table'] = table_ids[i - 1]
                     else:
-                        table.custom = {'previous_table':table_ids[i-1]}
-                if i<len(table_ids)-1:
+                        table.custom = {'previous_table': table_ids[i - 1]}
+                if i < len(table_ids) - 1 and table:
                     if table.custom:
-                        table.custom['next_table']=table_ids[i+1]
+                        table.custom['next_table'] = table_ids[i + 1]
                     else:
-                        table.custom = {'next_table':table_ids[i+1]}
+                        table.custom = {'next_table': table_ids[i + 1]}
+
 
 class THttpHeadersSchema(BaseSchema):
     date = m.fields.String(data_key="date", required=False)
-    x_amzn_request_id = m.fields.String(data_key="x-amzn-requestid",
-                                        required=False,
-                                        allow_none=False)
-    content_type = m.fields.String(data_key="content-type",
-                                   required=False,
-                                   allow_none=False)
-    content_length = m.fields.Int(data_key="content-length",
-                                  required=False,
-                                  allow_none=False)
-    connection = m.fields.String(data_key="connection",
-                                 required=False,
-                                 allow_none=False)
+    x_amzn_request_id = m.fields.String(data_key="x-amzn-requestid", required=False, allow_none=False)
+    content_type = m.fields.String(data_key="content-type", required=False, allow_none=False)
+    content_length = m.fields.Int(data_key="content-length", required=False, allow_none=False)
+    connection = m.fields.String(data_key="connection", required=False, allow_none=False)
 
     @post_load
     def make_thttp_headers(self, data, **kwargs):
@@ -633,19 +594,10 @@ class THttpHeadersSchema(BaseSchema):
 
 
 class TResponseMetadataSchema(BaseSchema):
-    request_id = m.fields.String(data_key="RequestId",
-                                 required=False,
-                                 allow_none=False)
-    http_status_code = m.fields.Int(data_key="HTTPStatusCode",
-                                    required=False,
-                                    allow_none=False)
-    retry_attempts = m.fields.Int(data_key="RetryAttempts",
-                                  required=False,
-                                  allow_none=False)
-    http_headers = m.fields.Nested(THttpHeadersSchema,
-                                   data_key="HTTPHeaders",
-                                   required=False,
-                                   allow_none=False)
+    request_id = m.fields.String(data_key="RequestId", required=False, allow_none=False)
+    http_status_code = m.fields.Int(data_key="HTTPStatusCode", required=False, allow_none=False)
+    retry_attempts = m.fields.Int(data_key="RetryAttempts", required=False, allow_none=False)
+    http_headers = m.fields.Nested(THttpHeadersSchema, data_key="HTTPHeaders", required=False, allow_none=False)
 
     @post_load
     def make_tresponse_metadata(self, data, **kwargs):
@@ -657,31 +609,17 @@ class TDocumentSchema(BaseSchema):
                                         data_key="DocumentMetadata",
                                         required=False,
                                         allow_none=False)
-    blocks = m.fields.List(m.fields.Nested(TBlockSchema),
-                           data_key="Blocks",
-                           required=False,
-                           allow_none=False)
-    analyze_document_model_version = m.fields.String(
-        data_key="AnalyzeDocumentModelVersion",
-        required=False,
-        allow_none=False)
-    detect_document_text_model_version = m.fields.String(
-        data_key="DetectDocumentTextModelVersion",
-        required=False,
-        allow_none=False)
-    status_message = m.fields.String(data_key="StatusMessage",
-                                     required=False,
-                                     allow_none=False)
-    warnings = m.fields.Nested(TWarningsSchema,
-                               data_key="Warnings",
-                               required=False,
-                               allow_none=False)
-    job_status = m.fields.String(data_key="JobStatus",
-                                 required=False,
-                                 allow_none=False)
-    next_token = m.fields.String(data_key="NextToken",
-                                required=False,
-                                allow_none=False)
+    blocks = m.fields.List(m.fields.Nested(TBlockSchema), data_key="Blocks", required=False, allow_none=False)
+    analyze_document_model_version = m.fields.String(data_key="AnalyzeDocumentModelVersion",
+                                                     required=False,
+                                                     allow_none=False)
+    detect_document_text_model_version = m.fields.String(data_key="DetectDocumentTextModelVersion",
+                                                         required=False,
+                                                         allow_none=False)
+    status_message = m.fields.String(data_key="StatusMessage", required=False, allow_none=False)
+    warnings = m.fields.Nested(TWarningsSchema, data_key="Warnings", required=False, allow_none=False)
+    job_status = m.fields.String(data_key="JobStatus", required=False, allow_none=False)
+    next_token = m.fields.String(data_key="NextToken", required=False, allow_none=False)
     response_metadata = m.fields.Nested(TResponseMetadataSchema,
                                         data_key="ResponseMetadata",
                                         required=False,

@@ -3,30 +3,35 @@
 import json
 import sys
 from trp.trp2 import TDocumentSchema
-from trp.t_pipeline import order_blocks_by_geo, add_page_orientation, pipeline_merge_tables
+from trp.t_pipeline import order_blocks_by_geo, add_page_orientation, pipeline_merge_tables, add_kv_ocr_confidence
 import argparse
 from trp import __version__
 from enum import Enum, auto
+
 
 class TPipelineComponents(Enum):
     order_blocks_by_geo = auto()
     add_page_orientation = auto()
     merge_tables = auto()
-
-
+    kv_ocr_confidence = auto()
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--components", nargs='+', choices=[TPipelineComponents.add_page_orientation.name, TPipelineComponents.order_blocks_by_geo.name, TPipelineComponents.merge_tables.name], help="define which components to call", required=True)
+parser.add_argument("--components",
+                    nargs='+',
+                    choices=[
+                        TPipelineComponents.add_page_orientation.name, TPipelineComponents.order_blocks_by_geo.name,
+                        TPipelineComponents.merge_tables.name, TPipelineComponents.kv_ocr_confidence.name
+                    ],
+                    help="define which components to call",
+                    required=True)
 parser.add_argument("--version",
                     action='version',
                     version='%(prog)s {version}'.format(version=__version__),
                     help="print version information")
 
-
 args = parser.parse_args()
 components = [TPipelineComponents[x] for x in args.components]
-
 
 doc_json = json.load(sys.stdin)
 t_doc = TDocumentSchema().load(doc_json)
@@ -36,6 +41,7 @@ if TPipelineComponents.add_page_orientation in components:
     t_doc = add_page_orientation(t_doc)
 if TPipelineComponents.merge_tables in components:
     t_doc = pipeline_merge_tables(t_doc)
+if TPipelineComponents.kv_ocr_confidence in components:
+    t_doc = add_kv_ocr_confidence(t_doc)
 
 print(TDocumentSchema().dumps(t_doc))
-
