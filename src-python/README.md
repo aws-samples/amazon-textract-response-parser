@@ -106,6 +106,79 @@ cat src-python/tests/data/gib_multi_page_table_merge.json | amazon-textract-pipe
 # compare to cat src-python/tests/data/gib_multi_page_table_merge.json | amazon-textract --stdin --pretty-print TABLES
 ```
 
+#### Add OCR confidence score to KEY and VALUE
+
+It can be useful for some use cases to validate the confidence score for a given KEY or the VALUE from an Analyze action with FORMS feature result.
+
+The Confidence property of a BlockType 'KEY_VALUE_SET' expresses the confidence in this particular prediction being a KEY or a VALUE, but not the confidence of the underlying text value.
+
+Simplified example:
+
+```json
+{
+    "Confidence": 95.5,
+    "Geometry": {<...>},
+    "Id": "v1",
+    "Relationships": [{"Type": "CHILD", "Ids": ["c1"]}],
+    "EntityTypes": ["VALUE"],
+    "BlockType": "KEY_VALUE_SET"
+},
+{
+    "Confidence": 99.2610092163086,
+    "TextType": "PRINTED",
+    "Geometry": {<...>},
+    "Id": "c1",
+    "Text": "2021-Apr-08",
+    "BlockType": "WORD"
+},
+```
+
+In this example the confidence in the prediction of the VALUE to be an actual value in a key/value relationship is 95.5.
+
+The confidence in the actual text representation is 99.2610092163086.
+For simplicity in this example the value consists of just one word, but is not limited to that and could contain multiple words.
+
+The KV_OCR_Confidence pipeline component adds confidence scores for the underlying OCR to the JSON. After executing the example JSON will look like this:
+
+```json
+{
+    "Confidence": 95.5,
+    "Geometry": {<...>},
+    "Id": "v1",
+    "Relationships": [{"Type": "CHILD", "Ids": ["c1"]}],
+    "EntityTypes": ["VALUE"],
+    "BlockType": "KEY_VALUE_SET",
+    "Custom": {"OCRConfidence": {"mean": 99.2610092163086, "min": 99.2610092163086}}
+},
+{
+    "Confidence": 99.2610092163086,
+    "TextType": "PRINTED",
+    "Geometry": {<...>},
+    "Id": "c1",
+    "Text": "2021-Apr-08",
+    "BlockType": "WORD"
+},
+```
+
+Usage is simple
+
+```python
+from trp.t_pipeline import add_kv_ocr_confidence
+import trp.trp2 as t2
+
+j = <call_textract(input_document="path_to_some_document (PDF, JPEG, PNG)") or your JSON dict>
+t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+t_document = add_kv_ocr_confidence(t_document)
+# further processing
+```
+
+Using from command line example and validating the output:
+
+```bash
+# from the root of the repository
+cat "src-python/tests/data/employment-application.json" | amazon-textract-pipeline --components kv_ocr_confidence | jq '.Blocks[] | select(.BlockType=="KEY_VALUE_SET") '
+```
+
 #### Using the pipeline on command line
 
 The amazon-textract-response-parser package also includes a command line tool to test pipeline components like the add_page_orientation or the order_blocks_by_geo.
@@ -121,18 +194,7 @@ Here is one example of the usage (in combination with the ```amazon-textract``` 
 {
   "Orientation": 11
 }
-{
-  "Orientation": 18
-}
-{
-  "Orientation": 90
-}
-{
-  "Orientation": 180
-}
-{
-  "Orientation": -90
-}
+...
 {
   "Orientation": -7
 }

@@ -27,7 +27,8 @@ def order_blocks_by_geo(t_document: t2.TDocument) -> t2.TDocument:
 
 def add_kv_ocr_confidence(t_document: t2.TDocument) -> t2.TDocument:
     """
-    adds custom attribute to each KEY_VALUE_SET in the form of "Custom":{"OCRConfidence": {"mean": 98.2}}
+    adds custom attribute to each KEY_VALUE_SET in the form of "Custom":{"OCRConfidence": {'mean': 98.2, 'min': 95.1}}
+    If no CHILD relationships exist for a KEY or VALUE, no confidence score will be added.
     """
     for idx, page_block in enumerate(t_document.pages):
         logger.debug(f"page: {idx}")
@@ -40,12 +41,20 @@ def add_kv_ocr_confidence(t_document: t2.TDocument) -> t2.TDocument:
                 logger.debug(f"len(child-relations: {len(ocr_blocks)}")
                 confidence_list: List[float] = [float(x.confidence) for x in ocr_blocks if x.confidence]
                 if confidence_list:
-                    kv_block_ocr_confidence = statistics.mean(confidence_list)
-                    logger.debug(f"confidence: {kv_block_ocr_confidence}")
+                    kv_block_ocr_confidence_mean = statistics.mean(confidence_list)
+                    kv_block_ocr_confidence_min = min(confidence_list)
                     if key_value_block.custom:
-                        key_value_block.custom['OCRConfidence'] = {'mean': kv_block_ocr_confidence}
+                        key_value_block.custom['OCRConfidence'] = {
+                            'mean': kv_block_ocr_confidence_mean,
+                            'min': kv_block_ocr_confidence_min
+                        }
                     else:
-                        key_value_block.custom = {'OCRConfidence': {'mean': kv_block_ocr_confidence}}
+                        key_value_block.custom = {
+                            'OCRConfidence': {
+                                'mean': kv_block_ocr_confidence_mean,
+                                'min': kv_block_ocr_confidence_min
+                            }
+                        }
     return t_document
 
 
