@@ -24,8 +24,10 @@ const runTestDocAssertions = (doc: TextractDocument, formsEnabled = true, tables
   expect(doc.nPages).toStrictEqual(1);
   const firstPage = doc.pageNumber(1);
   expect(firstPage.nLines).toStrictEqual(31);
-  expect(firstPage.lineAtIndex(0).words.length).toStrictEqual(2);
-  expect([...firstPage.iterLines()].reduce((acc, next) => acc + next.words.length, 0)).toStrictEqual(71);
+  expect(firstPage.lineAtIndex(0).listWords().length).toStrictEqual(2);
+  expect([...firstPage.iterLines()].reduce((acc, next) => acc + next.listWords().length, 0)).toStrictEqual(
+    71
+  );
   expect(firstPage.form.nFields).toStrictEqual(formsEnabled ? 9 : 0);
   expect(firstPage.nTables).toStrictEqual(tablesEnabled ? 1 : 0);
 };
@@ -78,9 +80,9 @@ describe("TextractDocument", () => {
           },
         })
       );
-      const expense = new TextractExpense((textractResponse as unknown) as ApiAnalyzeExpenseResponse);
+      const expense = new TextractExpense(textractResponse as unknown as ApiAnalyzeExpenseResponse);
       expect(expense.nDocs).toStrictEqual(1);
-      const expenseDoc = [...expense.iterDocs()][0];
+      const expenseDoc = expense.listDocs()[0];
 
       const vendorNameField = expenseDoc.getSummaryFieldByType("VENDOR_NAME");
       expect(vendorNameField).toBeTruthy();

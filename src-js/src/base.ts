@@ -58,3 +58,27 @@ export function getIterable<T>(collectionFetcher: () => T[]): Iterable<T> {
     [Symbol.iterator]: getIterator,
   };
 }
+
+/**
+ * Get the most common value in an Iterable of numbers
+ */
+export function modalAvg(arr: Iterable<number>): number | null {
+  const freqs: { [key: number]: { value: number; freq: number } } = {};
+  for (const item of arr) {
+    if (freqs[item]) {
+      ++freqs[item].freq;
+    } else {
+      freqs[item] = { value: item, freq: 1 };
+    }
+  }
+
+  let maxFreq = 0;
+  let mode: number | null = null;
+  for (const item in freqs) {
+    if (freqs[item].freq > maxFreq) {
+      maxFreq = freqs[item].freq;
+      mode = freqs[item].value;
+    }
+  }
+  return mode;
+}

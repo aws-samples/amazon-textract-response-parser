@@ -87,6 +87,9 @@ for (page of doc.iterPages()) {
   const inReadingOrder = page.getLineClustersInReadingOrder();
 }
 
+// Get snapshot arrays instead of iterators, if you need:
+const linesArrsByPage = doc.listPages().map((p) => p.listLines())
+
 // Easily access form key-value pairs:
 const page = doc.pageNumber(1);
 const addr = page.form.getFieldByKey("Address").value?.text;
@@ -114,6 +117,10 @@ for (const group of expenseDoc.iterLineItemGroups()) {
   }
 }
 
+// Get snapshot arrays instead of iterators, if you need:
+const summaryFieldsArrByDoc = expense.listDocs().map((doc) => doc.listSummaryFields());
+const linesArrsByPage = doc.listPages().map((p) => p.listLines())
+
 // Retrieve item fields by their tagged 'type':
 const vendorNameFields = expenseDoc.searchSummaryFieldsByType("VENDOR_NAME");
 console.log(`Found ${vendorNameFields.length} vendor name fields in doc summary`);
@@ -132,9 +139,7 @@ In general:
 - Where the library classes (`TextractDocument`, `Page`, `Word`, etc) offer mutation operations, these should modify the source API JSON object in-place and ensure self-consistency.
 - For library classes that are backed by a specific object in the source API JSON, you can access it via the `.dict` property (`word.dict`, `table.dict`, etc) but are responsible for updating any required references in other objects if making changes there.
 
-In particular for **array properties**, you'll note that TRP generally exposes getters and iterators (such as `table.nRows`, `table.iterRows()`, `table.cellsAt()`) rather than direct access to lists - to avoid implying that array mutations (such as `table.rows.pop()`) are properly supported.
-
-In a few cases (such as `line.words`) we do still expose arrays for convenience, but these properties return shallow copies of the underlying source.
+In particular for **array properties**, you'll note that TRP generally exposes getters and iterators (such as `table.nRows`, `table.iterRows()`, `table.listRows()`, `table.cellsAt()`) rather than direct access to lists - to avoid implying that arbitrary array mutations (such as `table.rows.pop()`) are properly supported.
 
 
 ## Development

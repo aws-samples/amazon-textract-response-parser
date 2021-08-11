@@ -1,6 +1,6 @@
 {
   "name": "amazon-textract-response-parser",
-  "version": "0.1.1-alpha.2",
+  "version": "0.1.1-alpha.3",
   "description": "Parse API responses from Amazon Textract with higher-level helpers",
   "browser": "dist/browser/trp.min.js",
   "main": "dist/umd/index.js",
