@@ -4,42 +4,26 @@ This library loads [Amazon Textract](https://docs.aws.amazon.com/textract/latest
 
 It's designed to work in both NodeJS and browser environments, and to support projects in either JavaScript or TypeScript.
 
+> ⚠️ **Warning:** If you're migrating from another TRP implementation such as the [Textract Response Parser for Python](https://github.com/aws-samples/amazon-textract-response-parser/tree/master/src-python), please note that the APIs and available features may be substantially different - due to differences between the languages' ecosystems.
+
 
 ## Installation
 
-This draft package is not yet published to NPM. Depending on the nature of your project, there are a few different ways you can try it out:
-
-
-### For JavaScript projects
-
-You'll need to download this source code (written in TypeScript) and then compile the JavaScript yourself.
-
-Download this folder to an environment where [NodeJS](https://nodejs.org/en/) is installed, and then run the following in your terminal to build the library:
+You can use TRP in your JavaScript or TypeScript NPM projects:
 
 ```sh
-# (Install the dev dependencies from package.json)
-npm install --dev
-# (Build the JavaScript output)
-npm run build
+$ npm install amazon-textract-response-parser
 ```
-
-Once the build is complete, you can use either the files in:
-
-- `dist/umd`, for NodeJS or other [Universal Module Definition](https://github.com/umdjs/umd)-compatible environments, or
-- `dist/browser`, for use directly in the browser with no module framework.
-
-**NodeJS example:**
 
 ```js
-const { TextractDocument } = require("./path/to/dist/umd"); // Probably rename the folder...
+import { TextractDocument, TextractExpense } from "textract-response-parser";
+const { TextractDocument, TextractExpense } = require("textract-response-parser");
 ```
 
-**Browser example:**
+...Or link directly in the browser - for example via the [unpkg CDN](https://unpkg.com/):
 
 ```html
-<script src="path/to/dist/browser/trp.min.js"></script>
-<!-- or -->
-<script>{Contents of trp.min.js}</script>
+<script src="https://unpkg.com/amazon-textract-response-parser@x.y.z"></script>
 
 <script>
   // Use via `trp`:
@@ -47,24 +31,46 @@ const { TextractDocument } = require("./path/to/dist/umd"); // Probably rename t
 </script>
 ```
 
+At a low level, the distribution of this library provides multiple builds:
 
-### For TypeScript projects
-
-TypeScript users can either **build** this package as described in the JavaScript instructions above, or directly copy the `src/` folder into your TypeScript project (e.g. as `trp/`) to build with the same toolchain as your project.
-
+- `dist/umd`, for NodeJS or other [Universal Module Definition](https://github.com/umdjs/umd)-compatible environments, and
+- `dist/cjs`, specifically for CommonJS environments like NodeJS, and
+- `dist/browser`, for use directly in the browser with no module framework (IIFE).
 
 ## Usage
 
-If you're using TypeScript, you may need to typecast your input JSON while loading it. The `ApiResponsePage` interface exposed and expected by this module is subtly different from - but functionally compatible with - the output types produced by the [AWS SDK for JavaScript Textract Client](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-textract/index.html).
+### Loading data
 
-For example, assuming you have the library in a local folder called `trp`:
+Initialize a `TextractDocument` (or `TextractExpense`) by providing the parsed response JSON object from [Amazon Textract APIs](https://docs.aws.amazon.com/textract/latest/dg/API_Reference.html) such as [AnalyzeExpense](https://docs.aws.amazon.com/textract/latest/dg/API_AnalyzeExpense.html) or [GetDocumentAnalysis](https://docs.aws.amazon.com/textract/latest/dg/API_GetDocumentAnalysis.html):
+
+```js
+const doc = new TextractDocument(require("./my-analyze-document-response.json"));
+```
+
+If you're using TypeScript, you may need to **typecast** your input JSON while loading it. The `ApiResponsePage` input interface exposed and expected by this module is subtly different from - but functionally compatible with - the output types produced by the [AWS SDK for JavaScript Textract Client](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-textract/index.html).
 
 ```typescript
-import { ApiResponsePage, TextractDocument } from "./trp";
+import { ApiAnalyzeExpenseResponse } from "amazon-textract-response-parser";
+import { TextractClient, AnalyzeExpenseCommand } from "@aws-sdk/client-textract";
+const textract = new TextractClient({});
 
-// Create a TextractDocument from your raw Textract response JSON:
-const doc = new TextractDocument(require("./my-textract-response.json") as ApiResponsePage);
+async function main() {
+  const textractResponse = await textract.send(
+    new AnalyzeExpenseCommand({
+      Document: { Bytes: await fs.readFile("...") },
+    })
+  );
+  const expense = new TextractExpense((textractResponse as unknown) as ApiAnalyzeExpenseResponse);
+}
+```
 
+### Analysis Features
+
+With your data loaded in to a TRP `TextractDocument` or `TextractExpense`, you can take advantage of the higher-level functionality to navigate and analyze the result.
+
+For example with a Document result:
+
+```typescript
 // Navigate the document hierarchy:
 console.log(`Opened doc with ${doc.nPages} pages`);
 console.log(`The first word of the first line is ${doc.pageNumber(1).lineAtIndex(0).wordAtIndex(0).text}`);
@@ -87,10 +93,48 @@ const addr = page.form.getFieldByKey("Address").value?.text;
 
 // ...and tables:
 const firstTable = page.nTables ? page.tableAtIndex(0) : null;
-const header_strs = firstTable.cellsAt(1, null).map(cell => cell.text);
+const header_strs = firstTable?.cellsAt(1, null)?.map(cell => cell.text);
+
+// Check the average angle/skew of detected text:
+const skew = page.getModalWordOrientationDegrees();
 ```
 
-For more examples of how the library can be used, you can refer to the [tests](tests/) folder and/or the source code.
+...Or with an Expense result:
+
+```typescript
+// Iterate through content:
+console.log(`Found ${expense.nDocs} expense docs in file`);
+const expenseDoc = [...expense.iterDocs()][0];
+for (const group of expenseDoc.iterLineItemGroups()) {
+  for (const item of group.iterLineItems()) {
+    console.log(`Found line item with ${item.nFields} fields`);
+    for (const field of item.iterFields()) {
+      ...
+    }
+  }
+}
+
+// Retrieve item fields by their tagged 'type':
+const vendorNameFields = expenseDoc.searchSummaryFieldsByType("VENDOR_NAME");
+console.log(`Found ${vendorNameFields.length} vendor name fields in doc summary`);
+console.log(vendorNameFields[0].fieldType.text); // "VENDOR_NAME"
+console.log(vendorNameFields[0].value.text); // e.g. "Amazon.com"
+```
+
+For more examples of the features of the library, you can refer to the [tests](tests/) folder and/or the source code. If you have suggestions for additional features that would be useful, please open a GitHub issue!
+
+### Mutation operations
+
+Easier analysis and querying of Textract results is useful, but what if you want to augment or edit your Textract JSONs with JS/TS Textract Response Parser?
+
+In general:
+
+- Where the library classes (`TextractDocument`, `Page`, `Word`, etc) offer mutation operations, these should modify the source API JSON object in-place and ensure self-consistency.
+- For library classes that are backed by a specific object in the source API JSON, you can access it via the `.dict` property (`word.dict`, `table.dict`, etc) but are responsible for updating any required references in other objects if making changes there.
+
+In particular for **array properties**, you'll note that TRP generally exposes getters and iterators (such as `table.nRows`, `table.iterRows()`, `table.cellsAt()`) rather than direct access to lists - to avoid implying that array mutations (such as `table.rows.pop()`) are properly supported.
+
+In a few cases (such as `line.words`) we do still expose arrays for convenience, but these properties return shallow copies of the underlying source.
 
 
 ## Development
