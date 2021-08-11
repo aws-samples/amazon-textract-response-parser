@@ -79,6 +79,31 @@ for page in doc.pages:
     print(page.custom['Orientation'])
 ```
 
+#### Using the pipeline on command line
+
+The amazon-textract-response-parser package also includes a command line tool to test pipeline components like the add_page_orientation or the order_blocks_by_geo.
+
+Here is one example of the usage (in combination with the ```amazon-textract``` command from amazon-textract-helper and the ```jq``` tool (https://stedolan.github.io/jq/))
+
+```bash
+> amazon-textract --input-document "s3://somebucket/some-multi-page-pdf.pdf" | amazon-textract-pipeline --components add_page_orientation | jq '.Blocks[] | select(.BlockType=="PAGE") | .Custom'm
+
+{
+  "Orientation": 7
+}
+{
+  "Orientation": 11
+}
+...
+{
+  "Orientation": -7
+}
+{
+  "Orientation": 0
+}
+```
+
+
 #### Merge or link tables across pages
 
 Sometimes tables start on one page and continue across the next page or pages. This component identifies if that is the case based on the number of columns and if a header is present on the subsequent table and can modify the output Textract JSON schema for down-stream processing. Other custom-logic is possible to develop for specific use cases.
@@ -177,30 +202,6 @@ Using from command line example and validating the output:
 ```bash
 # from the root of the repository
 cat "src-python/tests/data/employment-application.json" | amazon-textract-pipeline --components kv_ocr_confidence | jq '.Blocks[] | select(.BlockType=="KEY_VALUE_SET") '
-```
-
-#### Using the pipeline on command line
-
-The amazon-textract-response-parser package also includes a command line tool to test pipeline components like the add_page_orientation or the order_blocks_by_geo.
-
-Here is one example of the usage (in combination with the ```amazon-textract``` command from amazon-textract-helper and the ```jq``` tool (https://stedolan.github.io/jq/))
-
-```bash
-> amazon-textract --input-document "s3://somebucket/some-multi-page-pdf.pdf" | amazon-textract-pipeline --components add_page_orientation | jq '.Blocks[] | select(.BlockType=="PAGE") | .Custom'm
-
-{
-  "Orientation": 7
-}
-{
-  "Orientation": 11
-}
-...
-{
-  "Orientation": -7
-}
-{
-  "Orientation": 0
-}
 ```
 
 # Parse JSON response from Textract
