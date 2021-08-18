@@ -8,7 +8,7 @@ import pkg from "./package.json";
 
 export default [
   {
-    input: "dist/umd/index.js",
+    input: "dist/cjs/index.js",
     output: {
       name: "trp",
       file: pkg.browser,

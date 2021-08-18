@@ -133,6 +133,10 @@ export class ExpenseLineItem extends ApiObjectWrapper<ApiExpenseLineItem> {
     return getIterable(() => this._fields);
   }
 
+  listFields(): ExpenseField[] {
+    return this._fields.slice();
+  }
+
   getFieldByType(fieldType: string): ExpenseField | null {
     const results = this.searchFieldsByType(fieldType);
     return results.length ? results[0] : null;
@@ -178,6 +182,10 @@ export class ExpenseLineItemGroup extends ApiObjectWrapper<ApiExpenseLineItemGro
    */
   iterLineItems(): Iterable<ExpenseLineItem> {
     return getIterable(() => this._lineItems);
+  }
+
+  listLineItems(): ExpenseLineItem[] {
+    return this._lineItems.slice();
   }
 }
 
@@ -247,6 +255,14 @@ export class ExpenseDocument extends ApiObjectWrapper<ApiExpenseDocument> {
   iterSummaryFields(): Iterable<ExpenseField> {
     return getIterable(() => this._summaryFields);
   }
+
+  listLineItemGroups(): ExpenseLineItemGroup[] {
+    return this._lineItemGroups.slice();
+  }
+
+  listSummaryFields(): ExpenseField[] {
+    return this._summaryFields.slice();
+  }
 }
 
 export class TextractExpense extends ApiObjectWrapper<ApiAnalyzeExpenseResponse> {
@@ -286,5 +302,9 @@ export class TextractExpense extends ApiObjectWrapper<ApiAnalyzeExpenseResponse>
    */
   iterDocs(): Iterable<ExpenseDocument> {
     return getIterable(() => this._docs);
+  }
+
+  listDocs(): ExpenseDocument[] {
+    return this._docs.slice();
   }
 }

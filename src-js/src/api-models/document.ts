@@ -29,7 +29,7 @@ export const enum ApiBlockType {
 }
 
 export interface ApiPageBlock {
-  BlockType: "PAGE";
+  BlockType: ApiBlockType.Page;
   Geometry: ApiGeometry;
   readonly Id: string;
 }

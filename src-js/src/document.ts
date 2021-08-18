@@ -25,14 +25,22 @@ import {
   ApiResponseWithContent,
   ApiResultWarning,
 } from "./api-models/response";
-import { ApiObjectWrapper, getIterable } from "./base";
+import { ApiObjectWrapper, getIterable, modalAvg } from "./base";
 import { BoundingBox, Geometry } from "./geometry";
 
 export class ApiBlockWrapper<T extends ApiBlock> extends ApiObjectWrapper<T> {
   get id(): string {
     return this._dict.Id;
   }
+
+  get blockType(): ApiBlockType {
+    return this._dict.BlockType;
+  }
 }
+
+// Simple constructor type for TS mixin pattern
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Constructor<T> = new (...args: any[]) => T;
 
 export class Word extends ApiBlockWrapper<ApiWordBlock> {
   _geometry: Geometry<ApiWordBlock, Word>;
@@ -66,10 +74,57 @@ export class Word extends ApiBlockWrapper<ApiWordBlock> {
   }
 }
 
-export class Line extends ApiBlockWrapper<ApiLineBlock> {
+// eslint-disable-next-line @typescript-eslint/ban-types
+function WithWords<T extends Constructor<{}>>(SuperClass: T) {
+  return class extends SuperClass {
+    _words: Word[];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    constructor(...args: any[]) {
+      super(...args);
+      this._words = [];
+    }
+
+    get nWords(): number {
+      return this._words.length;
+    }
+
+    /**
+     * Iterate through the Words in this object
+     * @example
+     * for (const word of line.iterWords) {
+     *   console.log(word.text);
+     * }
+     * @example
+     * [...line.iterWords()].forEach(
+     *   (word) => console.log(word.text)
+     * );
+     */
+    iterWords(): Iterable<Word> {
+      return getIterable(() => this._words);
+    }
+
+    listWords(): Word[] {
+      return this._words.slice();
+    }
+
+    /**
+     * Get a particular Word from the object by index
+     * @param ix 0-based index in the word list
+     * @throws if the index is out of bounds
+     */
+    wordAtIndex(ix: number): Word {
+      if (ix < 0 || ix >= this._words.length) {
+        throw new Error(`Word index ${ix} must be >=0 and <${this._words.length}`);
+      }
+      return this._words[ix];
+    }
+  };
+}
+
+export class Line extends WithWords(ApiBlockWrapper)<ApiLineBlock> {
   _geometry: Geometry<ApiLineBlock, Line>;
   _parentPage: Page;
-  _words: Word[];
 
   constructor(block: ApiLineBlock, parentPage: Page) {
     super(block);
@@ -109,31 +164,6 @@ export class Line extends ApiBlockWrapper<ApiLineBlock> {
   get text(): string {
     return this._dict.Text;
   }
-  get words(): Word[] {
-    return this._words.slice();
-  }
-
-  /**
-   * Iterate through the words in this line
-   * @example
-   * for (const word of line.iterWords) {
-   *   console.log(cell.text);
-   * }
-   * @example
-   * [...line.iterWords()].forEach(
-   *   (word) => console.log(word.text)
-   * );
-   */
-  iterWords(): Iterable<Word> {
-    return getIterable(() => this._words);
-  }
-
-  wordAtIndex(ix: number): Word {
-    if (ix < 0 || ix >= this._words.length) {
-      throw new Error(`Word index ${ix} must be >=0 and <${this._words.length}`);
-    }
-    return this._words[ix];
-  }
 
   str(): string {
     return `Line\n==========\n${this._dict.Text}\nWords\n----------\n${this._words
@@ -167,10 +197,9 @@ export class SelectionElement extends ApiBlockWrapper<ApiSelectionElementBlock> 
   }
 }
 
-export class FieldKey extends ApiBlockWrapper<ApiKeyValueSetBlock> {
+export class FieldKey extends WithWords(ApiBlockWrapper)<ApiKeyValueSetBlock> {
   _geometry: Geometry<ApiKeyValueSetBlock, FieldKey>;
   _parentField: Field;
-  _words: Word[];
 
   constructor(block: ApiKeyValueSetBlock, parentField: Field) {
     super(block);
@@ -213,9 +242,6 @@ export class FieldKey extends ApiBlockWrapper<ApiKeyValueSetBlock> {
   }
   get text(): string {
     return this._words.map((w) => w.text).join(" ");
-  }
-  get words(): Word[] {
-    return this._words.slice();
   }
 
   str(): string {
@@ -263,9 +289,6 @@ export class FieldValue extends ApiBlockWrapper<ApiKeyValueSetBlock> {
   get confidence(): number {
     return this._dict.Confidence;
   }
-  get content(): Array<SelectionElement | Word> {
-    return this._content.slice();
-  }
   get geometry(): Geometry<ApiKeyValueSetBlock, FieldValue> {
     return this._geometry;
   }
@@ -276,6 +299,9 @@ export class FieldValue extends ApiBlockWrapper<ApiKeyValueSetBlock> {
     return this._content.map((c) => ("selectionStatus" in c ? c.selectionStatus : c.text)).join(" ");
   }
 
+  listContent(): Array<SelectionElement | Word> {
+    return this._content.slice();
+  }
   str(): string {
     return this.text;
   }
@@ -401,9 +427,21 @@ export class Form {
    * const fields = [...form.iterFields()];
    */
   iterFields(skipFieldsWithoutKey = false): Iterable<Field> {
-    return getIterable(() => (skipFieldsWithoutKey ? this._fields.filter((f) => f.key) : this._fields));
+    return getIterable(() => this.listFields(skipFieldsWithoutKey));
   }
 
+  /**
+   * List the Fields in the Form.
+   * @param skipFieldsWithoutKey Set `true` to skip fields with no field.key (Included by default)
+   */
+  listFields(skipFieldsWithoutKey = false): Field[] {
+    return skipFieldsWithoutKey ? this._fields.filter((f) => f.key) : this._fields.slice();
+  }
+
+  /**
+   * List the Fields in the Form with key text containing (case-insensitive) `key`
+   * @param key The text to search for in field keys
+   */
   searchFieldsByKey(key: string): Field[] {
     const searchKey = key.toLowerCase();
     return this._fields.filter((field) => field.key && field.key.text.toLowerCase().indexOf(searchKey) >= 0);
@@ -462,9 +500,6 @@ export class Cell extends ApiBlockWrapper<ApiCellBlock> {
   set confidence(newVal: number) {
     this._dict.Confidence = newVal;
   }
-  get content(): Array<SelectionElement | Word> {
-    return this._content.slice();
-  }
   get geometry(): Geometry<ApiCellBlock, Cell> {
     return this._geometry;
   }
@@ -481,6 +516,9 @@ export class Cell extends ApiBlockWrapper<ApiCellBlock> {
     return this._text;
   }
 
+  listContent(): Array<SelectionElement | Word> {
+    return this._content.slice();
+  }
   str(): string {
     return this._text;
   }
@@ -515,6 +553,10 @@ export class Row {
    */
   iterCells(): Iterable<Cell> {
     return getIterable(() => this._cells);
+  }
+
+  listCells(): Cell[] {
+    return this._cells.slice();
   }
 
   str(): string {
@@ -635,6 +677,16 @@ export class Table extends ApiBlockWrapper<ApiTableBlock> {
     };
   }
 
+  /**
+   * List the rows of the table
+   * @param repeatMultiRowCells Set `true` to include rowspan>1 cells in every `Row` they intersect with.
+   */
+  listRows(repeatMultiRowCells = false): Row[] {
+    return [...Array(this._nRows).keys()].map(
+      (ixRow) => new Row(this.cellsAt(++ixRow, null, !repeatMultiRowCells), this)
+    );
+  }
+
   get confidence(): number {
     return this._dict.Confidence;
   }
@@ -659,34 +711,13 @@ export class Table extends ApiBlockWrapper<ApiTableBlock> {
 
   str(): string {
     return (
-      "Table\n==========\n" + [...this.iterRows()].map((row) => `Row\n==========\n${row.str()}`).join("\n")
+      "Table\n==========\n" +
+      this.listRows()
+        .map((row) => `Row\n==========\n${row.str()}`)
+        .join("\n")
     );
   }
 }
-
-/**
- * Get the most common value in an Iterable of numbers
- */
-const getMode = (arr: Iterable<number>): number | null => {
-  const freqs: { [key: number]: { value: number; freq: number } } = {};
-  for (const item of arr) {
-    if (freqs[item]) {
-      ++freqs[item].freq;
-    } else {
-      freqs[item] = { value: item, freq: 1 };
-    }
-  }
-
-  let maxFreq = 0;
-  let mode: number | null = null;
-  for (const item in freqs) {
-    if (freqs[item].freq > maxFreq) {
-      maxFreq = freqs[item].freq;
-      mode = freqs[item].value;
-    }
-  }
-  return mode;
-};
 
 export class Page extends ApiBlockWrapper<ApiPageBlock> {
   _blocks: ApiBlock[];
@@ -741,15 +772,15 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
    * Calculate the most common orientation (in whole degrees) of 'WORD' content in the page.
    */
   getModalWordOrientationDegrees(): number | null {
-    const wordDegreesByLine = [...this.iterLines()].map((line) =>
-      [...line.iterWords()].map((word) => word.geometry.orientationDegrees())
+    const wordDegreesByLine = this.listLines().map((line) =>
+      line.listWords().map((word) => word.geometry.orientationDegrees())
     );
 
     const wordDegrees = ([] as Array<number | null>)
       .concat(...wordDegreesByLine)
       .filter((n) => n != null) as number[];
 
-    return getMode(wordDegrees.map((n) => Math.round(n)));
+    return modalAvg(wordDegrees.map((n) => Math.round(n)));
   }
 
   /**
@@ -808,8 +839,6 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
    * for (const line of page.iterLines()) {
    *   console.log(line.text);
    * }
-   * @example
-   * const lines = [...page.iterLines()];
    */
   iterLines(): Iterable<Line> {
     return getIterable(() => this._lines);
@@ -835,6 +864,18 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
     return this._lines[ix];
   }
 
+  listBlocks(): ApiBlock[] {
+    return this._blocks.slice();
+  }
+
+  listLines(): Line[] {
+    return this._lines.slice();
+  }
+
+  listTables(): Table[] {
+    return this._tables.slice();
+  }
+
   tableAtIndex(ix: number): Table {
     if (ix < 0 || ix >= this._tables.length) {
       throw new Error(`Table index ${ix} must be >=0 and <${this._tables.length}`);
@@ -842,9 +883,6 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
     return this._tables[ix];
   }
 
-  get blocks(): ApiBlock[] {
-    return this._blocks.slice();
-  }
   get form(): Form {
     return this._form;
   }
@@ -1021,9 +1059,6 @@ export class TextractDocument extends ApiObjectWrapper<ApiResponsePage & ApiResp
     };
   }
 
-  get blocks(): ApiBlock[] {
-    return this._dict.Blocks;
-  }
   get nPages(): number {
     return this._pages.length;
   }
@@ -1043,6 +1078,14 @@ export class TextractDocument extends ApiObjectWrapper<ApiResponsePage & ApiResp
    */
   iterPages(): Iterable<Page> {
     return getIterable(() => this._pages);
+  }
+
+  listBlocks(): ApiBlock[] {
+    return this._dict.Blocks.slice();
+  }
+
+  listPages(): Page[] {
+    return this._pages.slice();
   }
 
   pageNumber(pageNum: number): Page {
