@@ -238,7 +238,7 @@ class Field(BaseBlock):
                 for eid in item['Ids']:
                     vkvs = blockMap[eid]
                     if 'VALUE' in vkvs['EntityTypes']:
-                        if ('Relationships' in vkvs):
+                        if ('Relationships' in vkvs and vkvs['Relationships'] is not None):
                             for vitem in vkvs['Relationships']:
                                 if (vitem["Type"] == "CHILD"):
                                     self._value = FieldValue(
