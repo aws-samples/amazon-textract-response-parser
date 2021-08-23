@@ -3,6 +3,10 @@
 import json
 import sys
 from trp.trp2 import TDocumentSchema
+<<<<<<< HEAD
+=======
+from trp.t_pipeline import order_blocks_by_geo, add_page_orientation, pipeline_merge_tables, add_kv_ocr_confidence
+>>>>>>> master
 import argparse
 from trp import __version__
 from enum import Enum, auto
@@ -10,17 +14,35 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class TPipelineComponents(Enum):
     order_blocks_by_geo = auto()
     add_page_orientation = auto()
+<<<<<<< HEAD
     rotate_points_to_page_orientation = auto()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--components", nargs='+', choices=[TPipelineComponents.add_page_orientation.name, TPipelineComponents.order_blocks_by_geo.name, TPipelineComponents.rotate_points_to_page_orientation.name], help="define which components to call", required=True)
+=======
+    merge_tables = auto()
+    kv_ocr_confidence = auto()
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--components",
+                    nargs='+',
+                    choices=[
+                        TPipelineComponents.add_page_orientation.name, TPipelineComponents.order_blocks_by_geo.name,
+                        TPipelineComponents.merge_tables.name, TPipelineComponents.kv_ocr_confidence.name
+                    ],
+                    help="define which components to call",
+                    required=True)
+>>>>>>> master
 parser.add_argument("--version",
                     action='version',
                     version='%(prog)s {version}'.format(version=__version__),
                     help="print version information")
+<<<<<<< HEAD
 show_logs = parser.add_mutually_exclusive_group(required=False)
 show_logs.add_argument("-v",
                        dest='showinfo',
@@ -32,6 +54,8 @@ show_logs.add_argument("-vv",
                        action='store_true',
                        help=">=DEBUG level logging output to stderr")
 show_logs.set_defaults(showdebug=False)
+=======
+>>>>>>> master
 
 args = parser.parse_args()
 components = [TPipelineComponents[x] for x in args.components]
@@ -52,6 +76,7 @@ if showinfo or showdebug:
     pipeline_logger.setLevel(logging.INFO)
     pipeline_logger.addHandler(handler)
 
+<<<<<<< HEAD
 
     if showdebug:
         handler.setLevel(logging.DEBUG)
@@ -61,13 +86,23 @@ if showinfo or showdebug:
 
 import trp.t_pipeline as tp 
 
+=======
+>>>>>>> master
 doc_json = json.load(sys.stdin)
 t_doc = TDocumentSchema().load(doc_json)
 if TPipelineComponents.add_page_orientation in components:
+<<<<<<< HEAD
     t_doc = tp.add_page_orientation(t_doc)
 if TPipelineComponents.rotate_points_to_page_orientation in components:
     t_doc = tp.rotate_points_to_page_orientation(t_doc)
 if TPipelineComponents.order_blocks_by_geo in components:
     t_doc = tp.order_blocks_by_geo(t_doc)
-print(TDocumentSchema().dumps(t_doc))
+=======
+    t_doc = add_page_orientation(t_doc)
+if TPipelineComponents.merge_tables in components:
+    t_doc = pipeline_merge_tables(t_doc)
+if TPipelineComponents.kv_ocr_confidence in components:
+    t_doc = add_kv_ocr_confidence(t_doc)
 
+>>>>>>> master
+print(TDocumentSchema().dumps(t_doc))
