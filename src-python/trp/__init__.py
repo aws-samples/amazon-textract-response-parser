@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 __version__ = '0.1.16'
 
+
 class BaseBlock():
     def __init__(self, block, blockMap):
         self._block = block
@@ -16,10 +17,13 @@ class BaseBlock():
         self._geometry = Geometry(block['Geometry'])
         self._id = block['Id']
         self._text = ""
+        self._text_type = ""
         if 'Text' in block:
             self._text = block['Text']
         if "Custom" in block:
             self._custom = block["Custom"]
+        if 'TextType' in block and block['TextType']:
+            self._text_type = block['TextType']
 
     def __str__(self):
         return self._text
@@ -48,6 +52,11 @@ class BaseBlock():
     def block(self):
         return self._block
 
+    @property
+    def textType(self):
+        return self._text_type
+
+
 class BoundingBox:
     def __init__(self, width, height, left, top):
         self._width = width
@@ -56,8 +65,7 @@ class BoundingBox:
         self._top = top
 
     def __str__(self):
-        return "width: {}, height: {}, left: {}, top: {}".format(
-            self._width, self._height, self._left, self._top)
+        return "width: {}, height: {}, left: {}, top: {}".format(self._width, self._height, self._left, self._top)
 
     @property
     def width(self):
@@ -97,8 +105,7 @@ class Geometry:
     def __init__(self, geometry):
         boundingBox = geometry["BoundingBox"]
         polygon = geometry["Polygon"]
-        bb = BoundingBox(boundingBox["Width"], boundingBox["Height"],
-                         boundingBox["Left"], boundingBox["Top"])
+        bb = BoundingBox(boundingBox["Width"], boundingBox["Height"], boundingBox["Left"], boundingBox["Top"])
         pgs = []
         for pg in polygon:
             pgs.append(Polygon(pg["X"], pg["Y"]))
@@ -144,11 +151,9 @@ class Line(BaseBlock):
             s = s + "[{}]".format(str(word))
         return s
 
-
     @property
     def words(self):
         return self._words
-
 
 
 class SelectionElement:
@@ -192,7 +197,6 @@ class FieldKey(BaseBlock):
         if (t):
             self._text = ' '.join(t)
 
-
     @property
     def content(self):
         return self._content
@@ -219,7 +223,6 @@ class FieldValue(BaseBlock):
         if (t):
             self._text = ' '.join(t)
 
-
     @property
     def content(self):
         return self._content
@@ -241,8 +244,7 @@ class Field(BaseBlock):
                         if ('Relationships' in vkvs and vkvs['Relationships'] is not None):
                             for vitem in vkvs['Relationships']:
                                 if (vitem["Type"] == "CHILD"):
-                                    self._value = FieldValue(
-                                        vkvs, vitem['Ids'], blockMap)
+                                    self._value = FieldValue(vkvs, vitem['Ids'], blockMap)
 
     def __str__(self):
         s = "\nField\n==========\n"
@@ -341,7 +343,6 @@ class Cell(BaseBlock):
         return self._content
 
 
-
 class Row:
     def __init__(self):
         self._cells = []
@@ -434,7 +435,6 @@ class Page:
                             f"INFO: Detected K/V where key does not have content. Excluding key from output. {f} - {item}"
                         )
 
-
     def getLinesInReadingOrder(self):
         columns = []
         lines = []
@@ -445,20 +445,16 @@ class Page:
                 bbox_right = item.geometry.boundingBox.left + item.geometry.boundingBox.width
                 bbox_centre = item.geometry.boundingBox.left + item.geometry.boundingBox.width / 2
                 column_centre = column['left'] + column['right'] / 2
-                if (bbox_centre > column['left'] and bbox_centre <
-                        column['right']) or (column_centre > bbox_left
-                                             and column_centre < bbox_right):
+                if (bbox_centre > column['left'] and bbox_centre < column['right']) or (column_centre > bbox_left
+                                                                                        and column_centre < bbox_right):
                     #Bbox appears inside the column
                     lines.append([index, item.text])
                     column_found = True
                     break
             if not column_found:
                 columns.append({
-                    'left':
-                    item.geometry.boundingBox.left,
-                    'right':
-                    item.geometry.boundingBox.left +
-                    item.geometry.boundingBox.width
+                    'left': item.geometry.boundingBox.left,
+                    'right': item.geometry.boundingBox.left + item.geometry.boundingBox.width
                 })
                 lines.append([len(columns) - 1, item.text])
 
@@ -545,15 +541,17 @@ class Document:
                     documentPage = []
                     documentPage.append(block)
                 else:
-                    documentPage.append(block)
+                    if documentPage:
+                        documentPage.append(block)
+                    else:
+                        logger.error("assumed documentPage not None, but was None")
         if (documentPage):
             documentPages.append({"Blocks": documentPage})
         return documentPages, blockMap
 
     def _parse(self):
 
-        self._responseDocumentPages, self._blockMap = self._parseDocumentPagesAndBlockMap(
-        )
+        self._responseDocumentPages, self._blockMap = self._parseDocumentPagesAndBlockMap()
         for documentPage in self._responseDocumentPages:
             page = Page(documentPage["Blocks"], self._blockMap)
             self._pages.append(page)
