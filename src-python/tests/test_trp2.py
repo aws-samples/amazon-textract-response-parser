@@ -1,20 +1,14 @@
-<<<<<<< HEAD
 from trp.t_pipeline import add_page_orientation, order_blocks_by_geo
 from typing import List
-=======
 from trp.t_pipeline import add_page_orientation, order_blocks_by_geo, pipeline_merge_tables, add_kv_ocr_confidence
 from trp.t_tables import MergeOptions, HeaderFooterType
->>>>>>> master
 import trp.trp2 as t2
 import trp as t1
 import json
 import os
 import pytest
 from trp import Document
-<<<<<<< HEAD
 from uuid import uuid4
-=======
->>>>>>> master
 import logging
 
 current_folder = os.path.dirname(os.path.realpath(__file__))
@@ -70,8 +64,6 @@ def test_tblock_order_block_by_geo_multi_page():
     assert "Page 1 - Value 2.1.1" == doc.pages[0].tables[1].rows[0].cells[0].text.strip()
 
 
-<<<<<<< HEAD
-=======
 def test_tblock():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib.json"))
@@ -84,7 +76,6 @@ def test_tblock():
     assert "Value 3.1.1" == doc.pages[0].tables[2].rows[0].cells[0].text.strip()
 
 
->>>>>>> master
 def test_custom_tblock():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib.json"))
@@ -185,54 +176,54 @@ def test_next_token_response():
     assert t_document.pages[0].custom
 
 
-
 def test_rotate_point():
-    assert t2.TPoint(2,2) == t2.TPoint(2,2)
-    
-    p = t2.TPoint(2,2).rotate(degrees=180, origin_y=0, origin_x=0, force_limits=False)
+    assert t2.TPoint(2, 2) == t2.TPoint(2, 2)
+
+    p = t2.TPoint(2, 2).rotate(degrees=180, origin_y=0, origin_x=0, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(-2, -2)
 
-    p = t2.TPoint(3,4).rotate(degrees=-30, origin_y=0, origin_x=0, force_limits=False)
+    p = t2.TPoint(3, 4).rotate(degrees=-30, origin_y=0, origin_x=0, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(5, 2)
 
-    p = t2.TPoint(3,4).rotate(degrees=-77, origin_y=0, origin_x=0, force_limits=False)
+    p = t2.TPoint(3, 4).rotate(degrees=-77, origin_y=0, origin_x=0, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(5, -2)
 
-    p = t2.TPoint(3,4).rotate(degrees=-90, origin_y=0, origin_x=0, force_limits=False)
+    p = t2.TPoint(3, 4).rotate(degrees=-90, origin_y=0, origin_x=0, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(4, -3)
 
-    p = t2.TPoint(3,4).rotate(degrees=-270,origin_y=0, origin_x=0, force_limits=False)
+    p = t2.TPoint(3, 4).rotate(degrees=-270, origin_y=0, origin_x=0, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(-4, 3)
 
-    p = t2.TPoint(2,2).rotate(degrees=180, origin_x=1, origin_y=1)
+    p = t2.TPoint(2, 2).rotate(degrees=180, origin_x=1, origin_y=1)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(0, 0)
 
-    p = t2.TPoint(3,4).rotate(degrees=-30, origin_y=0, origin_x=0, force_limits=False)
+    p = t2.TPoint(3, 4).rotate(degrees=-30, origin_y=0, origin_x=0, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(5, 2)
 
-    p = t2.TPoint(3,4).rotate(degrees=-77, origin_x=4, origin_y=4, force_limits=False)
+    p = t2.TPoint(3, 4).rotate(degrees=-77, origin_x=4, origin_y=4, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(4, 5)
 
-    p = t2.TPoint(3,4).rotate(degrees=-90, origin_x=4, origin_y=6, force_limits=False)
+    p = t2.TPoint(3, 4).rotate(degrees=-90, origin_x=4, origin_y=6, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(2, 7)
 
-    p = t2.TPoint(3,4).rotate(degrees=-270, origin_x=4, origin_y=6, force_limits=False)
+    p = t2.TPoint(3, 4).rotate(degrees=-270, origin_x=4, origin_y=6, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(6, 5)
 
 
 def test_rotate():
 
     points = []
-    width= 0.05415758863091469
-    height= 0.011691284365952015
-    left= 0.13994796574115753
-    top= 0.8997916579246521
-    origin:t2.TPoint = t2.TPoint(x=0.5, y=0.5)
-    degrees:float = 180
+    width = 0.05415758863091469
+    height = 0.011691284365952015
+    left = 0.13994796574115753
+    top = 0.8997916579246521
+    origin: t2.TPoint = t2.TPoint(x=0.5, y=0.5)
+    degrees: float = 180
     points.append(t2.TPoint(x=left, y=top).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
-    points.append(t2.TPoint(x=left + width, y = top).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
+    points.append(t2.TPoint(x=left + width, y=top).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
     points.append(t2.TPoint(x=left, y=top + height).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
-    points.append(t2.TPoint(x=left+width, y = top+height).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
+    points.append(
+        t2.TPoint(x=left + width, y=top + height).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
     assert not None in points
 
 
@@ -272,16 +263,14 @@ def test_adjust_bounding_boxes_and_polygons_to_orientation():
 
     # FIXME: remove duplicates in relationship_recursive!
     # [b.rotate(origin=t2.TPoint(0.5, 0.5), degrees=180) for b in t_document.relationships_recursive(block=t_document.pages[0])]
-    t_document.rotate(page=t_document.pages[0], degrees=180)
-    new_order = order_blocks_by_geo(t_document)
-    with open("/Users/schadem/temp/rotation/rotate_json2.jon", "w") as out_file:
-        out_file.write(t2.TDocumentSchema().dumps(t_document))
+    # t_document.rotate(page=t_document.pages[0], degrees=180)
+    # new_order = order_blocks_by_geo(t_document)
+    # with open("/Users/schadem/temp/rotation/rotate_json2.jon", "w") as out_file:
+    #     out_file.write(t2.TDocumentSchema().dumps(t_document))
 
-    doc = t1.Document(t2.TDocumentSchema().dump(t_document))
-<<<<<<< HEAD
+    # doc = t1.Document(t2.TDocumentSchema().dump(t_document))
     # for line in doc.pages[0].lines:
     #     print("Line: {}".format(line.text))
-
 
     # p = t2.TPoint(x=0.75, y=0.03)
     # p.rotate(origin_x=0.5, origin_y=0.5, degrees=180)
@@ -292,38 +281,39 @@ def test_adjust_bounding_boxes_and_polygons_to_orientation():
 
 
 def test_scale(caplog):
-    p1:t2.TPoint = t2.TPoint(x=0.5, y=0.5)
+    p1: t2.TPoint = t2.TPoint(x=0.5, y=0.5)
     p1.scale(doc_width=10, doc_height=10)
-    assert(p1 == t2.TPoint(x=5, y=5))
-    b1:t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.5, top=0.5)
+    assert (p1 == t2.TPoint(x=5, y=5))
+    b1: t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.5, top=0.5)
     b1.scale(doc_width=10, doc_height=10)
-    assert(b1 == t2.TBoundingBox(width=1, height=1, left=5, top=5))
+    assert (b1 == t2.TBoundingBox(width=1, height=1, left=5, top=5))
 
-    p1:t2.TPoint = t2.TPoint(x=0.5, y=0.5)
-    b1:t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.5, top=0.5)
-    g1:t2.TGeometry = t2.TGeometry(bounding_box=b1, polygon=[p1])
+    p1: t2.TPoint = t2.TPoint(x=0.5, y=0.5)
+    b1: t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.5, top=0.5)
+    g1: t2.TGeometry = t2.TGeometry(bounding_box=b1, polygon=[p1])
     g1.scale(doc_width=10, doc_height=10)
-    assert (g1 == t2.TGeometry(bounding_box=t2.TBoundingBox(width=1, height=1, left=5, top=5), polygon=[t2.TPoint(x=5, y=5)]))
+    assert (g1 == t2.TGeometry(bounding_box=t2.TBoundingBox(width=1, height=1, left=5, top=5),
+                               polygon=[t2.TPoint(x=5, y=5)]))
 
 
 def test_ratio(caplog):
-    p1:t2.TPoint = t2.TPoint(x=0.5, y=0.5)
-    p2:t2.TPoint = t2.TPoint(x=5, y=5)
+    p1: t2.TPoint = t2.TPoint(x=0.5, y=0.5)
+    p2: t2.TPoint = t2.TPoint(x=5, y=5)
     p2.ratio(doc_width=10, doc_height=10)
-    assert(p1 == p2)
+    assert (p1 == p2)
 
-    b1:t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.5, top=0.5)
-    b2:t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=5, top=5)
+    b1: t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.5, top=0.5)
+    b2: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=5, top=5)
     b2.ratio(doc_width=10, doc_height=10)
-    assert(b1 == b2)
+    assert (b1 == b2)
 
-    p1:t2.TPoint = t2.TPoint(x=0.5, y=0.5)
-    p2:t2.TPoint = t2.TPoint(x=5, y=5)
-    b1:t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.5, top=0.5)
-    b2:t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=5, top=5)
+    p1: t2.TPoint = t2.TPoint(x=0.5, y=0.5)
+    p2: t2.TPoint = t2.TPoint(x=5, y=5)
+    b1: t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.5, top=0.5)
+    b2: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=5, top=5)
 
-    g1:t2.TGeometry = t2.TGeometry(bounding_box=b1, polygon=[p1])
-    g2:t2.TGeometry = t2.TGeometry(bounding_box=b2, polygon=[p2])
+    g1: t2.TGeometry = t2.TGeometry(bounding_box=b1, polygon=[p1])
+    g2: t2.TGeometry = t2.TGeometry(bounding_box=b2, polygon=[p2])
 
     g2.ratio(doc_width=10, doc_height=10)
     assert (g1 == g2)
@@ -347,27 +337,29 @@ def test_get_blocks_for_relationship(caplog):
             rel_value = t_document.get_blocks_for_relationships(relationship=relationships_value)
             assert len(rel_value) == 1
 
-            child_rel:List[t2.TBlock] = list()
+            child_rel: List[t2.TBlock] = list()
             for value_block in rel_value:
                 child_rel.extend(t_document.get_blocks_for_relationships(value_block.get_relationships_for_type()))
             assert len(child_rel) == 1
         else:
             assert False
 
+
 def test_add_ids_to_relationships(caplog):
     tdocument = t2.TDocument()
-    page_block = t2.TBlock(id=str(uuid4()),
-                            block_type="PAGE",
-                            geometry=t2.TGeometry(bounding_box=t2.TBoundingBox(width=1, height=1, left=0, top=0),
-                                                    polygon=[t2.TPoint(x=0,y=0), t2.TPoint(x=1,y=1)]),
-                            )
+    page_block = t2.TBlock(
+        id=str(uuid4()),
+        block_type="PAGE",
+        geometry=t2.TGeometry(bounding_box=t2.TBoundingBox(width=1, height=1, left=0, top=0),
+                              polygon=[t2.TPoint(x=0, y=0), t2.TPoint(x=1, y=1)]),
+    )
     tblock = t2.TBlock(id=str(uuid4()),
-                            block_type="WORD",
-                            text="sometest",
-                            geometry=t2.TGeometry(bounding_box=t2.TBoundingBox(width=0, height=0, left=0, top=0),
-                                                    polygon=[t2.TPoint(x=0,y=0), t2.TPoint(x=0,y=0)]),
-                            confidence=99,
-                            text_type="VIRTUAL")
+                       block_type="WORD",
+                       text="sometest",
+                       geometry=t2.TGeometry(bounding_box=t2.TBoundingBox(width=0, height=0, left=0, top=0),
+                                             polygon=[t2.TPoint(x=0, y=0), t2.TPoint(x=0, y=0)]),
+                       confidence=99,
+                       text_type="VIRTUAL")
     tdocument.add_block(page_block)
     tdocument.add_block(tblock)
     page_block.add_ids_to_relationships([tblock.id])
@@ -409,16 +401,15 @@ def test_get_relationships_for_type(caplog):
         assert t_document.get_block_by_id(new_block.id) == new_block
 
     #empty relationships
-    t_document:t2.TDocument = t2.TDocument()
+    t_document: t2.TDocument = t2.TDocument()
     t_document.add_block(t2.TBlock(id=str(uuid4()), block_type="PAGE"))
     page = t_document.pages[0]
     new_block = t2.TBlock(id=str(uuid4()))
     t_document.add_block(new_block)
     page.add_ids_to_relationships([new_block.id])
     assert t_document.get_block_by_id(new_block.id) == new_block
-=======
-    for page in doc.pages:
-        print(page.custom['Orientation'])
+    # for page in doc.pages:
+    #     print(page.custom['Orientation'])
 
 
 def test_merge_tables():
@@ -504,4 +495,3 @@ def test_kv_ocr_confidence(caplog):
         #     print(
         #         f"{field.key.text} - {field.key.custom['OCRConfidence']}, {field.value.text} - {field.value.custom['OCRConfidence']}"
         #     )
->>>>>>> master

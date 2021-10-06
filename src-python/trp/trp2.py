@@ -435,6 +435,7 @@ class TDocument():
                     for child in self.__relationships_recursive(block=b):
                         yield child
 
+    @lru_cache
     def relationships_recursive(self, block: TBlock) -> Optional[Set[TBlock]]:
         return set(self.__relationships_recursive(block=block))
 
@@ -463,7 +464,7 @@ class TDocument():
 
     # TODO: not ideal imho. customers want pages.tables or pages.forms like the current trp
     def tables(self, page: TBlock) -> List[TBlock]:
-        return self.__get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.TABLE)
+        return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.TABLE)
 
     def get_blocks_by_type(self, block_type_enum: TextractBlockTypes = None, page: TBlock = None) -> List[TBlock]:
         table_list: List[TBlock] = list()
@@ -482,7 +483,7 @@ class TDocument():
         else:
             if self.blocks:
                 for b in self.blocks:
-                    if b.block_type == block_type_enum:
+                    if b.block_type == block_type_enum.name:
                         table_list.append(b)
                 return table_list
             else:
@@ -519,7 +520,7 @@ class TDocument():
         return ' '.join([x.text for x in tblocks if x and x.text])
 
     def lines(self, page: TBlock) -> List[TBlock]:
-        return self.__get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.LINE)
+        return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.LINE)
 
     def delete_blocks(self, block_id: List[str]):
         for b in block_id:
