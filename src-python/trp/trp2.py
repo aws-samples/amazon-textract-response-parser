@@ -1,8 +1,14 @@
-from typing import List, Optional, Set
+from __future__ import annotations
+from functools import lru_cache
+from typing import List, Set, Optional
+from dataclasses import dataclass, field
 import marshmallow as m
 from marshmallow import post_load
 from enum import Enum, auto
 from dataclasses import dataclass, field
+from uuid import uuid4, UUID
+import math
+import statistics
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,14 +37,112 @@ class TextractBlockTypes(Enum):
     CELL = auto()
     KEY_VALUE_SET = auto()
     PAGE = auto()
+    SELECTION_ELEMENT = auto()
 
 
 @dataclass
+class TextractEntityTypes(Enum):
+    KEY = auto()
+    VALUE = auto()
+
+
+@dataclass(init=True, eq=True, repr=True)
+class TPoint():
+    x: float
+    y: float
+
+    def scale(self, doc_width=None, doc_height=None):
+        self.x: float = self.x * doc_width
+        self.y: float = self.y * doc_height
+
+    def ratio(self, doc_width=None, doc_height=None):
+        self.x: float = self.x / doc_width
+        self.y: float = self.y / doc_height
+
+    # TODO: add optimization for rotation of 90, 270, 180, -90, -180, -270 degrees
+    def rotate(self,
+               origin_x: float = 0.5,
+               origin_y: float = 0.5,
+               degrees: float = 180,
+               force_limits: bool = True) -> TPoint:
+        """
+        rotating this point around an origin point
+        force_limits enforces max 1 and min 0 values for the x and y coordinates (similar to min/max for Textract Schema Geometry)
+        """
+        angle = math.radians(degrees)
+        ox = origin_x
+        oy = origin_y
+        px = self.x
+        py = self.y
+        cos_result = math.cos(angle)
+        sin_result = math.sin(angle)
+        new_x = ox + cos_result * (px - ox) - sin_result * (py - oy)
+        new_y = oy + sin_result * (px - ox) + cos_result * (py - oy)
+        if force_limits:
+            new_x = max(min(new_x, 1), 0)
+            new_y = max(min(new_y, 1), 0)
+        self.x = new_x
+        self.y = new_y
+        return self
+
+
+@dataclass(eq=True, init=True, repr=True, order=True, unsafe_hash=True)
 class TBoundingBox():
     width: float
     height: float
     left: float
     top: float
+
+    def scale(self, doc_width=None, doc_height=None):
+        self.top: float = self.top * doc_height
+        self.height: float = self.height * doc_height
+        self.left: float = self.left * doc_width
+        self.width: float = self.width * doc_width
+
+    def ratio(self, doc_width=None, doc_height=None):
+        self.top: float = self.top / doc_height
+        self.height: float = self.height / doc_height
+        self.left: float = self.left / doc_width
+        self.width: float = self.width / doc_width
+
+    @property
+    def points(self) -> List[TPoint]:
+        points: List[TPoint] = list()
+        points.append(TPoint(x=self.left, y=self.top))
+        points.append(TPoint(x=self.left + self.width, y=self.top))
+        points.append(TPoint(x=self.left, y=self.top + self.height))
+        points.append(TPoint(x=self.left + self.width, y=self.top + self.height))
+        return points
+
+    def rotate(self, origin: TPoint = TPoint(0, 0), degrees: float = 180) -> TBoundingBox:
+        """
+        rotate bounding box
+        a bounding box sides are always parallel to x and y axis
+        """
+        points = []
+        points.append(TPoint(x=self.left, y=self.top).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
+        points.append(
+            TPoint(x=self.left + self.width, y=self.top).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
+        points.append(
+            TPoint(x=self.left, y=self.top + self.height).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
+        points.append(
+            TPoint(x=self.left + self.width, y=self.top + self.height).rotate(origin_x=origin.x,
+                                                                              origin_y=origin.y,
+                                                                              degrees=degrees))
+        xmin = min([p.x for p in points])
+        ymin = min([p.y for p in points])
+        xmax = max([p.x for p in points])
+        ymax = max([p.y for p in points])
+
+        new_width = xmax - xmin
+        new_height = ymax - ymin
+        new_left = xmin
+        new_top = ymin
+        self.width = new_width
+        self.height = new_height
+        self.left = new_left
+        self.top = new_top
+        return self
 
 
 class TBoundingBoxSchema(BaseSchema):
@@ -52,12 +156,6 @@ class TBoundingBoxSchema(BaseSchema):
         return TBoundingBox(**data)
 
 
-@dataclass
-class TPoint():
-    x: float
-    y: float
-
-
 class TPointSchema(BaseSchema):
     x = m.fields.Float(data_key="X", required=False, allow_none=False)
     y = m.fields.Float(data_key="Y", required=False, allow_none=False)
@@ -67,10 +165,22 @@ class TPointSchema(BaseSchema):
         return TPoint(**data)
 
 
-@dataclass
+@dataclass(eq=True, init=True, repr=True, order=True, unsafe_hash=True)
 class TGeometry():
-    bounding_box: TBoundingBox = field(default=None)    #type: ignore
-    polygon: List[TPoint] = field(default=None)    #type: ignore
+    bounding_box: TBoundingBox
+    polygon: List[TPoint]
+
+    def ratio(self, doc_width=None, doc_height=None):
+        self.bounding_box.ratio(doc_width=doc_width, doc_height=doc_height)
+        [x.ratio(doc_width=doc_width, doc_height=doc_height) for x in self.polygon]
+
+    def rotate(self, origin: TPoint = TPoint(0, 0), degrees: float = 180):
+        self.bounding_box.rotate(origin=origin, degrees=degrees)
+        [p.rotate(origin_x=origin.x, origin_y=origin.y) for p in self.polygon]
+
+    def scale(self, doc_width=None, doc_height=None):
+        self.bounding_box.scale(doc_width=doc_width, doc_height=doc_height)
+        [x.scale(doc_width=doc_width, doc_height=doc_height) for x in self.polygon]
 
 
 class TGeometrySchema(BaseSchema):
@@ -82,7 +192,7 @@ class TGeometrySchema(BaseSchema):
         return TGeometry(**data)
 
 
-@dataclass
+@dataclass(eq=True, init=True, repr=True)
 class TRelationship():
     type: str = field(default=None)    #type: ignore
     ids: List[str] = field(default=None)    #type: ignore
@@ -97,24 +207,24 @@ class TRelationshipSchema(BaseSchema):
         return TRelationship(**data)
 
 
-@dataclass
+@dataclass(eq=True, init=True, repr=True, order=True)
 class TBlock():
     """
     https://docs.aws.amazon.com/textract/latest/dg/API_Block.html
     as per this documentation none of the values is actually required
     """
-    id: str
+    geometry: TGeometry = field(default=None)    #type: ignore
+    id: str = field(default=None)    #type: ignore
+    block_type: str = field(default="")    #type: ignore
+    relationships: List[TRelationship] = field(default=None)    #type: ignore
     confidence: float = field(default=None)    #type: ignore
+    text: str = field(default=None)    #type: ignore
     column_index: int = field(default=None)    #type: ignore
     column_span: int = field(default=None)    #type: ignore
-    page: int = field(default=None)    #type: ignore
-    row_span: int = field(default=None)    #type: ignore
-    row_index: int = field(default=None)    #type: ignore
-    block_type: str = field(default=None)    #type: ignore
-    geometry: TGeometry = field(default=None)    #type: ignore
-    relationships: List[TRelationship] = field(default=None)    #type: ignore
-    text: str = field(default=None)    #type: ignore
     entity_types: List[str] = field(default=None)    #type: ignore
+    page: int = field(default=None)    #type: ignore
+    row_index: int = field(default=None)    #type: ignore
+    row_span: int = field(default=None)    #type: ignore
     selection_status: str = field(default=None)    #type: ignore
     text_type: str = field(default=None)    #type: ignore
     custom: dict = field(default=None)    #type: ignore
@@ -126,6 +236,29 @@ class TBlock():
 
     def __hash__(self) -> int:
         return hash(self.id)
+
+    def get_relationships_for_type(self, relationship_type="CHILD") -> Optional[TRelationship]:
+        """assuming only one relationship type entry in the list"""
+        if self.relationships:
+            for r in self.relationships:
+                if r.type == relationship_type:
+                    return r
+        return None
+
+    def add_ids_to_relationships(self, ids: List[str], relationships_type: str = "CHILD"):
+        relationship = self.get_relationships_for_type(relationship_type=relationships_type)
+        if relationship:
+            if not relationship.ids:
+                relationship.ids = list()
+            relationship.ids.extend(ids)
+        else:
+            # empty, set base
+            if not self.relationships:
+                self.relationships = list()
+            self.relationships.append(TRelationship(type=relationships_type, ids=ids))
+
+    def rotate(self, origin=TPoint(0.5, 0.5), degrees=180):
+        self.geometry.rotate(origin=origin, degrees=degrees)
 
 
 class TBlockSchema(BaseSchema):
@@ -150,7 +283,7 @@ class TBlockSchema(BaseSchema):
         return TBlock(**data)
 
 
-@dataclass
+@dataclass(eq=True, init=True, repr=True)
 class TDocumentMetadata():
     pages: int = field(default=None)    #type: ignore
 
@@ -163,7 +296,7 @@ class TDocumentMetadataSchema(BaseSchema):
         return TDocumentMetadata(**data)
 
 
-@dataclass
+@dataclass(eq=True, init=True, repr=True)
 class TWarnings():
     error_code: str = field(default=None)    #type: ignore
     pages: List[int] = field(default=None)    #type: ignore
@@ -178,7 +311,7 @@ class TWarningsSchema(BaseSchema):
         return TWarnings(**data)
 
 
-@dataclass
+@dataclass(eq=True, init=True, repr=True)
 class THttpHeaders():
     x_amzn_request_id: str = field(default=None)    #type: ignore
     content_type: str = field(default=None)    #type: ignore
@@ -187,38 +320,18 @@ class THttpHeaders():
     date: str = field(default=None)    #type: ignore
 
 
+@dataclass(eq=True, init=True, repr=True)
 class TResponseMetadata():
-    def __init__(self,
-                 request_id: str = None,
-                 http_status_code: int = None,
-                 retry_attempts: int = None,
-                 http_headers: THttpHeaders = None):
-        self.__request_id = request_id
-        self.__http_status_code = http_status_code
-        self.__retry_attempts = retry_attempts
-        self.__http_headers = http_headers
-
-    @property
-    def request_id(self):
-        return self.__request_id
-
-    @property
-    def http_status_code(self):
-        return self.__http_status_code
-
-    @property
-    def retry_attempts(self):
-        return self.__retry_attempts
-
-    @property
-    def http_headers(self):
-        return self.__http_headers
+    request_id: str = field(default=None)    #type: ignore
+    http_status_code: int = field(default=None)    #type: ignore
+    retry_attempts: int = field(default=None)    #type: ignore
+    http_headers: THttpHeaders = field(default=None)    #type: ignore
 
 
-@dataclass
+@dataclass(eq=True, init=True, repr=True)
 class TDocument():
-    blocks: List[TBlock] = field(default=None)    #type: ignore
     document_metadata: TDocumentMetadata = field(default=None)    #type: ignore
+    blocks: List[TBlock] = field(default=None)    #type: ignore
     analyze_document_model_version: str = field(default=None)    #type: ignore
     detect_document_text_model_version: str = field(default=None)    #type: ignore
     status_message: str = field(default=None)    #type: ignore
@@ -227,12 +340,102 @@ class TDocument():
     response_metadata: TResponseMetadata = field(default=None)    #type: ignore
     custom: dict = field(default=None)    #type: ignore
     next_token: str = field(default=None)    #type: ignore
+    id: UUID = field(default_factory=uuid4)
 
-    def get_block_by_id(self, id: str) -> Optional[TBlock]:
-        if self.blocks:
-            for b in self.blocks:
-                if b.id == id:
-                    return b
+    def __hash__(self):
+        return int(self.id)
+
+    def add_block(self, block: TBlock):
+        if not self.blocks:
+            self.blocks = list()
+        self.blocks.append(block)
+        self.relationships_recursive.cache_clear()
+
+    @staticmethod
+    def create_geometry_from_blocks(values: List[TBlock]) -> TGeometry:
+        all_points = [p.geometry.bounding_box.points for p in values]
+        all_points = [i for sublist in all_points for i in sublist]
+        ymin = min([p.y for p in all_points])
+        xmin = min([p.x for p in all_points])
+        ymax = max([p.y for p in all_points])
+        xmax = max([p.x for p in all_points])
+        new_bb = TBoundingBox(width=ymax - ymin, height=xmax - xmin, top=ymin, left=xmin)
+        new_poly = [TPoint(x=xmin, y=ymin), TPoint(x=xmax, y=ymin), TPoint(x=xmax, y=ymax), TPoint(x=xmin, y=ymax)]
+        return TGeometry(bounding_box=new_bb, polygon=new_poly)
+
+    @staticmethod
+    def create_value_block(values: List[TBlock]) -> TBlock:
+        value_block = TBlock(id=str(uuid4()), block_type="KEY_VALUE_SET", entity_types=["VALUE"])
+        value_block.add_ids_to_relationships([b.id for b in values])
+        value_block.geometry = TDocument.create_geometry_from_blocks(values=values)
+        value_block.confidence = statistics.mean([b.confidence for b in values])
+        return value_block
+
+    def create_virtual_block(self, text: str, page_block: TBlock) -> TBlock:
+        tblock = TBlock(id=str(uuid4()),
+                        block_type="WORD",
+                        text=text,
+                        geometry=TGeometry(bounding_box=TBoundingBox(width=0, height=0, left=0, top=0),
+                                           polygon=[TPoint(x=0, y=0), TPoint(x=0, y=0)]),
+                        confidence=99,
+                        text_type="VIRTUAL")
+        page_block.add_ids_to_relationships([tblock.id])
+        self.add_block(tblock)
+        return tblock
+
+    def add_virtual_key_for_existing_key(self, key_name: str, existing_key: TBlock, page_block: TBlock):
+        if existing_key and existing_key.block_type == "KEY_VALUE_SET" and "KEY" in existing_key.entity_types:
+            value_blocks: List[TBlock] = self.value_for_key(existing_key)
+            return self.add_key_values(key_name=key_name, values=value_blocks, page_block=page_block)
+        else:
+            logger.warning(
+                f"no existing_key or not block_type='KEY_VALUE_SET' or 'KEY' not in entity_type: {existing_key}")
+
+    def add_key_values(self, key_name: str, values: List[TBlock], page_block: TBlock):
+        if not key_name:
+            raise ValueError("need values and key_name")
+        if not values:
+            logger.debug(f"add_key_values: empty values for key: {key_name}, will create virtual empty block")
+            values = [self.create_virtual_block(text="", page_block=page_block)]
+
+        if values[0].page:
+            page_block = self.pages[values[0].page - 1]
+        else:
+            page_block = self.pages[0]
+
+        value_block = TDocument.create_value_block(values=values)
+        self.add_block(value_block)
+        page_block.add_ids_to_relationships([value_block.id])
+        virtual_block = self.create_virtual_block(text=key_name, page_block=page_block)
+        id = str(uuid4())
+        key_block = TBlock(
+            id=id,
+            block_type="KEY_VALUE_SET",
+            entity_types=["KEY"],
+            confidence=99,
+            geometry=TGeometry(bounding_box=TBoundingBox(width=0, height=0, left=0, top=0),
+                               polygon=[TPoint(x=0, y=0), TPoint(x=0, y=0)]),
+        )
+        key_block.add_ids_to_relationships(relationships_type="VALUE", ids=[value_block.id])
+        key_block.add_ids_to_relationships(relationships_type="CHILD", ids=[virtual_block.id])
+        logger.debug(f"add key with id: {id} and key_name: {key_name}")
+        self.add_block(key_block)
+
+    def rotate(self, page: TBlock = None, origin: TPoint = TPoint(x=0.5, y=0.5), degrees: float = None) -> None:
+        # FIXME: add dimension. the relative scale messes up the new coordinates, have to use the actual image scale
+        """atm no way to get back from Block to list of other blocks, hence get_block_by_id is only available on document level and quite some processing has to be here"""
+        if not page:
+            raise ValueError("need a page to rotate")
+        if not degrees:
+            raise ValueError("need degrees to rotate")
+        [b.rotate(origin=origin, degrees=degrees) for b in self.relationships_recursive(block=page)]
+        self.relationships_recursive.cache_clear()
+
+    def get_block_by_id(self, id: str) -> TBlock:
+        for b in self.blocks:
+            if b.id == id:
+                return b
+        raise ValueError(f"no block for id: {id}")
 
     def __relationships_recursive(self, block: TBlock) -> List[TBlock]:
         import itertools
@@ -245,7 +448,8 @@ class TDocument():
                     for child in self.__relationships_recursive(block=b):
                         yield child
 
-    def relationships_recursive(self, block: TBlock) -> Optional[Set[TBlock]]:
+    @lru_cache
+    def relationships_recursive(self, block: TBlock) -> Set[TBlock]:
         return set(self.__relationships_recursive(block=block))
 
     @property
@@ -260,7 +464,7 @@ class TDocument():
 
     @staticmethod
     def filter_blocks_by_type(block_list: List[TBlock],
-                              textract_block_type: List[TextractBlockTypes] = None) -> List[TBlock]:
+                              textract_block_type: list[TextractBlockTypes] = None) -> List[TBlock]:
         if textract_block_type:
             block_type_names = [x.name for x in textract_block_type]
             return [b for b in block_list if b.block_type in block_type_names]
@@ -269,41 +473,60 @@ class TDocument():
 
     # TODO: this is more generic and not limited to page, should change the parameter from "page" to "block"
     def get_child_relations(self, page: TBlock):
-        return self.__get_blocks_by_type(page=page)
+        return self.get_blocks_by_type(page=page)
 
     # TODO: not ideal imho. customers want pages.tables or pages.forms like the current trp
     def tables(self, page: TBlock) -> List[TBlock]:
-        return self.__get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.TABLE)
+        return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.TABLE)
 
-    def __get_blocks_by_type(self, block_type_enum: TextractBlockTypes = None, page: TBlock = None) -> List[TBlock]:
+    def get_blocks_by_type(self, block_type_enum: TextractBlockTypes = None, page: TBlock = None) -> List[TBlock]:
         table_list: List[TBlock] = list()
         if page and page.relationships:
-            for r in page.relationships:
-                if r.type == "CHILD" and r.ids:
-                    for id in r.ids:
-                        b = self.get_block_by_id(id)
-                        if b:
-                            if block_type_enum:
-                                if b.block_type == block_type_enum.name:
-                                    table_list.append(b)
-                            else:
-                                table_list.append(b)
-            return table_list
+            block_list = list(self.relationships_recursive(page))
+            if block_type_enum:
+                return self.filter_blocks_by_type(block_list=block_list, textract_block_type=[block_type_enum])
+            else:
+                return block_list
         else:
             if self.blocks:
                 for b in self.blocks:
-                    if b.block_type == block_type_enum:
+                    if block_type_enum and b.block_type == block_type_enum.name:
                         table_list.append(b)
                 return table_list
             else:
                 return list()
 
-    # TODO: not ideal imho. customers want pages.tables or pages.forms like the current trp
     def forms(self, page: TBlock) -> List[TBlock]:
-        return self.__get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.KEY_VALUE_SET)
+        return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.KEY_VALUE_SET)
+
+    def keys(self, page: TBlock) -> List[TBlock]:
+        for key_entities in self.forms(page=page):
+            if TextractEntityTypes.KEY.name in key_entities.entity_types:
+                yield key_entities
+
+    def get_blocks_for_relationships(self, relationship: TRelationship = None) -> List[TBlock]:
+        all_blocks: List[TBlock] = list()
+        if relationship and relationship.ids:
+            for id in relationship.ids:
+                all_blocks.append(self.get_block_by_id(id))
+        return all_blocks
+
+    def value_for_key(self, key: TBlock) -> List[TBlock]:
+        return_value_for_key: List[TBlock] = list()
+        if TextractEntityTypes.KEY.name in key.entity_types:
+            if key and key.relationships:
+                value_blocks = self.get_blocks_for_relationships(relationship=key.get_relationships_for_type("VALUE"))
+                for block in value_blocks:
+                    return_value_for_key.extend(self.get_blocks_for_relationships(block.get_relationships_for_type()))
+
+        return return_value_for_key
+
+    @staticmethod
+    def get_text_for_tblocks(tblocks: List[TBlock]) -> str:
+        return ' '.join([x.text for x in tblocks if x and x.text])
 
     def lines(self, page: TBlock) -> List[TBlock]:
-        return self.__get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.LINE)
+        return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.LINE)
 
     def delete_blocks(self, block_id: List[str]):
         for b in block_id:
@@ -312,6 +535,7 @@ class TDocument():
                 self.blocks.remove(block)
             else:
                 logger.warning(f"delete_blocks: did not get block for id: {b}")
+        self.relationships_recursive.cache_clear()
 
     def merge_tables(self, table_array_ids: List[List[str]]):
         for table_ids in table_array_ids:
@@ -360,6 +584,7 @@ class TDocument():
                         table.custom['next_table'] = table_ids[i + 1]
                     else:
                         table.custom = {'next_table': table_ids[i + 1]}
+        self.relationships_recursive.cache_clear()
 
 
 class THttpHeadersSchema(BaseSchema):
