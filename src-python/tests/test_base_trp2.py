@@ -14,6 +14,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from dataclasses import dataclass, field
+import uuid
+
 
 def test_relationship_recursive_with_lru_cache(caplog):
     caplog.set_level(logging.DEBUG)
@@ -24,7 +27,7 @@ def test_relationship_recursive_with_lru_cache(caplog):
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)
     relationships = t_document.relationships_recursive(block=t_document.pages[0])
     assert relationships
-    assert len(relationships) == 10
+    assert len(relationships) == 253
 
 
 def test_selection_elements(caplog):
@@ -41,5 +44,4 @@ def test_selection_elements(caplog):
                                                                page=t_document.pages[0])
     logger.debug(f"selection_elements_tblocks: {selection_elements_tblocks}")
     assert selection_elements_tblocks
-    print(f"len: {len(selection_elements_tblocks)}")
-    assert False
+    assert len(selection_elements_tblocks) == 12

@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 import marshmallow as m
 from marshmallow import post_load
 from enum import Enum, auto
-from uuid import uuid4
+from uuid import uuid4, UUID
 import math
 import statistics
 import logging
@@ -333,11 +333,16 @@ class TDocument():
     response_metadata: TResponseMetadata = field(default=None)    #type: ignore
     custom: dict = field(default=None)    #type: ignore
     next_token: str = field(default=None)    #type: ignore
+    id: UUID = field(default_factory=uuid4)
+
+    def __hash__(self):
+        return int(self.id)
 
     def add_block(self, block: TBlock):
         if not self.blocks:
             self.blocks = list()
         self.blocks.append(block)
+        self.relationships_recursive.cache_clear()
 
     @staticmethod
     def create_geometry_from_blocks(values: List[TBlock]) -> TGeometry:
@@ -417,6 +422,7 @@ class TDocument():
         if not degrees:
             raise ValueError("need degrees to rotate")
         [b.rotate(origin=origin, degrees=degrees) for b in self.relationships_recursive(block=page)]
+        self.relationships_recursive.cache_clear()
 
     def get_block_by_id(self, id: str) -> TBlock:
         for b in self.blocks:
@@ -436,7 +442,7 @@ class TDocument():
                         yield child
 
     @lru_cache
-    def relationships_recursive(self, block: TBlock) -> Optional[Set[TBlock]]:
+    def relationships_recursive(self, block: TBlock) -> Set[TBlock]:
         return set(self.__relationships_recursive(block=block))
 
     @property
@@ -451,7 +457,7 @@ class TDocument():
 
     @staticmethod
     def filter_blocks_by_type(block_list: List[TBlock],
-                              textract_block_type: List[TextractBlockTypes] = None) -> List[TBlock]:
+                              textract_block_type: list[TextractBlockTypes] = None) -> List[TBlock]:
         if textract_block_type:
             block_type_names = [x.name for x in textract_block_type]
             return [b for b in block_list if b.block_type in block_type_names]
@@ -469,27 +475,20 @@ class TDocument():
     def get_blocks_by_type(self, block_type_enum: TextractBlockTypes = None, page: TBlock = None) -> List[TBlock]:
         table_list: List[TBlock] = list()
         if page and page.relationships:
-            for r in page.relationships:
-                if r.type == "CHILD" and r.ids:
-                    for id in r.ids:
-                        b = self.get_block_by_id(id)
-                        if b:
-                            if block_type_enum:
-                                if b.block_type == block_type_enum.name:
-                                    table_list.append(b)
-                            else:
-                                table_list.append(b)
-            return table_list
+            block_list = list(self.relationships_recursive(page))
+            if block_type_enum:
+                return self.filter_blocks_by_type(block_list=block_list, textract_block_type=[block_type_enum])
+            else:
+                return block_list
         else:
             if self.blocks:
                 for b in self.blocks:
-                    if b.block_type == block_type_enum.name:
+                    if block_type_enum and b.block_type == block_type_enum.name:
                         table_list.append(b)
                 return table_list
             else:
                 return list()
 
-    # TODO: not ideal imho. customers want pages.tables or pages.forms like the current trp
     def forms(self, page: TBlock) -> List[TBlock]:
         return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.KEY_VALUE_SET)
 
@@ -529,6 +528,7 @@ class TDocument():
                 self.blocks.remove(block)
             else:
                 logger.warning(f"delete_blocks: did not get block for id: {b}")
+        self.relationships_recursive.cache_clear()
 
     def merge_tables(self, table_array_ids: List[List[str]]):
         for table_ids in table_array_ids:
@@ -577,6 +577,7 @@ class TDocument():
                         table.custom['next_table'] = table_ids[i + 1]
                     else:
                         table.custom = {'next_table': table_ids[i + 1]}
+        self.relationships_recursive.cache_clear()
 
 
 class THttpHeadersSchema(BaseSchema):
