@@ -161,7 +161,7 @@ def test_custom_page_orientation(json_response):
 
 
 def test_filter_blocks_by_type():
-    block_list = [t2.TBlock(block_type=t2.TextractBlockTypes.WORD.name)]
+    block_list = [t2.TBlock(id="1", block_type=t2.TextractBlockTypes.WORD.name)]
     assert t2.TDocument.filter_blocks_by_type(block_list=block_list,
                                               textract_block_type=[t2.TextractBlockTypes.WORD]) == block_list
 

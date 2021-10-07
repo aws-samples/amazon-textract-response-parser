@@ -8,6 +8,7 @@ from enum import Enum, auto
 from uuid import uuid4, UUID
 import math
 import statistics
+from dataclasses import dataclass, field
 import logging
 
 logger = logging.getLogger(__name__)
@@ -152,6 +153,12 @@ class TBoundingBoxSchema(BaseSchema):
     @post_load
     def make_tbounding_box(self, data, **kwargs):
         return TBoundingBox(**data)
+
+
+@dataclass
+class TPoint():
+    x: float
+    y: float
 
 
 class TPointSchema(BaseSchema):
