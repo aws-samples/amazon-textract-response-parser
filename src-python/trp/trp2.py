@@ -452,7 +452,7 @@ class TDocument():
                     for child in self.__relationships_recursive(block=b):
                         yield child
 
-    @lru_cache
+    @lru_cache()
     def relationships_recursive(self, block: TBlock) -> Set[TBlock]:
         return set(self.__relationships_recursive(block=block))
 
