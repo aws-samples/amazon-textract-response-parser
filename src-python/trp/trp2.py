@@ -527,7 +527,9 @@ class TDocument():
 
     @staticmethod
     def get_text_for_tblocks(tblocks: List[TBlock]) -> str:
-        return ' '.join([x.text for x in tblocks if x and x.text])
+        return_value = ' '.join([x.text for x in tblocks if x and x.text])
+        return_value += ' '.join([x.selection_status for x in tblocks if x and x.selection_status])
+        return return_value
 
     def lines(self, page: TBlock) -> List[TBlock]:
         return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.LINE)
