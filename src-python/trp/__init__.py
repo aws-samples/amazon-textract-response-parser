@@ -7,7 +7,7 @@ logging.getLogger(__name__).addHandler(NullHandler())
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.1.18'
+__version__ = '0.1.19'
 
 
 class BaseBlock():
