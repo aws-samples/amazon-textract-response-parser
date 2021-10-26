@@ -16,8 +16,8 @@ $ npm install amazon-textract-response-parser
 ```
 
 ```js
-import { TextractDocument, TextractExpense } from "textract-response-parser";
-const { TextractDocument, TextractExpense } = require("textract-response-parser");
+import { TextractDocument, TextractExpense } from "amazon-textract-response-parser";
+const { TextractDocument, TextractExpense } = require("amazon-textract-response-parser");
 ```
 
 ...Or link directly in the browser - for example via the [unpkg CDN](https://unpkg.com/):
