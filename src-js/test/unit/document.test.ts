@@ -9,16 +9,66 @@ const testInProgressJson: ApiResponsePage = require("../data/test-inprogress-res
 const testResponseJson: ApiResponsePage = require("../data/test-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testMultiColumnJson: ApiResponsePage = require("../data/test-multicol-response.json");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const testMultiColumnJson2: ApiResponsePage = require("../data/test-multicol-response-2.json");
 
 const EXPECTED_MULTILINE_SEQ_LOWER = [
   "multi-column test document",
   "a sample document with",
   "this section has two columns",
   "the left column contains",
-  "the right column",
+  "a horizontally separate right",
+  "this column has approximately",
   "correct processing",
   "a final footer",
 ];
+
+const EXPECTED_MULTILINE_SEQ_2_LOWER = [
+  "heading of the page",
+  "section id",
+  "[enter]",
+  "two columns, both alike",
+  "from ancient grudge break",
+  "a glooming peace",
+  "go hence with caution",
+  "for never was a heuristic",
+  "in reading order",
+  "the end",
+  "page 1",
+];
+
+/**
+ * We want to test a couple of examples for reading order, so will pull this out as a function
+ */
+function checkMultiColReadingOrder(
+  docJson: ApiResponsePage | ApiResponsePages,
+  expectedSeq: string[],
+  pageNum = 1
+) {
+  const doc = new TextractDocument(docJson);
+
+  const readingOrder = doc.pageNumber(pageNum).getLineClustersInReadingOrder();
+  // May want to switch to this instead to help debug if you see failures:
+  // const clustered = doc.pageNumber(pageNum)._getLineClustersByColumn();
+  // console.warn(clustered.map((col) => col.map((p) => `${p[0].text}... (${p.length} lines)`)));
+  // const readingOrder = [].concat(...clustered);
+
+  expect(readingOrder.length).not.toBeLessThan(expectedSeq.length);
+
+  const sortedLinesTextLower = ([] as Line[]).concat(...readingOrder).map((l) => l.text.toLocaleLowerCase());
+  expect(sortedLinesTextLower.length).not.toBeLessThan(expectedSeq.length);
+  let ixTest = 0;
+  sortedLinesTextLower.forEach((lineText) => {
+    const matchIx = expectedSeq.findIndex((seq) => lineText.indexOf(seq) >= 0);
+    if (matchIx >= 0) {
+      // We compare the strings first here to make failed assertions a bit more meaningful:
+      expect(expectedSeq[matchIx]).toStrictEqual(expectedSeq[ixTest]);
+      expect(matchIx).toStrictEqual(ixTest);
+      ++ixTest;
+    }
+  });
+  expect(ixTest).toStrictEqual(expectedSeq.length);
+}
 
 describe("TextractDocument", () => {
   it("should throw status error on failed async job JSONs (list)", () => {
@@ -365,27 +415,12 @@ describe("TextractDocument", () => {
     expect(formKeys.length && formKeys[0].value?.parentField.parentForm.parentPage.dict).toBe(page.dict);
   });
 
-  it("sorts lines correctly for multi-column documents", () => {
-    const doc = new TextractDocument(testMultiColumnJson);
+  it("sorts lines correctly for multi-column documents (case 1)", () => {
+    checkMultiColReadingOrder(testMultiColumnJson, EXPECTED_MULTILINE_SEQ_LOWER);
+  });
 
-    const readingOrder = doc.pageNumber(1).getLineClustersInReadingOrder();
-    expect(readingOrder.length).not.toBeLessThan(1);
-
-    const sortedLinesTextLower = ([] as Line[])
-      .concat(...readingOrder)
-      .map((l) => l.text.toLocaleLowerCase());
-    expect(sortedLinesTextLower.length).not.toBeLessThan(EXPECTED_MULTILINE_SEQ_LOWER.length);
-    let ixTest = 0;
-    sortedLinesTextLower.forEach((lineText) => {
-      const matchIx = EXPECTED_MULTILINE_SEQ_LOWER.findIndex((seq) => lineText.indexOf(seq) >= 0);
-      if (matchIx >= 0) {
-        // We compare the strings first here to make failed assertions a bit more meaningful:
-        expect(EXPECTED_MULTILINE_SEQ_LOWER[matchIx]).toStrictEqual(EXPECTED_MULTILINE_SEQ_LOWER[ixTest]);
-        expect(matchIx).toStrictEqual(ixTest);
-        ++ixTest;
-      }
-    });
-    expect(ixTest).toStrictEqual(EXPECTED_MULTILINE_SEQ_LOWER.length);
+  it("sorts lines correctly for multi-column documents (case 2)", () => {
+    checkMultiColReadingOrder(testMultiColumnJson2, EXPECTED_MULTILINE_SEQ_2_LOWER);
   });
 
   it("outputs text correctly for multi-column documents", () => {

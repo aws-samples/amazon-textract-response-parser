@@ -719,6 +719,39 @@ export class Table extends ApiBlockWrapper<ApiTableBlock> {
   }
 }
 
+/**
+ * @experimental
+ */
+export interface HeuristicReadingOrderModelParams {
+  /**
+   * Minimum ratio (0-1) of overlap to count a paragraph within a detected column. Applied relative
+   * to the *minimum* of {paragraph width, column width}. Can set close to 1 if your columns are
+   * well-defined with little skew and no hanging indents.
+   */
+  colHOverlapThresh?: number;
+  /**
+   * Minimum ratio (0-1) of intersection to count a paragraph within a detected column. Applied
+   * relative to the *union* of {paragraph, column} horizontal span, and *only* when both the
+   * paragraph and column contain multiple lines (since single-line paragraphs may be significantly
+   * short). Can set close to 1 if your text is justified, since individual paragraphs in a column
+   * should have reliably very similar widths.
+   */
+  colHMultilineUnionThresh?: number;
+  /**
+   * Maximum vertical distance, in multiples of line height, for a line to be considered eligible
+   * for merging into a paragraph. 1.0 may make a sensible default. May set >1.0 if your text has
+   * large spacing between lines within a paragraph, or <1.0 if your paragraphs have little
+   * vertical separating space between them.
+   */
+  paraVDistTol?: number;
+  /**
+   * Maximum ratio of deviation of this line height from average line height in a paragraph, for a
+   * line to be considered eligible for merging into a paragraph. Set close to 0 to encourage text
+   * size changes to be represented as paragraph breaks (e.g. close-together heading/subheading).
+   */
+  paraLineHeightTol?: number;
+}
+
 export class Page extends ApiBlockWrapper<ApiPageBlock> {
   _blocks: ApiBlock[];
   _content: Array<Line | Table | Field>;
@@ -784,44 +817,122 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
   }
 
   /**
-   * List lines in reading order, grouped by 'cluster' (heuristically, almost a paragraph)
+   * List lines in reading order, grouped by pseudo-'paragraph' and contiguous 'column'
+   * @returns Nested array of text lines by column, paragraph, line
+   * @private
    */
-  getLineClustersInReadingOrder(): Line[][] {
-    const colBoxes: BoundingBox<ApiLineBlock, ApiObjectWrapper<ApiLineBlock>>[] = [];
-    const colLines: Line[][] = [];
-    const colTotalLineHeight: number[] = [];
+  _getLineClustersByColumn({
+    colHOverlapThresh = 0.8,
+    colHMultilineUnionThresh = 0.7,
+    paraVDistTol = 0.8,
+    paraLineHeightTol = 0.2,
+  }: HeuristicReadingOrderModelParams = {}): Line[][][] {
+    // First, assign lines to paragraphs:
+    const paraBoxes: BoundingBox<ApiLineBlock, ApiObjectWrapper<ApiLineBlock>>[] = [];
+    const paraLines: Line[][] = [];
+    const paraTotalLineHeight: number[] = [];
     const lineHCenters = this._lines.map((l) => l.geometry.boundingBox.hCenter);
     this._lines.forEach((line, ixLine) => {
       const lineBox = line.geometry.boundingBox;
       const lineHCenter = lineHCenters[ixLine];
-      let ixColumn: number | null = null;
-      for (let ixCol = 0; ixCol < colBoxes.length; ++ixCol) {
-        const colBox = colBoxes[ixCol];
-        const colHCenter = colBox.hCenter;
-        const newTotalLineHeight = colTotalLineHeight[ixCol] + lineBox.height;
-        const newAvgLineHeight = newTotalLineHeight / (colLines[ixCol].length + 1);
+      let assignedPara: number | null = null;
+      for (let ixPara = 0; ixPara < paraBoxes.length; ++ixPara) {
+        const paraBox = paraBoxes[ixPara];
+        const paraHCenter = paraBox.hCenter;
+        const newTotalLineHeight = paraTotalLineHeight[ixPara] + lineBox.height;
+        const newAvgLineHeight = newTotalLineHeight / (paraLines[ixPara].length + 1);
         // These distances can't both be >0, and will both be <0 if they overlap
-        const vDist = Math.max(0, lineBox.top - colBox.bottom, colBox.top - lineBox.bottom);
+        const vDist = Math.max(0, lineBox.top - paraBox.bottom, paraBox.top - lineBox.bottom);
         if (
-          ((lineHCenter > colBox.left && lineHCenter < colBox.right) ||
-            (colHCenter > lineBox.left && colHCenter < lineBox.right)) &&
-          vDist < newAvgLineHeight &&
-          Math.abs((newAvgLineHeight - lineBox.height) / newAvgLineHeight) < 0.3
+          // Line has good horizontal overlap with the working "paragraph":
+          ((lineHCenter > paraBox.left && lineHCenter < paraBox.right) ||
+            (paraHCenter > lineBox.left && paraHCenter < lineBox.right)) &&
+          // Line is vertically within N line-heights of the "paragraph":
+          vDist < newAvgLineHeight * paraVDistTol &&
+          // Line has similar line height to the rest of the "paragraph"s text:
+          Math.abs((newAvgLineHeight - lineBox.height) / newAvgLineHeight) < paraLineHeightTol
         ) {
-          ixColumn = ixCol;
-          colBoxes[ixCol] = colBox.union(lineBox);
-          colLines[ixCol].push(line);
-          colTotalLineHeight[ixCol] = newTotalLineHeight;
+          assignedPara = ixPara;
+          paraBoxes[ixPara] = paraBox.union(lineBox);
+          paraLines[ixPara].push(line);
+          paraTotalLineHeight[ixPara] = newTotalLineHeight;
           break;
         }
       }
-      if (ixColumn == null) {
-        colBoxes.push(new BoundingBox(lineBox.dict));
-        colLines.push([line]);
-        colTotalLineHeight.push(lineBox.height);
+      if (assignedPara == null) {
+        paraBoxes.push(new BoundingBox(lineBox.dict));
+        paraLines.push([line]);
+        paraTotalLineHeight.push(lineBox.height);
       }
     });
-    return colLines;
+
+    // At this point we essentially have paragraphs in default order, so typically columns will be
+    // interleaved. Assign the paragraphs to "columns" to correct for this:
+    const colBoxes: BoundingBox<ApiLineBlock, ApiObjectWrapper<ApiLineBlock>>[] = [];
+    const colParas: Line[][][] = [];
+    paraLines.forEach((para, ixPara) => {
+      const paraBox = paraBoxes[ixPara];
+      let assignedCol: number | null = null;
+      for (let ixCol = 0; ixCol < colBoxes.length; ++ixCol) {
+        const colBox = colBoxes[ixCol];
+        const thisColParas = colParas[ixCol];
+        const vIsectTop = Math.max(colBox.top, paraBox.top);
+        const vIsectBottom = Math.min(colBox.bottom, paraBox.bottom);
+        const vIsect = Math.max(0, vIsectBottom - vIsectTop);
+        const hIsectLeft = Math.max(colBox.left, paraBox.left);
+        const hIsectRight = Math.min(colBox.right, paraBox.right);
+        const hIsect = Math.max(0, hIsectRight - hIsectLeft);
+        const hUnion = Math.max(colBox.right, paraBox.right) - Math.min(colBox.left, paraBox.left);
+        const minWidth = Math.min(colBox.width, paraBox.width);
+        const proposedColBox = colBox.union(paraBox);
+        const matchingVsSingleLine =
+          para.length === 1 || (thisColParas.length === 1 && thisColParas[0].length === 1);
+        if (
+          // Paragraphs has no vertical overlap with the working column:
+          vIsect === 0 &&
+          // Paragraph has good horizontal overlap with the working column:
+          hIsect / minWidth >= colHOverlapThresh &&
+          // Multi-line paragraph should have a more stringent horizontal overlap with the working
+          // column (because a single-line paragraph can be short):
+          (matchingVsSingleLine || hIsect / hUnion >= colHMultilineUnionThresh) &&
+          hIsect / minWidth >= colHOverlapThresh &&
+          // The newly-modified column would not overlap with any other column:
+          colBoxes.filter((cbox) => cbox.intersection(proposedColBox)).length === 1
+        ) {
+          assignedCol = ixCol;
+          colBoxes[ixCol] = colBox.union(paraBox);
+          colParas[ixCol].push(para);
+          break;
+        }
+      }
+      if (assignedCol == null) {
+        colBoxes.push(new BoundingBox(paraBox.dict));
+        colParas.push([para]);
+      }
+    });
+
+    return colParas;
+  }
+
+  /**
+   * List lines in reading order, grouped by 'cluster' (heuristically, almost a paragraph)
+   * @returns Nested array of text lines by paragraph, line
+   */
+  getLineClustersInReadingOrder({
+    colHOverlapThresh = 0.8,
+    colHMultilineUnionThresh = 0.7,
+    paraVDistTol = 0.8,
+    paraLineHeightTol = 0.2,
+  }: HeuristicReadingOrderModelParams = {}): Line[][] {
+    // Pass through to the private function, but flatten the result to simplify out the "columns":
+    return ([] as Line[][]).concat(
+      ...this._getLineClustersByColumn({
+        colHOverlapThresh,
+        colHMultilineUnionThresh,
+        paraVDistTol,
+        paraLineHeightTol,
+      })
+    );
   }
 
   getTextInReadingOrder(): string {
