@@ -18,6 +18,7 @@
     "prepublishOnly": "npm run clean && npm run build && npm run test:postbuild",
     "prettify": "prettier --config .prettierrc.js 'src/**/*.{js,ts,tsx}' --write",
     "lint": "eslint 'src/**/*.{js,ts,tsx}' --quiet --fix",
+    "reading-order-diagnostic": "npm run build && node bin/reading-order-diagnostic.js",
     "test": "jest --coverage",
     "test:postbuild": "node test/postbuild/node.js && node test/postbuild/browser.js",
     "test:unit": "jest --coverage --testPathPattern=test/unit"

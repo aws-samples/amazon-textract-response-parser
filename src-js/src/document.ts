@@ -750,6 +750,13 @@ export interface HeuristicReadingOrderModelParams {
    * size changes to be represented as paragraph breaks (e.g. close-together heading/subheading).
    */
   paraLineHeightTol?: number;
+  /**
+   * Optional maximum indentation of a line versus previous, after which the line will be forced
+   * into a new paragraph even if vertical distance is small. Set =0 to disable this behavior (for
+   * e.g. with center-aligned text or where paragraphs are marked by vertical whitespace), or >0 to
+   * specify paragraph indentation in terms of a multiplier on text line-height. Default 0.
+   */
+  paraIndentThresh?: number;
 }
 
 export class Page extends ApiBlockWrapper<ApiPageBlock> {
@@ -824,8 +831,9 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
   _getLineClustersByColumn({
     colHOverlapThresh = 0.8,
     colHMultilineUnionThresh = 0.7,
-    paraVDistTol = 0.8,
-    paraLineHeightTol = 0.2,
+    paraVDistTol = 0.7,
+    paraLineHeightTol = 0.3,
+    paraIndentThresh = 0,
   }: HeuristicReadingOrderModelParams = {}): Line[][][] {
     // First, assign lines to paragraphs:
     const paraBoxes: BoundingBox<ApiLineBlock, ApiObjectWrapper<ApiLineBlock>>[] = [];
@@ -835,22 +843,111 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
     this._lines.forEach((line, ixLine) => {
       const lineBox = line.geometry.boundingBox;
       const lineHCenter = lineHCenters[ixLine];
+      // Geometries we get from Amazon Textract are bounding boxes for the detections, not necessarily
+      // corrected for the inferred font size / line height. For example 'A' will be significantly taller
+      // than 'a', and extreme outliers may be possible like e.g. '-'. In order to have some notion of line
+      // height for grouping text to paragraphs, we'll heuristically adjust the raw boxes in special cases
+      // where only a subset of small-height characters were detected:
+      let isLineHeightGarbage: boolean;
+      let adjLineBox: BoundingBox<unknown, ApiBlockWrapper<unknown & ApiBlock>>;
+      if (!/[^.,_\s]/.test(line.text)) {
+        // All low punctuation marks - line height is really a guess
+        isLineHeightGarbage = true;
+        adjLineBox = new BoundingBox(
+          {
+            Top: lineBox.top - lineBox.height * 1.5,
+            Left: lineBox.left,
+            Height: lineBox.height * 2.5,
+            Width: lineBox.width,
+          },
+          null
+        );
+      } else if (!/[^-–—=~\s]/.test(line.text)) {
+        // All low punctuation marks (e.g. just a dash?) - line height is really a guess
+        isLineHeightGarbage = true;
+        adjLineBox = new BoundingBox(
+          {
+            Top: lineBox.top - lineBox.height * 0.75, // Vertically centered on previous
+            Left: lineBox.left,
+            Height: lineBox.height * 2.5,
+            Width: lineBox.width,
+          },
+          null
+        );
+      } else if (!/[^'"`^\s]/.test(line.text)) {
+        // All high punctuation marks - line height is really a guess
+        isLineHeightGarbage = true;
+        adjLineBox = new BoundingBox(
+          {
+            Top: lineBox.top,
+            Left: lineBox.left,
+            Height: lineBox.height * 2.5,
+            Width: lineBox.width,
+          },
+          null
+        );
+      } else if (!/[^-–—=~.,_acemnorsuvwxz+<>:;\s]/.test(line.text)) {
+        // All low/mid punctuation and x-height letters - adjust line height up slightly
+        isLineHeightGarbage = false;
+        adjLineBox = new BoundingBox(
+          {
+            Top: lineBox.top - lineBox.height * 0.25,
+            Left: lineBox.left,
+            Height: lineBox.height * 1.25,
+            Width: lineBox.width,
+          },
+          null
+        );
+      } else {
+        // Keep box as-is
+        isLineHeightGarbage = false;
+        adjLineBox = lineBox;
+      }
       let assignedPara: number | null = null;
       for (let ixPara = 0; ixPara < paraBoxes.length; ++ixPara) {
         const paraBox = paraBoxes[ixPara];
         const paraHCenter = paraBox.hCenter;
-        const newTotalLineHeight = paraTotalLineHeight[ixPara] + lineBox.height;
-        const newAvgLineHeight = newTotalLineHeight / (paraLines[ixPara].length + 1);
+        const nCurrParaLines = paraLines[ixPara].length;
+        let newTotalLineHeight: number;
+        let newAvgLineHeight: number;
+        if (isLineHeightGarbage) {
+          newAvgLineHeight = paraTotalLineHeight[ixPara] / nCurrParaLines; // Unchanged
+          newTotalLineHeight = newAvgLineHeight * (nCurrParaLines + 1);
+        } else {
+          newTotalLineHeight = paraTotalLineHeight[ixPara] + adjLineBox.height;
+          newAvgLineHeight = newTotalLineHeight / (nCurrParaLines + 1);
+        }
         // These distances can't both be >0, and will both be <0 if they overlap
-        const vDist = Math.max(0, lineBox.top - paraBox.bottom, paraBox.top - lineBox.bottom);
+        const vDist = Math.max(0, adjLineBox.top - paraBox.bottom, paraBox.top - adjLineBox.bottom);
+        let passIndentationCheck: boolean;
+        if (paraIndentThresh) {
+          const paraLastLine = paraLines[ixPara][nCurrParaLines - 1];
+          // If paragraphs are started with indentation, we should regard paragraphs with only a single line
+          // in as having a reference position offset to the left. Otherwise, just paragraph bbox:
+          const paraRefLeft =
+            paraLastLine.geometry.boundingBox.left -
+            (nCurrParaLines === 1 ? paraIndentThresh * newAvgLineHeight : 0);
+          const vIsectTop = Math.max(adjLineBox.top, paraBox.top);
+          const vIsectBottom = Math.min(adjLineBox.bottom, paraBox.bottom);
+          const vIsect = Math.max(0, vIsectBottom - vIsectTop);
+          passIndentationCheck =
+            Math.max(0, adjLineBox.left - paraRefLeft) < paraIndentThresh * newAvgLineHeight ||
+            vIsect > 0.5 * adjLineBox.height;
+        } else {
+          passIndentationCheck = true;
+        }
         if (
           // Line has good horizontal overlap with the working "paragraph":
           ((lineHCenter > paraBox.left && lineHCenter < paraBox.right) ||
             (paraHCenter > lineBox.left && paraHCenter < lineBox.right)) &&
           // Line is vertically within N line-heights of the "paragraph":
           vDist < newAvgLineHeight * paraVDistTol &&
-          // Line has similar line height to the rest of the "paragraph"s text:
-          Math.abs((newAvgLineHeight - lineBox.height) / newAvgLineHeight) < paraLineHeightTol
+          // Line has similar line height to the rest of the "paragraph"s text, unless the line is
+          // composed of such charcters that it's height is basically meaningless:
+          (isLineHeightGarbage ||
+            Math.abs((newAvgLineHeight - adjLineBox.height) / newAvgLineHeight) < paraLineHeightTol) &&
+          // Indentation check if enabled:
+          passIndentationCheck
         ) {
           assignedPara = ixPara;
           paraBoxes[ixPara] = paraBox.union(lineBox);
@@ -887,9 +984,10 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
         const proposedColBox = colBox.union(paraBox);
         const matchingVsSingleLine =
           para.length === 1 || (thisColParas.length === 1 && thisColParas[0].length === 1);
+        const paraLineHeight = paraTotalLineHeight[ixPara] / paraLines[ixPara].length;
         if (
-          // Paragraphs has no vertical overlap with the working column:
-          vIsect === 0 &&
+          // Paragraph has no significant vertical overlap with the working column:
+          vIsect < paraLineHeight * 0.1 &&
           // Paragraph has good horizontal overlap with the working column:
           hIsect / minWidth >= colHOverlapThresh &&
           // Multi-line paragraph should have a more stringent horizontal overlap with the working
@@ -915,14 +1013,21 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
   }
 
   /**
-   * List lines in reading order, grouped by 'cluster' (heuristically, almost a paragraph)
+   * List lines in reading order, grouped by 'cluster' (somewhat like a paragraph)
+   *
+   * This method works by applying local heuristics to group text together into paragraphs, and then sorting
+   * paragraphs into "columns" in reading order. Although parameters are exposed to customize the behaviour,
+   * note that this customization API is experimental and subject to change. For complex requirements,
+   * consider implementing your own more robust approach - perhaps using expected global page structure.
+   *
    * @returns Nested array of text lines by paragraph, line
    */
   getLineClustersInReadingOrder({
     colHOverlapThresh = 0.8,
     colHMultilineUnionThresh = 0.7,
-    paraVDistTol = 0.8,
-    paraLineHeightTol = 0.2,
+    paraVDistTol = 0.7,
+    paraLineHeightTol = 0.3,
+    paraIndentThresh = 0,
   }: HeuristicReadingOrderModelParams = {}): Line[][] {
     // Pass through to the private function, but flatten the result to simplify out the "columns":
     return ([] as Line[][]).concat(
@@ -931,6 +1036,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
         colHMultilineUnionThresh,
         paraVDistTol,
         paraLineHeightTol,
+        paraIndentThresh,
       })
     );
   }

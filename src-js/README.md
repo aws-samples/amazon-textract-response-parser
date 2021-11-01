@@ -76,15 +76,21 @@ console.log(`Opened doc with ${doc.nPages} pages`);
 console.log(`The first word of the first line is ${doc.pageNumber(1).lineAtIndex(0).wordAtIndex(0).text}`);
 
 // Iterate through content:
-for (page of doc.iterPages()) {
+for (const page of doc.iterPages()) {
   // (In Textract's output order...)
-  for (line of page.iterLines()) {
-    for (word of line.iterWords()) {
+  for (const line of page.iterLines()) {
+    for (const word of line.iterWords()) {
       console.log(word.text);
     }
   }
   // (...Or approximate human reading order)
   const inReadingOrder = page.getLineClustersInReadingOrder();
+  for (const pseudoParagraph of inReadingOrder) {
+    for (const line of pseudoParagraph) {
+      console.log(line.text);
+    }
+    console.log();
+  }
 }
 
 // Get snapshot arrays instead of iterators, if you need:
