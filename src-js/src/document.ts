@@ -1041,8 +1041,20 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
     );
   }
 
-  getTextInReadingOrder(): string {
-    return this.getLineClustersInReadingOrder()
+  getTextInReadingOrder({
+    colHOverlapThresh = 0.8,
+    colHMultilineUnionThresh = 0.7,
+    paraVDistTol = 0.7,
+    paraLineHeightTol = 0.3,
+    paraIndentThresh = 0,
+  }: HeuristicReadingOrderModelParams = {}): string {
+    return this.getLineClustersInReadingOrder({
+      colHOverlapThresh,
+      colHMultilineUnionThresh,
+      paraVDistTol,
+      paraLineHeightTol,
+      paraIndentThresh,
+    })
       .map((lines) => lines.map((l) => l.text).join("\n"))
       .join("\n\n");
   }
