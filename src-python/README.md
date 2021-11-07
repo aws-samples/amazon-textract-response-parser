@@ -27,6 +27,18 @@ from trp.trp2 import TDocument, TDocumentSchema
 t_doc = TDocumentSchema().dump(t_doc)
 ```
 
+#### Deserialize Textract AnalyzeId JSON
+```python
+# j holds the Textract JSON
+from trp.trp2_analyzeid import TAnalyzeIdDocument, TAnalyzeIdDocumentSchema
+t_doc = TAnalyzeIdDocumentSchema().load(json.loads(j))
+```
+#### Serialize Textract
+```python
+from trp.trp2_analyzeid import TAnalyzeIdDocument, TAnalyzeIdDocumentSchema
+t_doc = TAnalyzeIdDocumentSchema().dump(t_doc)
+```
+
 
 ### Pipeline 
 
