@@ -1,0 +1,218 @@
+{
+    "IdentityDocumentFields": [
+        {
+            "Type": {
+                "Text": "FIRST_NAME"
+            },
+            "ValueDetection": {
+                "Text": "SAMPLE",
+                "Confidence": 95.66547393798828
+            }
+        },
+        {
+            "Type": {
+                "Text": "LAST_NAME"
+            },
+            "ValueDetection": {
+                "Text": "SWART",
+                "Confidence": 94.9337158203125
+            }
+        },
+        {
+            "Type": {
+                "Text": "MIDDLE_NAME"
+            },
+            "ValueDetection": {
+                "Text": "",
+                "Confidence": 96.52023315429688
+            }
+        },
+        {
+            "Type": {
+                "Text": "SUFFIX"
+            },
+            "ValueDetection": {
+                "Text": "",
+                "Confidence": 99.14985656738281
+            }
+        },
+        {
+            "Type": {
+                "Text": "CITY_IN_ADDRESS"
+            },
+            "ValueDetection": {
+                "Text": "ANYTOWN",
+                "Confidence": 97.43914794921875
+            }
+        },
+        {
+            "Type": {
+                "Text": "ZIP_CODE_IN_ADDRESS"
+            },
+            "ValueDetection": {
+                "Text": "12345",
+                "Confidence": 97.55549621582031
+            }
+        },
+        {
+            "Type": {
+                "Text": "STATE_IN_ADDRESS"
+            },
+            "ValueDetection": {
+                "Text": "NY",
+                "Confidence": 96.96430969238281
+            }
+        },
+        {
+            "Type": {
+                "Text": "STATE_NAME"
+            },
+            "ValueDetection": {
+                "Text": "NEW YORK",
+                "Confidence": 97.82574462890625
+            }
+        },
+        {
+            "Type": {
+                "Text": "DOCUMENT_NUMBER"
+            },
+            "ValueDetection": {
+                "Text": "",
+                "Confidence": 45.997554779052734
+            }
+        },
+        {
+            "Type": {
+                "Text": "EXPIRATION_DATE"
+            },
+            "ValueDetection": {
+                "Text": "10-01-16",
+                "NormalizedValue": {
+                    "Value": "2016-10-01T00:00:00",
+                    "ValueType": "Date"
+                },
+                "Confidence": 96.23866271972656
+            }
+        },
+        {
+            "Type": {
+                "Text": "DATE_OF_BIRTH"
+            },
+            "ValueDetection": {
+                "Text": "06-09-85",
+                "NormalizedValue": {
+                    "Value": "1985-06-09T00:00:00",
+                    "ValueType": "Date"
+                },
+                "Confidence": 95.25730895996094
+            }
+        },
+        {
+            "Type": {
+                "Text": "DATE_OF_ISSUE"
+            },
+            "ValueDetection": {
+                "Text": "09-30-08",
+                "NormalizedValue": {
+                    "Value": "2008-09-30T00:00:00",
+                    "ValueType": "Date"
+                },
+                "Confidence": 96.56719207763672
+            }
+        },
+        {
+            "Type": {
+                "Text": "COUNTRY"
+            },
+            "ValueDetection": {
+                "Text": "USA",
+                "Confidence": 97.7656478881836
+            }
+        },
+        {
+            "Type": {
+                "Text": "ID_TYPE"
+            },
+            "ValueDetection": {
+                "Text": "DRIVER LICENSE FRONT",
+                "Confidence": 97.86083984375
+            }
+        },
+        {
+            "Type": {
+                "Text": "ENDORSEMENTS"
+            },
+            "ValueDetection": {
+                "Text": "NONE",
+                "Confidence": 97.78777313232422
+            }
+        },
+        {
+            "Type": {
+                "Text": "VETERAN"
+            },
+            "ValueDetection": {
+                "Text": "",
+                "Confidence": 99.20891571044922
+            }
+        },
+        {
+            "Type": {
+                "Text": "RESTRICTIONS"
+            },
+            "ValueDetection": {
+                "Text": "NONE",
+                "Confidence": 97.69193267822266
+            }
+        },
+        {
+            "Type": {
+                "Text": "CLASS"
+            },
+            "ValueDetection": {
+                "Text": "D",
+                "Confidence": 97.38567352294922
+            }
+        },
+        {
+            "Type": {
+                "Text": "ADDRESS"
+            },
+            "ValueDetection": {
+                "Text": "2345 ANYPLACE AVE",
+                "Confidence": 94.2719955444336
+            }
+        },
+        {
+            "Type": {
+                "Text": "COUNTY"
+            },
+            "ValueDetection": {
+                "Text": "",
+                "Confidence": 99.22357177734375
+            }
+        },
+        {
+            "Type": {
+                "Text": "PLACE_OF_BIRTH"
+            },
+            "ValueDetection": {
+                "Text": "",
+                "Confidence": 99.19039916992188
+            }
+        },
+        {
+            "Type": {
+                "Text": "MRZ_CODE"
+            },
+            "ValueDetection": {
+                "Text": "",
+                "Confidence": 99.20500183105469
+            }
+        }
+    ],
+    "DocumentMetadata": {
+        "Pages": 1
+    },
+    "AnalyzeIDModelVersion": "1.0"
+}
