@@ -21,5 +21,5 @@ def test_serialization(caplog, json_response_1):
     caplog.set_level(logging.DEBUG)
     exp_doc: texa.TAnalyzeIdDocument = texa.TAnalyzeIdDocumentSchema().load(json_response_1)
     assert 22 == len(exp_doc.identity_document_fields)
-    assert 1.0 == exp_doc.analyze_id_model_version
+    assert "1.0" == exp_doc.analyze_id_model_version
     assert 1 == exp_doc.document_metadata.pages
