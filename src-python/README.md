@@ -21,7 +21,7 @@ from trp.trp2 import TDocument, TDocumentSchema
 t_doc = TDocumentSchema().load(json.loads(j))
 ```
 
-#### Serialize Textract
+#### Serialize Textract 
 ```python
 from trp.trp2 import TDocument, TDocumentSchema
 t_doc = TDocumentSchema().dump(t_doc)
@@ -33,7 +33,7 @@ t_doc = TDocumentSchema().dump(t_doc)
 from trp.trp2_analyzeid import TAnalyzeIdDocument, TAnalyzeIdDocumentSchema
 t_doc = TAnalyzeIdDocumentSchema().load(json.loads(j))
 ```
-#### Serialize Textract
+#### Serialize Textract AnalyzeId object to JSON
 ```python
 from trp.trp2_analyzeid import TAnalyzeIdDocument, TAnalyzeIdDocumentSchema
 t_doc = TAnalyzeIdDocumentSchema().dump(t_doc)
