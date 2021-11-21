@@ -17,9 +17,21 @@ def json_response_1():
     return return_json_for_file("data/test-trp2_analyzeid_sampe1.json")
 
 
-def test_serialization(caplog, json_response_1):
+@pytest.fixture
+def json_response_2():
+    return return_json_for_file("data/test-trp2_analyzeid_sampe2.json")
+
+def test_analyzeid_serialization(caplog, json_response_1):
     caplog.set_level(logging.DEBUG)
     exp_doc: texa.TAnalyzeIdDocument = texa.TAnalyzeIdDocumentSchema().load(json_response_1)
-    assert 22 == len(exp_doc.identity_document_fields)
+    assert 1 == len(exp_doc.identity_documents)
+    identityDoc1 = exp_doc.identity_documents[0]
+    assert 21 == len(identityDoc1.identity_document_fields)
+    assert "1.0" == exp_doc.analyze_id_model_version
+    assert 1 == exp_doc.document_metadata.pages
+
+def test_analyzeid_serialization_empty(caplog, json_response_2):
+    caplog.set_level(logging.DEBUG)
+    exp_doc: texa.TAnalyzeIdDocument = texa.TAnalyzeIdDocumentSchema().load(json_response_2)
     assert "1.0" == exp_doc.analyze_id_model_version
     assert 1 == exp_doc.document_metadata.pages

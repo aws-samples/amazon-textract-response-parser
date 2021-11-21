@@ -102,6 +102,30 @@ class TIdentityDocumentFieldSchema(BaseSchema):
     def make_tidentitydocumentfield(self, data, **kwargs):
         return TIdentityDocumentField(**data)
 
+@dataclass
+class TIdentityDocument():
+    """
+    Class for Analyze ID Response
+    """
+    document_index: int = 1
+    identity_document_fields: TIdentityDocumentField = None
+
+class TIdentityDocumentSchema(BaseSchema):
+    """
+    Class for IdentityDocument Schema
+    """
+
+    document_index = m.fields.Int(data_key="DocumentIndex", required=False, allow_none=True)
+    
+    identity_document_fields = m.fields.List(m.fields.Nested(TIdentityDocumentFieldSchema),
+                            data_key="IdentityDocumentFields",
+                            required=False,
+                            allow_none=True)
+
+    @post_load
+    def make_tidentitydocumentfield(self, data, **kwargs):
+        return TIdentityDocument(**data)
+
 
 class TAnalyzeIdDocument():
     """
@@ -109,7 +133,7 @@ class TAnalyzeIdDocument():
     """
     def __init__(self,
                  document_metadata: TDocumentMetadata = None,
-                 identity_document_fields: List[TIdentityDocumentField] = None,
+                 identity_documents: List[TIdentityDocument] = None,
                  analyze_id_model_version: str = None,
                  status_message: str = None,
                  warnings: TWarnings = None,
@@ -118,7 +142,7 @@ class TAnalyzeIdDocument():
                  custom: dict = None,
                  next_token: str = None):
         self.__document_metadata = document_metadata
-        self.__identity_document_fields = identity_document_fields
+        self.__identity_documents = identity_documents
         self.__analyze_id_model_version = analyze_id_model_version
         self.__status_message = status_message
         self.__next_token = next_token
@@ -132,12 +156,12 @@ class TAnalyzeIdDocument():
         return self.__document_metadata
 
     @property
-    def identity_document_fields(self):
-        return self.__identity_document_fields
+    def identity_documents(self):
+        return self.__identity_documents
 
-    @identity_document_fields.setter
-    def identity_document_fields(self, value: List[TIdentityDocumentField]):
-        self.__identity_document_fields = value
+    @identity_documents.setter
+    def identity_documents(self, value: List[TIdentityDocument]):
+        self.__identity_documents = value
 
     @property
     def analyze_id_model_version(self):
@@ -180,10 +204,11 @@ class TAnalyzeIdDocumentSchema(BaseSchema):
                                         data_key="DocumentMetadata",
                                         required=False,
                                         allow_none=False)
-    identity_document_fields = m.fields.List(m.fields.Nested(TIdentityDocumentFieldSchema),
-                                       data_key="IdentityDocumentFields",
+    identity_documents = m.fields.List(m.fields.Nested(TIdentityDocumentSchema),
+                                       data_key="IdentityDocuments",
                                        required=False,
                                        allow_none=False)
+ 
     analyze_id_model_version = m.fields.String(data_key="AnalyzeIDModelVersion",
                                             Required=False,
                                             allow_none=False)
