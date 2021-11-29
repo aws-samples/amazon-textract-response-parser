@@ -759,6 +759,28 @@ export interface HeuristicReadingOrderModelParams {
   paraIndentThresh?: number;
 }
 
+/**
+ * @experimental
+ */
+export interface HeaderFooterSegmentModelParams {
+  /**
+   * Cut-off maximum proportion of the page height that the header/footer must be within. Set close
+   * to 0 if main content is known to start very close to the page edge, or higher to allow more
+   * space for the header/footer search. Default 0.16 (16% page height).
+   * @default 0.16 (16% page height)
+   */
+  maxMargin?: number;
+  /**
+   * Minimum vertical spacing between header/footer and main page content, as a proportion of
+   * average local text LINE height. The header/footer will break on the first gap bigger than
+   * this, working in from the edge of the page towards content. Set close to 0 if the main content
+   * is known to start very close, or higher if multiple vertically-separate paragraphs/lines
+   * should be captured in the header/footer. Default 0.8 (80% line height).
+   * @default 0.8 (80% line height)
+   */
+  minGap?: number;
+}
+
 export class Page extends ApiBlockWrapper<ApiPageBlock> {
   _blocks: ApiBlock[];
   _content: Array<Line | Table | Field>;
@@ -1057,6 +1079,324 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
     })
       .map((lines) => lines.map((l) => l.text).join("\n"))
       .join("\n\n");
+  }
+
+  /**
+   * Split lines of text into vertically contiguous groups, and describe the gaps between groups
+   *
+   * Useful for finding vertical cut-offs by looking for largest vertical gaps in a region. Note
+   * that by 'contiguous' here we mean literally overlapping: small gaps are not filtered out, and
+   * the iterative splitting process may cause the output order to be different from either the
+   * human reading order or the Amazon Textract output order.
+   *
+   * @param {number} focusTop Top coordinate of the search area on the page. All lines above the
+   *      search area will be compressed into one group regardless of separation.
+   * @param {number} focusHeight Height of the search area on the page. All lines below the search
+   *      area will be compressed into one group regardless of separation.
+   * @param {Line[]} [lines] Optional array of Line objects to group. By default, the full list of
+   *      lines on the page will be analyzed.
+   * @returns Object with props 'lines' (the list of Lines in each group) and 'vGaps' (a
+   *      list of BoundingBox objects describing the gaps between the groups). Note that this means
+   *      `lines.length == vGaps.length + 1`.
+   */
+  _groupLinesByVerticalGaps(
+    focusTop: number,
+    focusHeight: number,
+    lines?: Line[]
+  ): { vGaps: BoundingBox<unknown, ApiObjectWrapper<unknown>>[]; lines: Line[][] } {
+    // Start with one big "gap" covering the entire focus region, and iteratively split/refine it
+    // from the lines of text:
+    let vGaps = [
+      new BoundingBox(
+        {
+          Top: focusTop,
+          Left: this._geometry.boundingBox.left,
+          Height: focusHeight,
+          Width: this._geometry.boundingBox.width,
+        },
+        null
+      ),
+    ];
+    let preGapLineLists: Line[][] = [[]];
+    let postLines: Line[] = [];
+
+    (lines || this._lines).forEach((line) => {
+      const lineBox = line.geometry.boundingBox;
+      // Fast exit for lines not in the focus area:
+      if (lineBox.top > vGaps[vGaps.length - 1].bottom) {
+        postLines.push(line);
+        return;
+      } else if (lineBox.bottom < vGaps[0].top) {
+        preGapLineLists[0].push(line);
+        return;
+      }
+
+      const nextGaps = [];
+      const nextPreGapLineLists = [];
+      let orphanedLines: Line[] = [];
+      let lineAssigned = false;
+      // Loop from top to bottom, updating the vGaps per the new text line:
+      for (let ixGap = 0; ixGap < vGaps.length; ++ixGap) {
+        const gap = vGaps[ixGap];
+        const preGapLineList = preGapLineLists[ixGap];
+        const isect = lineBox.intersection(gap);
+        if (!isect) {
+          // This gap is preserved as-is
+          nextGaps.push(gap);
+          nextPreGapLineLists.push(orphanedLines.concat(preGapLineList));
+          orphanedLines = [];
+          continue;
+        } else if (isect.top === gap.top && isect.height === gap.height) {
+          // This gap is fully covered by the line: Delete it
+          orphanedLines = orphanedLines.concat(preGapLineList);
+          continue;
+        } else if (isect.top > gap.top && isect.bottom < gap.bottom) {
+          // This gap is split in two
+          nextGaps.push(
+            new BoundingBox(
+              {
+                Top: gap.top,
+                Left: gap.left,
+                Height: isect.top - gap.top,
+                Width: gap.width,
+              },
+              null
+            )
+          );
+          nextPreGapLineLists.push(orphanedLines.concat(preGapLineList));
+          orphanedLines = [];
+          nextGaps.push(
+            new BoundingBox(
+              {
+                Top: isect.bottom,
+                Left: gap.left,
+                Height: gap.bottom - isect.bottom,
+                Width: gap.width,
+              },
+              null
+            )
+          );
+          nextPreGapLineLists.push([line]);
+          lineAssigned = true;
+        } else {
+          // This gap is part-covered: Adjust it
+          const preGapLines = orphanedLines.concat(preGapLineList);
+          if (isect.top === gap.top) {
+            // If the intersection starts at the gap top, this gap must be the one that immediately
+            // follows this line:
+            preGapLines.push(line);
+            lineAssigned = true;
+            nextGaps.push(
+              new BoundingBox(
+                {
+                  Top: gap.top + isect.height,
+                  Left: gap.left,
+                  Height: gap.height - isect.height,
+                  Width: gap.width,
+                },
+                null
+              )
+            );
+          } else {
+            nextGaps.push(
+              new BoundingBox(
+                {
+                  Top: gap.top,
+                  Left: gap.left,
+                  Height: isect.top - gap.top,
+                  Width: gap.width,
+                },
+                null
+              )
+            );
+          }
+          nextPreGapLineLists.push(preGapLines);
+          orphanedLines = [];
+        }
+      }
+      vGaps = nextGaps;
+      preGapLineLists = nextPreGapLineLists;
+      postLines = orphanedLines.concat(postLines);
+
+      // If the text line was not already directly assigned to a vGap (by splitting a gap or
+      // trimming its top), then find the latest gap immediately following it:
+      if (!lineAssigned) {
+        const followGapIx = vGaps.findIndex((gap) => gap.top >= lineBox.bottom);
+        if (followGapIx < 0) {
+          postLines.push(line);
+        } else {
+          preGapLineLists[followGapIx].push(line);
+        }
+      }
+    });
+
+    return {
+      vGaps,
+      lines: preGapLineLists.concat([postLines]),
+    };
+  }
+
+  /**
+   * Identify (via heuristics) the list of Lines likely to be page header or page footer.
+   *
+   * Output lines are not guaranteed to be sorted either in reading order or strictly in the
+   * default Amazon Textract output order.
+   *
+   * @param {boolean} isHeader Set true for header, or false for footer.
+   * @param {HeaderFooterSegmentModelParams} [config] (Experimental) heuristic configurations.
+   * @param {Line[]} [fromLines] Optional array of Line objects to group. By default, the full list
+   *      of lines on the page will be analyzed.
+   * @returns {Line[]} Array of Lines in the relevant section.
+   */
+  _getHeaderOrFooterLines(
+    isHeader: boolean,
+    { maxMargin = 0.16, minGap = 0.8 }: HeaderFooterSegmentModelParams = {},
+    fromLines?: Line[]
+  ): Line[] {
+    // Find contiguous vertical gaps (spaces with no LINEs) in the defined area of the page:
+    const { vGaps, lines: linesByGap } = this._groupLinesByVerticalGaps(
+      isHeader ? this._geometry.boundingBox.top : this._geometry.boundingBox.bottom - maxMargin,
+      maxMargin,
+      fromLines
+    );
+
+    // We'll look at gaps relative to text line height, rather than absolute page size:
+    // ...But need to be careful as some linesByGap (e.g. at the very edge of the page) may have
+    // no text.
+    const lineGroupAvgHeights: Array<number | null> = linesByGap.map((lines) =>
+      lines.length ? lines.reduce((acc, l) => acc + l.geometry.boundingBox.height, 0) / lines.length : null
+    );
+    const nonNullLineGroupAvgHeights = lineGroupAvgHeights.filter((h) => h) as number[];
+    const defaultLineHeight =
+      nonNullLineGroupAvgHeights.reduce((acc, h) => acc + h, 0) / nonNullLineGroupAvgHeights.length;
+    const gapAvgLineHeights = vGaps.map((_, ixGap) => {
+      const components: number[] = [];
+      // Use the pre-gap section avg height if it's not null/zero:
+      const preGapHeight = lineGroupAvgHeights[ixGap];
+      if (preGapHeight) components.push(preGapHeight);
+      // Also use the post-gap section avg height if it's not null/zero:
+      const postGapHeight = lineGroupAvgHeights[ixGap + 1];
+      if (postGapHeight) components.push(postGapHeight);
+
+      if (components.length) {
+        return components.reduce((acc, h) => acc + h, 0) / components.length;
+      } else {
+        // If neither the pre-gap nor post-gap line height are usable, take the default across all content:
+        return defaultLineHeight;
+      }
+    });
+
+    // Select the most likely gap in the focus area as the split between header/footer and content.
+    if (isHeader) {
+      // The header/content separator is the *first* gap which:
+      // - Has some content on the edgeward side of it (i.e. not the gap at the very page edge)
+      // - Is bigger than the minGap threshold
+      const ixSplit = vGaps.findIndex(
+        (gap, ixGap) =>
+          (ixGap > 0 || linesByGap[ixGap].length) && gap.height >= gapAvgLineHeights[ixGap] * minGap
+      );
+      return ixSplit < 0 ? [] : linesByGap.slice(0, ixSplit + 1).flat();
+    } else {
+      // For footer, apply the same process as header but working backwards from the page bottom.
+      const revLinesBygap = linesByGap.slice().reverse();
+      const revGapAvgLineHeights = gapAvgLineHeights.slice().reverse();
+      const ixRevSplit = vGaps
+        .slice()
+        .reverse()
+        .findIndex(
+          (gap, ixGap) =>
+            (ixGap > 0 || revLinesBygap[ixGap].length) && gap.height >= revGapAvgLineHeights[ixGap] * minGap
+        );
+      return ixRevSplit < 0 ? [] : linesByGap.slice(vGaps.length - ixRevSplit).flat();
+    }
+  }
+
+  /**
+   * Identify (via heuristics) the list of Lines likely to be page footer.
+   *
+   * Output lines are not guaranteed to be sorted either in reading order or strictly in the
+   * default Amazon Textract output order. See also getLinesByLayoutArea() for this.
+   *
+   * @param {HeaderFooterSegmentModelParams} [config] (Experimental) heuristic configurations.
+   * @param {Line[]} [fromLines] Optional array of Line objects to group. By default, the full list
+   *      of lines on the page will be analyzed.
+   * @returns {Line[]} Array of Lines in the relevant section.
+   */
+  getFooterLines(config: HeaderFooterSegmentModelParams = {}, fromLines?: Line[]): Line[] {
+    return this._getHeaderOrFooterLines(false, config, fromLines);
+  }
+
+  /**
+   * Identify (via heuristics) the list of Lines likely to be page header.
+   *
+   * Output lines are not guaranteed to be sorted either in reading order or strictly in the
+   * default Amazon Textract output order. See also getLinesByLayoutArea() for this.
+   *
+   * @param {HeaderFooterSegmentModelParams} [config] (Experimental) heuristic configurations.
+   * @param {Line[]} [fromLines] Optional array of Line objects to group. By default, the full list
+   *      of lines on the page will be analyzed.
+   * @returns {Line[]} Array of Lines in the relevant section.
+   */
+  getHeaderLines(config: HeaderFooterSegmentModelParams = {}, fromLines?: Line[]): Line[] {
+    return this._getHeaderOrFooterLines(true, config, fromLines);
+  }
+
+  /**
+   * Segment page text into header, content, and footer - optionally in (approximate) reading order
+   *
+   * @param {boolean|HeuristicReadingOrderModelParams} [inReadingOrder=false] Set true to sort text
+   *      in reading order, or leave false (the default) to use the standard Textract ouput order
+   *      instead. To customize the (experimental) parameters of the reading order model, pass in a
+   *      configuration object instead of true.
+   * @param {HeaderFooterSegmentModelParams} [headerConfig] (Experimental) heuristic configurations
+   *      for header extraction.
+   * @param {HeaderFooterSegmentModelParams} [footerConfig] (Experimental) heuristic configurations
+   *      for footer extraction.
+   * @returns Object with .header, .content, .footer properties: Each of type Line[].
+   */
+  getLinesByLayoutArea(
+    inReadingOrder: boolean | HeuristicReadingOrderModelParams = false,
+    headerConfig: HeaderFooterSegmentModelParams = {},
+    footerConfig: HeaderFooterSegmentModelParams = {}
+  ): { header: Line[]; content: Line[]; footer: Line[] } {
+    const sourceLines = inReadingOrder
+      ? ([] as Line[]).concat(
+          ...(inReadingOrder === true
+            ? this.getLineClustersInReadingOrder()
+            : this.getLineClustersInReadingOrder(inReadingOrder))
+        )
+      : this._lines;
+
+    const sourceLineSortOrder = sourceLines.reduce((acc, next, ix) => {
+      acc[next.id] = ix;
+      return acc;
+    }, {} as { [id: string]: number });
+
+    const header = this._getHeaderOrFooterLines(true, headerConfig, sourceLines).sort(
+      (a, b) => sourceLineSortOrder[a.id] - sourceLineSortOrder[b.id]
+    );
+    let usedIds = header.reduce((acc, next) => {
+      acc[next.id] = true;
+      return acc;
+    }, {} as { [key: string]: true });
+
+    const footer = this._getHeaderOrFooterLines(
+      false,
+      footerConfig,
+      sourceLines.filter((l) => !(l.id in usedIds))
+    ).sort((a, b) => sourceLineSortOrder[a.id] - sourceLineSortOrder[b.id]);
+    usedIds = footer.reduce((acc, next) => {
+      acc[next.id] = true;
+      return acc;
+    }, usedIds);
+
+    return {
+      header,
+      content: sourceLines
+        .filter((l) => !(l.id in usedIds))
+        .sort((a, b) => sourceLineSortOrder[a.id] - sourceLineSortOrder[b.id]),
+      footer,
+    };
   }
 
   /**

@@ -17,15 +17,15 @@
  * every use case - so if you're struggling to tune parameters for your own documents, you may find it easier
  * to write custom logic!
  */
-import { ApiResponsePages } from "../../src/api-models";
-import { TextractDocument } from "../../src/document";
+import { ApiResponsePages } from "../../../src/api-models";
+import { TextractDocument } from "../../../src/document";
 
 // Define your tests in a .ts file in the corpus folder alongside your documents:
-//import { READING_ORDER_TESTS } from "../data/corpus/reading-order-spec";
+//import { READING_ORDER_TESTS } from "../../data/corpus/reading-order-spec";
 // OR here inline:
 const READING_ORDER_TESTS = [
   // {
-  //   textractJsonFile: "../data/corpus/...textract.json",
+  //   textractJsonFile: "../../data/corpus/...textract.json",
   //   sequence: [
   //     // List of (case-insensitive) expected paragraph first line texts by page.
   //     // The code will check if your text is *contained* within the LINE from Textract.

@@ -64,9 +64,9 @@ async function main() {
 }
 ```
 
-### Analysis Features
+### Basic Navigation
 
-With your data loaded in to a TRP `TextractDocument` or `TextractExpense`, you can take advantage of the higher-level functionality to navigate and analyze the result.
+With your data loaded in to a TRP `TextractDocument` or `TextractExpense`, you can take advantage of the higher-level functions to navigate and analyze the result - rather than traversing the relationships between API `BLOCK`s
 
 For example with a Document result:
 
@@ -83,17 +83,9 @@ for (const page of doc.iterPages()) {
       console.log(word.text);
     }
   }
-  // (...Or approximate human reading order)
-  const inReadingOrder = page.getLineClustersInReadingOrder();
-  for (const pseudoParagraph of inReadingOrder) {
-    for (const line of pseudoParagraph) {
-      console.log(line.text);
-    }
-    console.log();
-  }
 }
 
-// Get snapshot arrays instead of iterators, if you need:
+// ...Or get snapshot arrays instead of iterators, if you need:
 const linesArrsByPage = doc.listPages().map((p) => p.listLines())
 
 // Easily access form key-value pairs:
@@ -133,6 +125,39 @@ console.log(`Found ${vendorNameFields.length} vendor name fields in doc summary`
 console.log(vendorNameFields[0].fieldType.text); // "VENDOR_NAME"
 console.log(vendorNameFields[0].value.text); // e.g. "Amazon.com"
 ```
+
+### Extra layout analyses
+
+Some tools are built in to the library for other common but complex analyses you might want to tackle:
+
+To list `LINE`s of text in **approximate human reading order**, grouped into pseudo-**paragraphs**:
+
+```typescript
+const inReadingOrder = page.getLineClustersInReadingOrder();
+for (const pseudoParagraph of inReadingOrder) {
+  for (const line of pseudoParagraph) {
+    console.log(line.text);
+  }
+  console.log();  // Print a gap between "paragraphs"
+}
+```
+
+To split **headers and footers** from main content:
+
+```typescript
+const segmented = page.getLinesByLayoutArea(
+  true  // (Also try to sort lines in reading order)
+);
+
+console.log("---- HEADER:")
+console.log(segmented.header.map((l) => l.text).join("\n"));
+console.log("\n---- CONTENT:")
+console.log(segmented.content.map((l) => l.text).join("\n"));
+console.log("\n---- FOOTER:")
+console.log(segmented.footer.map((l) => l.text).join("\n"));
+```
+
+These analyses tackle challenging problems by way of imperfect, heuristic, rule-based methods. There are some configuration parameters exposed to help you tune the results for your particular domain (and test harnesses in the [tests/unit/corpus folder](tests/unit/corpus) to help you experiment via `npm run test:unit`). However, in certain challenging cases it might be more effective to explore different algorithms or even custom ML models.
 
 For more examples of the features of the library, you can refer to the [tests](tests/) folder and/or the source code. If you have suggestions for additional features that would be useful, please open a GitHub issue!
 
