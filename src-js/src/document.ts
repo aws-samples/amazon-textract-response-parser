@@ -1295,7 +1295,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
         (gap, ixGap) =>
           (ixGap > 0 || linesByGap[ixGap].length) && gap.height >= gapAvgLineHeights[ixGap] * minGap
       );
-      return ixSplit < 0 ? [] : linesByGap.slice(0, ixSplit + 1).flat();
+      return ixSplit < 0 ? [] : ([] as Line[]).concat(...linesByGap.slice(0, ixSplit + 1));
     } else {
       // For footer, apply the same process as header but working backwards from the page bottom.
       const revLinesBygap = linesByGap.slice().reverse();
@@ -1307,7 +1307,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> {
           (gap, ixGap) =>
             (ixGap > 0 || revLinesBygap[ixGap].length) && gap.height >= revGapAvgLineHeights[ixGap] * minGap
         );
-      return ixRevSplit < 0 ? [] : linesByGap.slice(vGaps.length - ixRevSplit).flat();
+      return ixRevSplit < 0 ? [] : ([] as Line[]).concat(...linesByGap.slice(vGaps.length - ixRevSplit));
     }
   }
 
