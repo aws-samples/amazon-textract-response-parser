@@ -408,8 +408,6 @@ def test_get_relationships_for_type(caplog):
     t_document.add_block(new_block)
     page.add_ids_to_relationships([new_block.id])
     assert t_document.get_block_by_id(new_block.id) == new_block
-    # for page in doc.pages:
-    #     print(page.custom['Orientation'])
 
 
 def test_merge_tables():

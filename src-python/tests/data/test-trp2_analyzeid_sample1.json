@@ -1,0 +1,206 @@
+{
+    "IdentityDocuments": [
+        {
+            "DocumentIndex": 1,
+            "IdentityDocumentFields": [
+                {
+                    "Type": {
+                        "Text": "FIRST_NAME"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 71.52985382080078
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "LAST_NAME"
+                    },
+                    "ValueDetection": {
+                        "Text": "BAKER",
+                        "Confidence": 98.5782241821289
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "MIDDLE_NAME"
+                    },
+                    "ValueDetection": {
+                        "Text": "DOE",
+                        "Confidence": 75.19215393066406
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "SUFFIX"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 99.6145248413086
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "CITY_IN_ADDRESS"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 99.6345443725586
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "ZIP_CODE_IN_ADDRESS"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 99.70516967773438
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "STATE_IN_ADDRESS"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 99.57034301757812
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "STATE_NAME"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 64.784423828125
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "DOCUMENT_NUMBER"
+                    },
+                    "ValueDetection": {
+                        "Text": "5550100",
+                        "Confidence": 96.9133071899414
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "EXPIRATION_DATE"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 99.6310806274414
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "DATE_OF_BIRTH"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 46.86362075805664
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "DATE_OF_ISSUE"
+                    },
+                    "ValueDetection": {
+                        "Text": "8/10/2013",
+                        "NormalizedValue": {
+                            "Value": "2013-08-10T00:00:00",
+                            "ValueType": "Date"
+                        },
+                        "Confidence": 60.09776306152344
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "COUNTRY"
+                    },
+                    "ValueDetection": {
+                        "Text": "USA",
+                        "Confidence": 99.08971405029297
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "ID_TYPE"
+                    },
+                    "ValueDetection": {
+                        "Text": "UNKNOWN",
+                        "Confidence": 95.90719604492188
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "ENDORSEMENTS"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 99.68761444091797
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "VETERAN"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 99.62588500976562
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "RESTRICTIONS"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 99.5017318725586
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "CLASS"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 99.83049774169922
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "ADDRESS"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 99.5990219116211
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "COUNTY"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 99.63861846923828
+                    }
+                },
+                {
+                    "Type": {
+                        "Text": "PLACE_OF_BIRTH"
+                    },
+                    "ValueDetection": {
+                        "Text": "",
+                        "Confidence": 99.53759002685547
+                    }
+                }
+            ]
+        }
+    ],
+    "DocumentMetadata": {
+        "Pages": 1
+    },
+    "AnalyzeIDModelVersion": "1.0"
+}
