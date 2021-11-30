@@ -173,8 +173,9 @@ def test_next_token_response():
     assert t_document.pages[0].custom
 
     doc = t1.Document(t2.TDocumentSchema().dump(t_document))
-    for page in doc.pages:
-        print(page.custom['Orientation'])
+    assert doc
+    # for page in doc.pages:
+    #     print(page.custom['Orientation'])
 
 
 def test_merge_tables():
