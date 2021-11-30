@@ -53,3 +53,6 @@ def test_analyzeid_serialization_multi_page(caplog, json_response_multi_page):
     identityDoc2 = exp_doc.identity_documents[1]
     assert 20 == len(identityDoc1.identity_document_fields)
     assert 20 == len(identityDoc2.identity_document_fields)
+    result = exp_doc.get_values_as_list()
+    assert result
+    assert len(result) > 0

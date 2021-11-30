@@ -143,6 +143,30 @@ class TAnalyzeIdDocument():
     custom: dict = field(default=None)    #type: ignore
     next_token: str = field(default=None)    #type: ignore
 
+    def get_values_as_list(self) -> List[List[str]]:
+        """
+        return a List of List of str in the following format
+        [["doc_number", "type", "value", "confidence", "normalized_value", "normalized_value_type"]]
+        """
+        result_list: List[List[str]] = list()
+        for identity_document in self.identity_documents:
+            doc_number = identity_document.document_index
+            for identity_document_field in identity_document.identity_document_fields:
+                normalized_value = ""
+                normalized_value_type = ""
+                if identity_document_field.value_detection.normalized_value:
+                    normalized_value = identity_document_field.value_detection.normalized_value.value
+                    normalized_value_type = identity_document_field.value_detection.normalized_value.value_type
+                result_list.append([
+                    str(doc_number),
+                    str(identity_document_field.type.text),
+                    str(identity_document_field.value_detection.text),
+                    str(identity_document_field.value_detection.confidence),
+                    str(normalized_value),
+                    str(normalized_value_type)
+                ])
+        return result_list
+
 
 class TAnalyzeIdDocumentSchema(BaseSchema):
     """
