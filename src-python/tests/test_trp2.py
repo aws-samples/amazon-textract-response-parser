@@ -179,39 +179,48 @@ def test_next_token_response():
 def test_rotate_point():
     assert t2.TPoint(2, 2) == t2.TPoint(2, 2)
 
-    p = t2.TPoint(2, 2).rotate(degrees=180, origin_y=0, origin_x=0, force_limits=False)
+    p = t2.TPoint(2, 2)
+    p.rotate(degrees=180, origin_y=0, origin_x=0, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(-2, -2)
 
-    p = t2.TPoint(3, 4).rotate(degrees=-30, origin_y=0, origin_x=0, force_limits=False)
+    p = t2.TPoint(3, 4)
+    p.rotate(degrees=-30, origin_y=0, origin_x=0, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(5, 2)
 
-    p = t2.TPoint(3, 4).rotate(degrees=-77, origin_y=0, origin_x=0, force_limits=False)
+    p = t2.TPoint(3, 4)
+    p.rotate(degrees=-77, origin_y=0, origin_x=0, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(5, -2)
 
-    p = t2.TPoint(3, 4).rotate(degrees=-90, origin_y=0, origin_x=0, force_limits=False)
+    p = t2.TPoint(3, 4)
+    p.rotate(degrees=-90, origin_y=0, origin_x=0, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(4, -3)
 
-    p = t2.TPoint(3, 4).rotate(degrees=-270, origin_y=0, origin_x=0, force_limits=False)
+    p = t2.TPoint(3, 4)
+    p.rotate(degrees=-270, origin_y=0, origin_x=0, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(-4, 3)
 
-    p = t2.TPoint(2, 2).rotate(degrees=180, origin_x=1, origin_y=1)
+    p = t2.TPoint(2, 2)
+    p.rotate(degrees=180, origin_x=1, origin_y=1)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(0, 0)
 
-    p = t2.TPoint(3, 4).rotate(degrees=-30, origin_y=0, origin_x=0, force_limits=False)
+    p = t2.TPoint(3, 4)
+    p.rotate(degrees=-30, origin_y=0, origin_x=0, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(5, 2)
 
-    p = t2.TPoint(3, 4).rotate(degrees=-77, origin_x=4, origin_y=4, force_limits=False)
+    p = t2.TPoint(3, 4)
+    p.rotate(degrees=-77, origin_x=4, origin_y=4, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(4, 5)
 
-    p = t2.TPoint(3, 4).rotate(degrees=-90, origin_x=4, origin_y=6, force_limits=False)
+    p = t2.TPoint(3, 4)
+    p.rotate(degrees=-90, origin_x=4, origin_y=6, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(2, 7)
 
-    p = t2.TPoint(3, 4).rotate(degrees=-270, origin_x=4, origin_y=6, force_limits=False)
+    p = t2.TPoint(3, 4)
+    p.rotate(degrees=-270, origin_x=4, origin_y=6, force_limits=False)
     assert t2.TPoint(x=round(p.x), y=round(p.y)) == t2.TPoint(6, 5)
 
 
 def test_rotate():
-
     points = []
     width = 0.05415758863091469
     height = 0.011691284365952015
@@ -219,11 +228,18 @@ def test_rotate():
     top = 0.8997916579246521
     origin: t2.TPoint = t2.TPoint(x=0.5, y=0.5)
     degrees: float = 180
-    points.append(t2.TPoint(x=left, y=top).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
-    points.append(t2.TPoint(x=left + width, y=top).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
-    points.append(t2.TPoint(x=left, y=top + height).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
-    points.append(
-        t2.TPoint(x=left + width, y=top + height).rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees))
+    p1 = t2.TPoint(x=left, y=top)
+    p2 = t2.TPoint(x=left + width, y=top)
+    p3 = t2.TPoint(x=left, y=top + height)
+    p4 = t2.TPoint(x=left + width, y=top + height)
+    p1.rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees)
+    p2.rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees)
+    p3.rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees)
+    p4.rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees)
+    points.append(p1)
+    points.append(p2)
+    points.append(p3)
+    points.append(p4)
     assert not None in points
 
 

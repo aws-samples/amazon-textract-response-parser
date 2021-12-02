@@ -1,4 +1,3 @@
-from __future__ import annotations
 from functools import lru_cache
 from typing import List, Set, Optional
 from dataclasses import dataclass, field
@@ -64,11 +63,7 @@ class TPoint():
         self.y: float = self.y / doc_height
 
     # TODO: add optimization for rotation of 90, 270, 180, -90, -180, -270 degrees
-    def rotate(self,
-               origin_x: float = 0.5,
-               origin_y: float = 0.5,
-               degrees: float = 180,
-               force_limits: bool = True) -> TPoint:
+    def rotate(self, origin_x: float = 0.5, origin_y: float = 0.5, degrees: float = 180, force_limits: bool = True):
         """
         rotating this point around an origin point
         force_limits enforces max 1 and min 0 values for the x and y coordinates (similar to min/max for Textract Schema Geometry)
@@ -87,7 +82,6 @@ class TPoint():
             new_y = max(min(new_y, 1), 0)
         self.x = new_x
         self.y = new_y
-        return self
 
 
 @dataclass(eq=True, init=True, repr=True, order=True, unsafe_hash=True)
@@ -118,7 +112,7 @@ class TBoundingBox():
         points.append(TPoint(x=self.left + self.width, y=self.top + self.height))
         return points
 
-    def rotate(self, origin: TPoint = TPoint(0, 0), degrees: float = 180) -> TBoundingBox:
+    def rotate(self, origin: TPoint = TPoint(0, 0), degrees: float = 180):
         """
         rotate bounding box
         a bounding box sides are always parallel to x and y axis
@@ -146,7 +140,6 @@ class TBoundingBox():
         self.height = new_height
         self.left = new_left
         self.top = new_top
-        return self
 
 
 class TBoundingBoxSchema(BaseSchema):
