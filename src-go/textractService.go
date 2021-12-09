@@ -50,6 +50,10 @@ func IsJobComplete(context context.Context, jobId *string, ch chan bool) {
 		fmt.Println("go subroutine IsJobComplete complete")
 	}()
 
+	if *jobId == "" {
+		context.Done()
+	}
+
 	for !isComplete {
 		fmt.Println("checking status of job " + *jobId)
 		response, err := svc.GetDocumentAnalysis(&textract.GetDocumentAnalysisInput{

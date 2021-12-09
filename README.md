@@ -10,6 +10,10 @@ For documentation on usage see: [src-python/README.md](src-python/README.md)
 
 For documentation on usage see: [src-js/README.md](src-js/README.md)
 
+## Go Usage
+
+For documentation on usage see: [src-go/README.md](src-go/README.md)
+
 ## C# Usage
 
 ### Forms

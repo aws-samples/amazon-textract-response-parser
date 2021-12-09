@@ -57,7 +57,7 @@ func TestStartDocumentAnalysis(t *testing.T) {
 	connectToTextract(config)
 
 	jobId := StartDocumentAnalysis(&config.BucketToTest, &config.KeyToTest, &config.FeaturesListItem)
-	if *jobId == "" {
+	if jobId == nil || *jobId == "" {
 		t.Fail()
 	}
 }
@@ -67,7 +67,7 @@ func TestGetJobResultsAsync(t *testing.T) {
 	connectToTextract(config)
 
 	jobId := StartDocumentAnalysis(&config.BucketToTest, &config.KeyToTest, &config.FeaturesListItem)
-	if *jobId == "" {
+	if jobId == nil || *jobId == "" {
 		t.Fail()
 	}
 
