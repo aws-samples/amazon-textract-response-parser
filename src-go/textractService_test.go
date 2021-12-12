@@ -32,7 +32,8 @@ func (c *testConfig) getConfig(fileName string) *testConfig {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("\n%#v\n", string(file))
+	fmt.Println("printing test config...")
+	fmt.Printf("\t%#v\n\n", string(file))
 	err = yaml.Unmarshal(file, c)
 	if err != nil {
 		return nil
