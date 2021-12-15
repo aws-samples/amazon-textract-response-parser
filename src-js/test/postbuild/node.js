@@ -15,6 +15,8 @@ console.log("Checking built assets can be used with NodeJS...");
 const doc = new TextractDocument(testResponse);
 assert.strictEqual(doc.nPages, 1);
 assert.strictEqual(doc.pageNumber(1).nTables, 1);
+doc.pageNumber(1).getLineClustersInReadingOrder();
+doc.pageNumber(1).getLinesByLayoutArea();
 
 const expense = new TextractExpense(testExpenseResponse);
 assert.strictEqual(expense.nDocs, 1);

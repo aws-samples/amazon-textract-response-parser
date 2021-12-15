@@ -9,16 +9,68 @@ const testInProgressJson: ApiResponsePage = require("../data/test-inprogress-res
 const testResponseJson: ApiResponsePage = require("../data/test-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testMultiColumnJson: ApiResponsePage = require("../data/test-multicol-response.json");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const testMultiColumnJson2: ApiResponsePage = require("../data/test-multicol-response-2.json");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const testHeaderFooterJson: ApiResponsePage = require("../data/test-twocol-header-footer-response.json");
 
 const EXPECTED_MULTILINE_SEQ_LOWER = [
   "multi-column test document",
   "a sample document with",
   "this section has two columns",
   "the left column contains",
-  "the right column",
+  "a horizontally separate right",
+  "this column has approximately",
   "correct processing",
   "a final footer",
 ];
+
+const EXPECTED_MULTILINE_SEQ_2_LOWER = [
+  "heading of the page",
+  "section id",
+  "[enter]",
+  "two columns, both alike",
+  "from ancient grudge break",
+  "a glooming peace",
+  "go hence with caution",
+  "for never was a heuristic",
+  "in reading order",
+  "the end",
+  "page 1",
+];
+
+/**
+ * We want to test a couple of examples for reading order, so will pull this out as a function
+ */
+function checkMultiColReadingOrder(
+  docJson: ApiResponsePage | ApiResponsePages,
+  expectedSeq: string[],
+  pageNum = 1
+) {
+  const doc = new TextractDocument(docJson);
+
+  const readingOrder = doc.pageNumber(pageNum).getLineClustersInReadingOrder();
+  // May want to switch to this instead to help debug if you see failures:
+  // const clustered = doc.pageNumber(pageNum)._getLineClustersByColumn();
+  // console.warn(clustered.map((col) => col.map((p) => `${p[0].text}... (${p.length} lines)`)));
+  // const readingOrder = [].concat(...clustered);
+
+  expect(readingOrder.length).not.toBeLessThan(expectedSeq.length);
+
+  const sortedLinesTextLower = ([] as Line[]).concat(...readingOrder).map((l) => l.text.toLocaleLowerCase());
+  expect(sortedLinesTextLower.length).not.toBeLessThan(expectedSeq.length);
+  let ixTest = 0;
+  sortedLinesTextLower.forEach((lineText) => {
+    const matchIx = expectedSeq.findIndex((seq) => lineText.indexOf(seq) >= 0);
+    if (matchIx >= 0) {
+      // We compare the strings first here to make failed assertions a bit more meaningful:
+      expect(expectedSeq[matchIx]).toStrictEqual(expectedSeq[ixTest]);
+      expect(matchIx).toStrictEqual(ixTest);
+      ++ixTest;
+    }
+  });
+  expect(ixTest).toStrictEqual(expectedSeq.length);
+}
 
 describe("TextractDocument", () => {
   it("should throw status error on failed async job JSONs (list)", () => {
@@ -365,27 +417,12 @@ describe("TextractDocument", () => {
     expect(formKeys.length && formKeys[0].value?.parentField.parentForm.parentPage.dict).toBe(page.dict);
   });
 
-  it("sorts lines correctly for multi-column documents", () => {
-    const doc = new TextractDocument(testMultiColumnJson);
+  it("sorts lines correctly for multi-column documents (case 1)", () => {
+    checkMultiColReadingOrder(testMultiColumnJson, EXPECTED_MULTILINE_SEQ_LOWER);
+  });
 
-    const readingOrder = doc.pageNumber(1).getLineClustersInReadingOrder();
-    expect(readingOrder.length).not.toBeLessThan(1);
-
-    const sortedLinesTextLower = ([] as Line[])
-      .concat(...readingOrder)
-      .map((l) => l.text.toLocaleLowerCase());
-    expect(sortedLinesTextLower.length).not.toBeLessThan(EXPECTED_MULTILINE_SEQ_LOWER.length);
-    let ixTest = 0;
-    sortedLinesTextLower.forEach((lineText) => {
-      const matchIx = EXPECTED_MULTILINE_SEQ_LOWER.findIndex((seq) => lineText.indexOf(seq) >= 0);
-      if (matchIx >= 0) {
-        // We compare the strings first here to make failed assertions a bit more meaningful:
-        expect(EXPECTED_MULTILINE_SEQ_LOWER[matchIx]).toStrictEqual(EXPECTED_MULTILINE_SEQ_LOWER[ixTest]);
-        expect(matchIx).toStrictEqual(ixTest);
-        ++ixTest;
-      }
-    });
-    expect(ixTest).toStrictEqual(EXPECTED_MULTILINE_SEQ_LOWER.length);
+  it("sorts lines correctly for multi-column documents (case 2)", () => {
+    checkMultiColReadingOrder(testMultiColumnJson2, EXPECTED_MULTILINE_SEQ_2_LOWER);
   });
 
   it("outputs text correctly for multi-column documents", () => {
@@ -404,6 +441,84 @@ describe("TextractDocument", () => {
       }
     });
     expect(ixTest).toStrictEqual(EXPECTED_MULTILINE_SEQ_LOWER.length);
+  });
+
+  it("Extracts header and footer content", () => {
+    const page = new TextractDocument(testHeaderFooterJson).pageNumber(1);
+
+    const headerLines = page.getHeaderLines();
+    expect(headerLines.length).toStrictEqual(5);
+    const footerLines = page.getFooterLines();
+    expect(footerLines.length).toStrictEqual(4);
+  });
+
+  it("Restricts header and footer content with strict configuration", () => {
+    const page = new TextractDocument(testHeaderFooterJson).pageNumber(1);
+
+    // Require bigger gap between header and content than exists:
+    const headerLines = page.getHeaderLines({ minGap: 4 });
+    expect(headerLines.length).toStrictEqual(0);
+    // Footer has a big gap on this page, so same param should be fine:
+    const footerLines1 = page.getFooterLines({ minGap: 4 });
+    expect(footerLines1.length).toStrictEqual(4);
+    // But should still be able to restrict by narrowing the footer window too short:
+    const footerLines2 = page.getFooterLines({ maxMargin: 0.02 });
+    expect(footerLines2.length).toStrictEqual(0);
+  });
+
+  it("Segments header, content, and footer sections", () => {
+    const page = new TextractDocument(testHeaderFooterJson).pageNumber(1);
+
+    const segmented = page.getLinesByLayoutArea(false);
+    expect(segmented.header.length).toStrictEqual(5);
+    expect(segmented.footer.length).toStrictEqual(4);
+    expect(segmented.content.length).toStrictEqual(page.listLines().length - (5 + 4));
+  });
+
+  it("Segments header, content, and footer sections in reading order", () => {
+    const page = new TextractDocument(testHeaderFooterJson).pageNumber(1);
+
+    const readingOrder = ([] as Line[]).concat(...page.getLineClustersInReadingOrder());
+    const tmpfirst = readingOrder.findIndex((line) => line.text == "With multiple lines");
+    const tmpsecond = readingOrder.findIndex((line) => line.text == "right-aligned header");
+    expect(tmpfirst).toBeGreaterThanOrEqual(0);
+    expect(tmpsecond).toBeGreaterThanOrEqual(0);
+    expect(tmpsecond).toBeGreaterThan(tmpfirst);
+
+    const segmented = page.getLinesByLayoutArea(true);
+    const EXPECTED_HEADER_LINES = [
+      "Left-aligned header",
+      "With multiple lines",
+      // (Right comes in first because it starts higher up than center)
+      "right-aligned header",
+      "with multiple lines",
+      "CENTER-ALIGNED HEADER",
+    ];
+    expect(segmented.header.length).toStrictEqual(EXPECTED_HEADER_LINES.length);
+    segmented.header.forEach((line, ix) => {
+      expect(line.text).toMatch(EXPECTED_HEADER_LINES[ix]);
+    });
+
+    const EXPECTED_FOOTER_LINES = ["Left-aligned footer", "Multi-line centered", "footer content", "Page"];
+    expect(segmented.footer.length).toStrictEqual(EXPECTED_FOOTER_LINES.length);
+    segmented.footer.forEach((line, ix) => {
+      expect(line.text).toMatch(EXPECTED_FOOTER_LINES[ix]);
+    });
+
+    const ixLeftColBottomLine = segmented.content.findIndex((l) =>
+      l.text.startsWith("ML model-based approaches may be")
+    );
+    if (ixLeftColBottomLine < 0) {
+      throw new Error("Couldn't find multi-column left col test line in segmented content");
+    }
+    const ixRightColMidLine = segmented.content.findIndex((l) =>
+      l.text.startsWith("This means it cannot solve")
+    );
+    if (ixRightColMidLine < 0) {
+      throw new Error("Couldn't find multi-column right col test line in segmented content");
+    }
+
+    expect(ixRightColMidLine).toBeGreaterThan(ixLeftColBottomLine);
   });
 
   it("detects 0 orientation for perfectly straight pages", () => {
