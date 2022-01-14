@@ -514,3 +514,34 @@ def test_kv_ocr_confidence(caplog):
         #     print(
         #         f"{field.key.text} - {field.key.custom['OCRConfidence']}, {field.value.text} - {field.value.custom['OCRConfidence']}"
         #     )
+
+
+def test_table_with_headers_and_merged_cells(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "tables_with_headers_and_merged_cells.json"))
+    j = json.load(f)
+    t_doc: t2.TDocument = t2.TDocumentSchema().load(j)
+    page: t2.TBlock = t_doc.pages[0]
+    tables: t2.TBlock = t_doc.tables(page=page)[0]
+
+
+def test_bla(caplog):
+    import trp as t
+    import json
+    from tabulate import tabulate
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "tables_with_headers_and_merged_cells.json"))
+    # f = open("data/employment-application.json")
+    j = json.load(f)
+    d = Document(j)
+    for p in d.pages:
+        for t in p.tables:
+            table: List[List[str]] = list()
+            for r in t.rows:
+                row: List[str] = list()
+                for c in r.cells:
+                    row.append(c.text)
+                    print(c.rowIndex, c.columnIndex)
+                table.append(row)
+            print(tabulate(table))
