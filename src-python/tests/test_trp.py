@@ -62,7 +62,6 @@ def test_table_with_headers_and_merged_cells_out_of_order_cells(caplog):
             for row in table.rows:
                 for cell in row.cells:
                     cells_in_child_order.append([int(cell.rowIndex), int(cell.columnIndex)])
-                    print(cell.rowIndex, cell.columnIndex)
 
     sorted_cells = sorted(cells_in_child_order, key=lambda row: (row[0], row[1]))
     assert sorted_cells == cells_in_child_order
@@ -73,13 +72,12 @@ def test_tables_after_sort_cells():
     f = open(os.path.join(p, "data/multi-tables-multi-page-sample.json"))
     j = json.load(f)
     doc = Document(j)
-    cells_in_child_order: List[List[int]] = list()
     for page in doc.pages:
         for table in page.tables:
+            cells_in_child_order: List[List[int]] = list()
             for row in table.rows:
                 for cell in row.cells:
                     cells_in_child_order.append([int(cell.rowIndex), int(cell.columnIndex)])
-                    print(cell.rowIndex, cell.columnIndex)
 
-    sorted_cells = sorted(cells_in_child_order, key=lambda row: (row[0], row[1]))
-    assert sorted_cells == cells_in_child_order
+            sorted_cells = sorted(cells_in_child_order, key=lambda row: (row[0], row[1]))
+            assert sorted_cells == cells_in_child_order

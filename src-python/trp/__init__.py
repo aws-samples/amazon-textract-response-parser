@@ -369,7 +369,6 @@ class Row:
 
     @property
     def cells(self):
-        """with merged_cells=True, the rowSpan or columnSpan could be > 1"""
         return self._cells
 
     @cells.setter
@@ -393,16 +392,10 @@ class Table(BaseBlock):
                         cell = Cell(blockMap[cid], blockMap)
                         cells.append(cell)
                     cells.sort(key=lambda cell: (cell.rowIndex, cell.columnIndex))
-                    # import pickle
-                    # pickle.dump(cells, open("cells.p", "wb"))
-                    # print("done")
-                    num_cells = 0
                     for row_index in range(1, max([x.rowIndex for x in cells])):
                         new_row: Row = Row()
                         new_row.cells = [x for x in cells if x.rowIndex == row_index]
                         self._rows.append(new_row)
-                        num_cells += len(self._rows)
-                    print(f"cells: {num_cells}")
 
     def __str__(self):
         s = "Table\n==========\n"
@@ -427,13 +420,16 @@ class Table(BaseBlock):
 
     @property
     def rows_without_header(self) -> List[Row]:
-        header_cells: List[Row] = list()
+        non_header_rows: List[Row] = list()
         for row in self.rows:
+            header = False
             for cell in row.cells:
                 for entity_type in cell.entityTypes:
                     if entity_type == ENTITY_TYPE_COLUMN_HEADER:
-                        header_cells.append(cell)
-        return header_cells
+                        header = True
+                if not header:
+                    non_header_rows.append(row)
+        return non_header_rows
 
 
 class Page:
