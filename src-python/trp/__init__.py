@@ -8,7 +8,7 @@ logging.getLogger(__name__).addHandler(NullHandler())
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.1.23'
+__version__ = '0.1.24'
 
 ENTITY_TYPE_COLUMN_HEADER = "COLUMN_HEADER"
 
