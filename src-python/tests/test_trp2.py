@@ -459,18 +459,22 @@ def test_link_tables():
 
 def test_pipeline_merge_tables():
     p = os.path.dirname(os.path.realpath(__file__))
-    f = open(os.path.join(p, "data/gib_multi_page_table_merge.json"))
+    f = open(os.path.join(p, "data/gib_multi_tables_multi_page_sample.json"))
     j = json.load(f)
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)
-    tbl_id1 = '5685498d-d196-42a7-8b40-594d6d886ca9'
-    tbl_id2 = 'a9191a66-0d32-4d36-8fd6-58e6917f4ea6'
-    tbl_id3 = 'e0368543-c9c3-4616-bd6c-f25e66c859b2'
+    tbl_id1 = '4894d2ba-0479-4196-9cbd-c0fea4d28762'
+    tbl_id2 = 'b5e061ec-05be-48d5-83fc-6719fdd4397a'
+    tbl_id3 = '8bbc3f4f-0354-4999-a001-4585631bb7fe'
+    tbl_id4 = 'cf8e09a1-c317-40c1-9c45-e830e14167d5'
     pre_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)    # type: ignore
     pre_merge_tbl2_cells_no = len(t_document.get_block_by_id(tbl_id2).relationships[0].ids)    # type: ignore
     pre_merge_tbl3_cells_no = len(t_document.get_block_by_id(tbl_id3).relationships[0].ids)    # type: ignore
+    pre_merge_tbl4_cells_no = len(t_document.get_block_by_id(tbl_id4).relationships[0].ids)    # type: ignore
     t_document = pipeline_merge_tables(t_document, MergeOptions.MERGE, None, HeaderFooterType.NONE)
     post_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)    # type: ignore
-    assert post_merge_tbl1_cells_no == pre_merge_tbl1_cells_no + pre_merge_tbl2_cells_no + pre_merge_tbl3_cells_no
+    post_merge_tbl2_cells_no = len(t_document.get_block_by_id(tbl_id3).relationships[0].ids)    # type: ignore
+    assert post_merge_tbl1_cells_no == pre_merge_tbl1_cells_no + pre_merge_tbl2_cells_no
+    assert post_merge_tbl2_cells_no == pre_merge_tbl3_cells_no + pre_merge_tbl4_cells_no
 
 
 def test_pipeline_merge_multiple_tables():
@@ -513,3 +517,34 @@ def test_kv_ocr_confidence(caplog):
         #     print(
         #         f"{field.key.text} - {field.key.custom['OCRConfidence']}, {field.value.text} - {field.value.custom['OCRConfidence']}"
         #     )
+
+
+def test_table_with_headers_and_merged_cells(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "tables_with_headers_and_merged_cells.json"))
+    j = json.load(f)
+    t_doc: t2.TDocument = t2.TDocumentSchema().load(j)
+    page: t2.TBlock = t_doc.pages[0]
+    tables: t2.TBlock = t_doc.tables(page=page)[0]
+
+
+def test_bla(caplog):
+    import trp as t
+    import json
+    from tabulate import tabulate
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "tables_with_headers_and_merged_cells.json"))
+    # f = open("data/employment-application.json")
+    j = json.load(f)
+    d = Document(j)
+    for p in d.pages:
+        for t in p.tables:
+            table: List[List[str]] = list()
+            for r in t.rows:
+                row: List[str] = list()
+                for c in r.cells:
+                    row.append(c.text)
+                    print(c.rowIndex, c.columnIndex)
+                table.append(row)
+            print(tabulate(table))
