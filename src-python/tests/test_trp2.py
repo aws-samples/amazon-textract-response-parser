@@ -384,8 +384,8 @@ def test_key_value_set_key_name(caplog):
             if child_relationship:
                 for id in child_relationship.ids:
                     k_b = t_document.get_block_by_id(id=id)
-                    print(k_b.text)
-            print(' '.join([x.text for x in t_document.value_for_key(key_value)]))
+            #         print(k_b.text)
+            # print(' '.join([x.text for x in t_document.value_for_key(key_value)]))
 
 
 def test_get_relationships_for_type(caplog):
@@ -545,6 +545,17 @@ def test_bla(caplog):
                 row: List[str] = list()
                 for c in r.cells:
                     row.append(c.text)
-                    print(c.rowIndex, c.columnIndex)
                 table.append(row)
-            print(tabulate(table))
+
+
+def test_add_key_values_new_value_blocks(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/employment-application.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    test_block = t_document.add_virtual_block(text="test", page_block=t_document.pages[0], text_type="VIRTUAL")
+    assert t_document.get_block_by_id(test_block.id)
+    t_document.add_key_values(key_name="new_key", values=[test_block], page_block=t_document.pages[0])
+    assert t_document.get_key_by_name(key_name="new_key")
+    assert len(t_document.get_key_by_name(key_name="new_key")) == 1

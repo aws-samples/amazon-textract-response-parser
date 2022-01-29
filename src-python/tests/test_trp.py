@@ -47,7 +47,8 @@ def test_table_with_headers_and_merged_cells(caplog):
     for page in doc.pages:
         for table in page.tables:
             header = table.header
-    print([word.text for x in header for word in x.content])
+    assert header
+    # print([word.text for x in header for word in x.content])
 
 
 def test_table_with_headers_and_merged_cells_out_of_order_cells(caplog):
