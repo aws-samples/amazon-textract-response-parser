@@ -94,12 +94,6 @@ def ExecuteTableValidations(t_doc: t2.TDocument, header_footer_type: HeaderFoote
     trp_doc = trp.Document(TDocumentSchema().dump(ordered_doc))
 
     for current_page in trp_doc.pages:
-        print()
-        for table in current_page.tables:
-            print()
-            for row in table.rows:
-                for cell in row.cells:
-                    print(cell.rowIndex, cell.columnIndex)
 
         if (page_compare_proc >= len(trp_doc.pages) - 1):
             break
@@ -118,11 +112,11 @@ def ExecuteTableValidations(t_doc: t2.TDocument, header_footer_type: HeaderFoote
                 result3 = __compare_table_dimensions(current_page_table, next_page_table, accuracy_percentage)
                 if (result3):
                     table_ids_to_merge[next_page_table.id] = current_page_table.id
-                    if(table_ids_merge_list):
-                        if(any(merge_pairs[1] == current_page_table.id for merge_pairs in table_ids_merge_list)):
-                            table_ids_merge_list[len(table_ids_merge_list)-1].append(next_page_table.id)
+                    if (table_ids_merge_list):
+                        if (any(merge_pairs[1] == current_page_table.id for merge_pairs in table_ids_merge_list)):
+                            table_ids_merge_list[len(table_ids_merge_list) - 1].append(next_page_table.id)
                         else:
-                            table_ids_merge_list.append([current_page_table.id,next_page_table.id])
+                            table_ids_merge_list.append([current_page_table.id, next_page_table.id])
                     else:
                         table_ids_merge_list.append([current_page_table.id, next_page_table.id])
         page_compare_proc += 1
