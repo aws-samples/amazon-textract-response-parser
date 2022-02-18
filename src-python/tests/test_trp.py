@@ -60,6 +60,7 @@ def test_table_with_headers_and_merged_cells_out_of_order_cells(caplog):
     cells_in_child_order: List[List[int]] = list()
     for page in doc.pages:
         for table in page.tables:
+            assert 30 == len(table.rows)
             for row in table.rows:
                 for cell in row.cells:
                     cells_in_child_order.append([int(cell.rowIndex), int(cell.columnIndex)])

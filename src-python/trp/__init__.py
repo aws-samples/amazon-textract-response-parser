@@ -392,7 +392,7 @@ class Table(BaseBlock):
                         cell = Cell(blockMap[cid], blockMap)
                         cells.append(cell)
                     cells.sort(key=lambda cell: (cell.rowIndex, cell.columnIndex))
-                    for row_index in range(1, max([x.rowIndex for x in cells])):
+                    for row_index in range(1, max([x.rowIndex for x in cells]) + 1):
                         new_row: Row = Row()
                         new_row.cells = [x for x in cells if x.rowIndex == row_index]
                         self._rows.append(new_row)
