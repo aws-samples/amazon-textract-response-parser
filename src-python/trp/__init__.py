@@ -427,8 +427,8 @@ class Table(BaseBlock):
                 for entity_type in cell.entityTypes:
                     if entity_type == ENTITY_TYPE_COLUMN_HEADER:
                         header = True
-                if not header:
-                    non_header_rows.append(row)
+            if not header:
+                non_header_rows.append(row)
         return non_header_rows
 
 
