@@ -4464,6 +4464,11 @@
             },
             {
                 "BlockType": "MERGED_CELL",
+                "Confidence": 91.56806182861328,
+                "RowIndex": 3,
+                "ColumnIndex": 1,
+                "RowSpan": 2,
+                "ColumnSpan": 1,
                 "Geometry": {
                     "BoundingBox": {
                         "Width": 0.7870725989341736,

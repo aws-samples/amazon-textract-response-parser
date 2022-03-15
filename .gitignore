@@ -1,6 +1,9 @@
 .DS_Store
 obj
 
+workspace.code-workspace
+.gitignore
+
 #Python
 __pycache__/
 *.py[cod]
@@ -26,3 +29,7 @@ MANIFEST
 .venv
 .venv/
 .vscode/
+src-python/tests/call_textract_tables.py
+src-python/tests/*.ipynb
+src-python/tests/.ipynb_checkpoints
+.env
