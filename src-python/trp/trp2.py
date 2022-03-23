@@ -540,13 +540,22 @@ class TDocument():
 
     def get_query_answers(self, page: TBlock) -> List[List[str]]:
         result_list: List[List[str]] = list()
+        geo_empty: List[str] = ["0", "0", "0", "0"]
         for query in self.queries(page=page):
             answers = [x for x in self.get_answers_for_query(block=query)]
             if answers:
                 for answer in answers:
-                    result_list.append([query.query.text, query.query.alias, answer.text])
+                    geo = geo_empty
+                    if answer.geometry and answer.geometry.bounding_box:
+                        bb = answer.geometry.bounding_box
+                        geo: List[str] = [str(bb.height), str(bb.left), str(bb.top), str(bb.width)]
+                    base_information = [query.query.text, query.query.alias, answer.text, answer.confidence]
+                    base_information.extend(geo)
+                    result_list.append(base_information)
             else:
-                result_list.append([query.query.text, query.query.alias, ""])
+                base_information = [query.query.text, query.query.alias, ""]
+                base_information.extend(geo_empty)
+                result_list.append(base_information)
         return result_list
 
     def get_blocks_for_relationships(self, relationship: TRelationship = None) -> List[TBlock]:
