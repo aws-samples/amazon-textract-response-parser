@@ -61,6 +61,32 @@ export class BoundingBox<
     );
   }
 
+  /**
+   * Calculate the intersection (if there is one) between two boxes.
+   * @returns A new BoundingBox object with null `parentGeometry`, or null if inputs don't overlap
+   */
+  intersection<T>(other: BoundingBox<T, ApiObjectWrapper<T>>): BoundingBox<T, ApiObjectWrapper<T>> | null {
+    const vIsectTop = Math.max(this.top, other.top);
+    const vIsectBottom = Math.min(this.bottom, other.bottom);
+    const vIsect = Math.max(0, vIsectBottom - vIsectTop);
+    const hIsectLeft = Math.max(this.left, other.left);
+    const hIsectRight = Math.min(this.right, other.right);
+    const hIsect = Math.max(0, hIsectRight - hIsectLeft);
+    if (vIsect > 0 && hIsect > 0) {
+      return new BoundingBox(
+        {
+          Height: vIsectBottom - vIsectTop,
+          Left: hIsectLeft,
+          Top: vIsectTop,
+          Width: hIsectRight - hIsectLeft,
+        },
+        null
+      );
+    } else {
+      return null;
+    }
+  }
+
   str(): string {
     return `width: ${this._dict.Width}, height: ${this._dict.Height}, left: ${this._dict.Left}, top: ${this._dict.Top}`;
   }

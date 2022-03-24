@@ -120,7 +120,7 @@ def pipeline_merge_tables(t_document: t2.TDocument,
                           merge_options: MergeOptions = MergeOptions.MERGE,
                           customer_function: Callable = None,
                           header_footer_type: HeaderFooterType = HeaderFooterType.NONE,
-                          accuracy_percentage: float = 99) -> t2.TDocument:
+                          accuracy_percentage: float = 98) -> t2.TDocument:
     """
     Checks if tables require to be merged using a customer function or built function 
     and merges tables

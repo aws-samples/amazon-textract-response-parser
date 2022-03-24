@@ -16,15 +16,27 @@ Based on the [marshmallow](https://marshmallow.readthedocs.io/en/stable/) framew
 
 #### Deserialize Textract JSON
 ```python
-# j holds the Textract JSON
+# j holds the Textract JSON dict
 from trp.trp2 import TDocument, TDocumentSchema
-t_doc = TDocumentSchema().load(json.loads(j))
+t_doc = TDocumentSchema().load(j)
 ```
 
-#### Serialize Textract
+#### Serialize Textract 
 ```python
 from trp.trp2 import TDocument, TDocumentSchema
 t_doc = TDocumentSchema().dump(t_doc)
+```
+
+#### Deserialize Textract AnalyzeId JSON
+```python
+# j holds the Textract JSON
+from trp.trp2_analyzeid import TAnalyzeIdDocument, TAnalyzeIdDocumentSchema
+t_doc = TAnalyzeIdDocumentSchema().load(json.loads(j))
+```
+#### Serialize Textract AnalyzeId object to JSON
+```python
+from trp.trp2_analyzeid import TAnalyzeIdDocument, TAnalyzeIdDocumentSchema
+t_doc = TAnalyzeIdDocumentSchema().dump(t_doc)
 ```
 
 
@@ -52,7 +64,7 @@ import json
 
 j = call_textract(input_document="path_to_some_document (PDF, JPEG, PNG)", features=[Textract_Features.FORMS, Textract_Features.TABLES])
 # the t_doc will be not ordered
-t_doc = TDocumentSchema().load(json.loads(j))
+t_doc = TDocumentSchema().load(j)
 # the ordered_doc has elements ordered by y-coordinate (top to bottom of page)
 ordered_doc = order_blocks_by_geo(t_doc)
 # send to trp for further processing logic

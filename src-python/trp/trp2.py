@@ -15,6 +15,8 @@ import statistics
 from dataclasses import dataclass, field
 import logging
 
+from trp import Geometry
+
 logger = logging.getLogger(__name__)
 
 
@@ -268,11 +270,14 @@ class TBlock():
         return None
 
     def add_ids_to_relationships(self, ids: List[str], relationships_type: str = "CHILD"):
+        """Only adds id if not already existing"""
         relationship = self.get_relationships_for_type(relationship_type=relationships_type)
         if relationship:
             if not relationship.ids:
                 relationship.ids = list()
-            relationship.ids.extend(ids)
+                relationship.ids.extend(ids)
+            else:
+                relationship.ids.extend(x for x in ids if x not in relationship.ids)
         else:
             # empty, set base
             if not self.relationships:
@@ -368,10 +373,16 @@ class TDocument():
     def __hash__(self):
         return int(self.id)
 
-    def add_block(self, block: TBlock):
+    def add_block(self, block: TBlock, page: TBlock = None):
+        if not block.id:
+            block.id = str(uuid4())
         if not self.blocks:
             self.blocks = list()
-        self.blocks.append(block)
+        if not self.find_block_by_id(block.id):
+            self.blocks.append(block)
+        if not page:
+            page = self.pages[0]
+        page.add_ids_to_relationships(ids=[block.id])
         self.relationships_recursive.cache_clear()
 
     @staticmethod
@@ -394,16 +405,15 @@ class TDocument():
         value_block.confidence = statistics.mean([b.confidence for b in values])
         return value_block
 
-    def create_virtual_block(self, text: str, page_block: TBlock) -> TBlock:
+    def add_virtual_block(self, text: str, page_block: TBlock, text_type="VIRTUAL") -> TBlock:
         tblock = TBlock(id=str(uuid4()),
                         block_type="WORD",
                         text=text,
                         geometry=TGeometry(bounding_box=TBoundingBox(width=0, height=0, left=0, top=0),
                                            polygon=[TPoint(x=0, y=0), TPoint(x=0, y=0)]),
                         confidence=99,
-                        text_type="VIRTUAL")
-        page_block.add_ids_to_relationships([tblock.id])
-        self.add_block(tblock)
+                        text_type=text_type)
+        self.add_block(tblock, page=page_block)
         return tblock
 
     def add_virtual_key_for_existing_key(self, key_name: str, existing_key: TBlock, page_block: TBlock):
@@ -419,7 +429,10 @@ class TDocument():
             raise ValueError("need values and key_name")
         if not values:
             logger.debug(f"add_key_values: empty values for key: {key_name}, will create virtual empty block")
-            values = [self.create_virtual_block(text="", page_block=page_block)]
+            values = [self.add_virtual_block(text="", page_block=page_block)]
+        for value_block in values:
+            if not value_block.id or not self.get_block_by_id(value_block.id):
+                raise ValueError("value blocks to add have to already exist. Use add_word_block for new ones.")
 
         if values[0].page:
             page_block = self.pages[values[0].page - 1]
@@ -427,9 +440,9 @@ class TDocument():
             page_block = self.pages[0]
 
         value_block = TDocument.create_value_block(values=values)
-        self.add_block(value_block)
-        page_block.add_ids_to_relationships([value_block.id])
-        virtual_block = self.create_virtual_block(text=key_name, page_block=page_block)
+        self.add_block(value_block, page=page_block)
+
+        virtual_block = self.add_virtual_block(text=key_name, page_block=page_block)
         id = str(uuid4())
         key_block = TBlock(
             id=id,
@@ -442,7 +455,7 @@ class TDocument():
         key_block.add_ids_to_relationships(relationships_type="VALUE", ids=[value_block.id])
         key_block.add_ids_to_relationships(relationships_type="CHILD", ids=[virtual_block.id])
         logger.debug(f"add key with id: {id} and key_name: {key_name}")
-        self.add_block(key_block)
+        self.add_block(key_block, page=page_block)
 
     def rotate(self, page: TBlock = None, origin: TPoint = TPoint(x=0.5, y=0.5), degrees: float = None) -> None:
         # FIXME: add dimension. the relative scale messes up the new coordinates, have to use the actual image scale
@@ -453,6 +466,12 @@ class TDocument():
             raise ValueError("need degrees to rotate")
         [b.rotate(origin=origin, degrees=degrees) for b in self.relationships_recursive(block=page)]
         self.relationships_recursive.cache_clear()
+
+    def find_block_by_id(self, id: str) -> Optional[TBlock]:
+        for b in self.blocks:
+            if b.id == id:
+                return b
+        return None
 
     def get_block_by_id(self, id: str) -> TBlock:
         for b in self.blocks:
@@ -515,14 +534,16 @@ class TDocument():
                 for b in self.blocks:
                     if block_type_enum and b.block_type == block_type_enum.name:
                         table_list.append(b)
+                    if not block_type_enum:
+                        table_list.append(b)
                 return table_list
             else:
                 return list()
 
-    def forms(self, page: TBlock) -> List[TBlock]:
+    def forms(self, page: TBlock = None) -> List[TBlock]:
         return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.KEY_VALUE_SET)
 
-    def keys(self, page: TBlock) -> List[TBlock]:
+    def keys(self, page: TBlock = None) -> List[TBlock]:
         for key_entities in self.forms(page=page):
             if TextractEntityTypes.KEY.name in key_entities.entity_types:
                 yield key_entities
@@ -557,6 +578,17 @@ class TDocument():
                 base_information.extend(geo_empty)
                 result_list.append(base_information)
         return result_list
+
+    def get_key_by_name(self, key_name: str) -> List[TBlock]:
+        result_blocks: List[TBlock] = list()
+        for key in self.keys():
+            keys_text_blocks = key.get_relationships_for_type()
+            if keys_text_blocks:
+                key_name_text: str = TDocument.get_text_for_tblocks(
+                    [self.get_block_by_id(x) for x in keys_text_blocks.ids])
+                if key_name == key_name_text:
+                    result_blocks.append(key)
+        return result_blocks
 
     def get_blocks_for_relationships(self, relationship: TRelationship = None) -> List[TBlock]:
         all_blocks: List[TBlock] = list()

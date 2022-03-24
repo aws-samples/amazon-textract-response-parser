@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 """Top-level package for amazon-textract-response-parser."""
 import logging
+from typing import List
 from logging import NullHandler
 
 logging.getLogger(__name__).addHandler(NullHandler())
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.1.21'
+__version__ = '0.1.27'
+
+ENTITY_TYPE_COLUMN_HEADER = "COLUMN_HEADER"
 
 
 class BaseBlock():
@@ -311,6 +314,7 @@ class Cell(BaseBlock):
         self._rowSpan = block['RowSpan']
         self._columnSpan = block['ColumnSpan']
         self._content = []
+        self._entityTypes: List[str] = list()
         if ('Relationships' in block and block['Relationships']):
             for rs in block['Relationships']:
                 if (rs['Type'] == 'CHILD'):
@@ -324,6 +328,8 @@ class Cell(BaseBlock):
                             se = SelectionElement(blockMap[cid], blockMap)
                             self._content.append(se)
                             self._text = self._text + se.selectionStatus + ', '
+        if ('EntityTypes' in block and block['EntityTypes']):
+            self._entityTypes = block['EntityTypes']
 
     @property
     def rowIndex(self):
@@ -345,10 +351,15 @@ class Cell(BaseBlock):
     def content(self):
         return self._content
 
+    @property
+    def entityTypes(self):
+        """at the moment for COLUMN_HEADER"""
+        return self._entityTypes
+
 
 class Row:
     def __init__(self):
-        self._cells = []
+        self._cells: List[Cell] = []
 
     def __str__(self):
         s = ""
@@ -360,26 +371,31 @@ class Row:
     def cells(self):
         return self._cells
 
+    @cells.setter
+    def cells(self, cells: List[Cell]):
+        self._cells = cells
+
+    @property
+    def merged_cells(self):
+        return self._cells
+
 
 class Table(BaseBlock):
     def __init__(self, block, blockMap):
         super().__init__(block, blockMap)
-        self._rows = []
-        ri = 1
-        row = Row()
-        cell = None
+        self._rows: List[Row] = []
         if ('Relationships' in block and block['Relationships']):
             for rs in block['Relationships']:
                 if (rs['Type'] == 'CHILD'):
+                    cells: List[Cell] = list()
                     for cid in rs['Ids']:
                         cell = Cell(blockMap[cid], blockMap)
-                        if (cell.rowIndex > ri):
-                            self._rows.append(row)
-                            row = Row()
-                            ri = cell.rowIndex
-                        row.cells.append(cell)
-                    if (row and row.cells):
-                        self._rows.append(row)
+                        cells.append(cell)
+                    cells.sort(key=lambda cell: (cell.rowIndex, cell.columnIndex))
+                    for row_index in range(1, max([x.rowIndex for x in cells]) + 1):
+                        new_row: Row = Row()
+                        new_row.cells = [x for x in cells if x.rowIndex == row_index]
+                        self._rows.append(new_row)
 
     def __str__(self):
         s = "Table\n==========\n"
@@ -389,8 +405,31 @@ class Table(BaseBlock):
         return s
 
     @property
-    def rows(self):
+    def rows(self) -> List[Row]:
         return self._rows
+
+    @property
+    def header(self) -> List[Cell]:
+        header_cells: List[Cell] = list()
+        for row in self.rows:
+            for cell in row.cells:
+                for entity_type in cell.entityTypes:
+                    if entity_type == ENTITY_TYPE_COLUMN_HEADER:
+                        header_cells.append(cell)
+        return header_cells
+
+    @property
+    def rows_without_header(self) -> List[Row]:
+        non_header_rows: List[Row] = list()
+        for row in self.rows:
+            header = False
+            for cell in row.cells:
+                for entity_type in cell.entityTypes:
+                    if entity_type == ENTITY_TYPE_COLUMN_HEADER:
+                        header = True
+                if not header:
+                    non_header_rows.append(row)
+        return non_header_rows
 
 
 class Page:

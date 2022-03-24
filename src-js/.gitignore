@@ -1,3 +1,6 @@
 coverage
 dist
 node_modules
+
+test/data/corpus
+test/data/corpus-readingorder
