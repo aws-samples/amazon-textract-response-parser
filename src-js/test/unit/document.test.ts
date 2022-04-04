@@ -2,6 +2,8 @@ import { ApiBlockType, ApiResponsePage, ApiResponsePages } from "../../src/api-m
 import { Line, TextractDocument, Word } from "../../src/document";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
+const testTableMergedCellsJson: ApiResponsePage = require("../data/table-example-response.json");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const testFailedJson: ApiResponsePage = require("../data/test-failed-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testInProgressJson: ApiResponsePage = require("../data/test-inprogress-response.json");
@@ -242,29 +244,59 @@ describe("TextractDocument", () => {
 
     expect(table.cellAt(2, 2)?.text).toMatch("End Date");
     expect(table.cellAt(3, 2)?.text).toMatch("6/30/2011");
-    // Strict mode:
+    // Explicitly ignoring merged cells:
     expect(table.cellAt(2, 2, true)?.text).toMatch("End Date");
     expect(table.cellAt(3, 2, true)?.text).toMatch("6/30/2011");
   });
 
-  it("fetches table row cells by index", () => {
-    const doc = new TextractDocument(testResponseJson);
+  it("indexes merged cells by row and column", () => {
+    const doc = new TextractDocument(testTableMergedCellsJson);
+    expect(doc.pageNumber(1).nTables).toStrictEqual(1);
 
-    const table = [...doc.pageNumber(1).iterTables()][0];
+    const table = doc.pageNumber(1).listTables()[0];
 
-    expect(table.cellsAt(2, null).length).toStrictEqual(5);
-    // Strict mode:
-    expect(table.cellsAt(2, null, true).length).toStrictEqual(5);
+    // Horizontal merge:
+    expect(table.cellAt(2, 1)?.text).toMatch("Previous Balance");
+    expect(table.cellAt(2, 4)?.text).toMatch("Previous Balance");
+    expect(table.cellAt(2, 4, true)?.text).toStrictEqual("");
+    // Merged cell contents equals sum of split cell contents:
+    const mergedContents = table.cellAt(2, 1)?.listContent();
+    const splitContents = [1, 2, 3, 4].map((ixCol) => table.cellAt(2, ixCol, true)?.listContent()).flat();
+    expect(mergedContents.map((c) => c.id)).toStrictEqual(splitContents.map((c) => c.id));
+    // Vertical merge:
+    expect(table.cellAt(3, 1)?.text).toMatch("2022-01-01");
+    expect(table.cellAt(4, 1)?.text).toMatch("2022-01-01");
+    expect(table.cellAt(3, 1, true)?.text).toStrictEqual("");
   });
 
-  it("fetches column cells by index", () => {
-    const doc = new TextractDocument(testResponseJson);
+  it("fetches table row cells by index", () => {
+    const doc = new TextractDocument(testTableMergedCellsJson);
+    const table = doc.pageNumber(1).listTables()[0];
 
-    const table = [...doc.pageNumber(1).iterTables()][0];
+    // No merges:
+    expect(table.cellsAt(1, null).length).toStrictEqual(5);
+    expect(table.cellsAt(1, null, true).length).toStrictEqual(5);
+    // Merges in row, no merges across rows:
+    expect(table.cellsAt(2, null).length).toStrictEqual(2);
+    expect(table.cellsAt(2, null, true).length).toStrictEqual(5);
+    // Includes cells merged across rows:
+    expect(table.cellsAt(3, null).length).toStrictEqual(5);
+    expect(table.cellsAt(3, null, true).length).toStrictEqual(5);
+  });
 
-    expect(table.cellsAt(null, 2).length).toStrictEqual(5);
-    // Strict mode:
-    expect(table.cellsAt(null, 2, true).length).toStrictEqual(5);
+  it("fetches table column cells by index", () => {
+    const doc = new TextractDocument(testTableMergedCellsJson);
+    const table = doc.pageNumber(1).listTables()[0];
+
+    // No merges:
+    expect(table.cellsAt(null, 5).length).toStrictEqual(6);
+    expect(table.cellsAt(null, 5, true).length).toStrictEqual(6);
+    // Cross-column merges:
+    expect(table.cellsAt(null, 4).length).toStrictEqual(6);
+    expect(table.cellsAt(null, 4, true).length).toStrictEqual(6);
+    // Cross-column and in-column merges:
+    expect(table.cellsAt(null, 1).length).toStrictEqual(5);
+    expect(table.cellsAt(null, 1, true).length).toStrictEqual(6);
   });
 
   it("iterates table rows", () => {
@@ -274,12 +306,29 @@ describe("TextractDocument", () => {
     const tableRows = table.listRows();
     expect(tableRows.length).toStrictEqual(table.nRows);
     let nRows = 0;
-    for (const row of table.iterRows(false)) {
+    for (const row of table.iterRows()) {
       ++nRows;
       expect(row.parentTable).toBe(table);
     }
     expect(nRows).toStrictEqual(table.nRows);
     expect(nRows).toStrictEqual(5);
+  });
+
+  it("iterates table rows with cross-row merged cell repetition", () => {
+    const doc = new TextractDocument(testTableMergedCellsJson);
+    // Row 3 or 4 will be one cell short if a cross-row merged cell is not repeated:
+    const expectedCellsPerRow = [5, 2, 5, 5, 5, 2];
+
+    const table = doc.pageNumber(1).tableAtIndex(0);
+    const tableRows = table.listRows();
+    expect(tableRows.length).toStrictEqual(table.nRows);
+    let nRows = 0;
+    for (const row of table.iterRows(true)) {
+      expect(row.nCells).toStrictEqual(expectedCellsPerRow[nRows]);
+      ++nRows;
+    }
+    expect(nRows).toStrictEqual(table.nRows);
+    expect(nRows).toStrictEqual(6);
   });
 
   it("lists table rows", () => {
@@ -290,17 +339,18 @@ describe("TextractDocument", () => {
   });
 
   it("navigates table row cells", () => {
-    const doc = new TextractDocument(testResponseJson);
-
+    const doc = new TextractDocument(testTableMergedCellsJson);
     const table = doc.pageNumber(1).tableAtIndex(0);
+    const expectedRowLengths = [5, 2, 5, 4, 5, 2];
     let nCellsTotal = 0;
     let nRows = 0;
     let targetCellFound = false;
     for (const row of table.iterRows(false)) {
       const rowCells = row.listCells();
+      expect(rowCells.length).toStrictEqual(expectedRowLengths[nRows]);
       let nCells = 0;
       ++nRows;
-      const indexedCells = table.cellsAt(nRows, null, true);
+      const indexedCells = table.cellsAt(nRows, null).filter((c) => (c.rowIndex === nRows));
       expect(rowCells.length).toStrictEqual(indexedCells.length);
       for (const cell of row.iterCells()) {
         ++nCells;
@@ -311,21 +361,21 @@ describe("TextractDocument", () => {
         expect(cell.confidence).toBeLessThanOrEqual(100);
         expect(cell.geometry.parentObject).toBe(cell);
         expect(cell.str()).toStrictEqual(cell.text);
-        if (nRows === 2 && nCells === 4) {
-          expect(cell.text).toMatch("Position Held");
+        if (nRows === 4 && nCells === 1) {
+          expect(cell.text).toMatch("Payment - Utility");
           expect(
             cell
               .listContent()
               .filter((c) => c.blockType === ApiBlockType.Word)
               .map((w) => (w as Word).text)
               .join(" ")
-          ).toMatch("Position Held");
+          ).toMatch("Payment - Utility");
           targetCellFound = true;
         }
       }
       expect(nCells).toStrictEqual(row.nCells);
     }
-    expect(nCellsTotal).toStrictEqual(25);
+    expect(nCellsTotal).toStrictEqual(expectedRowLengths.reduce((acc, next) => acc + next, 0));
     expect(targetCellFound).toStrictEqual(true);
   });
 

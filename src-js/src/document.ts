@@ -10,6 +10,7 @@ import {
   ApiKeyValueEntityType,
   ApiKeyValueSetBlock,
   ApiLineBlock,
+  ApiMergedCellBlock,
   ApiPageBlock,
   ApiRelationshipType,
   ApiSelectionElementBlock,
@@ -452,40 +453,17 @@ export class Form {
   }
 }
 
-export class Cell extends ApiBlockWrapper<ApiCellBlock> {
-  _geometry: Geometry<ApiCellBlock, Cell>;
-  _content: Array<SelectionElement | Word>;
+/**
+ * Base for a table cell, which may be merged or not.
+ */
+export abstract class CellBase<T extends ApiCellBlock | ApiMergedCellBlock> extends ApiBlockWrapper<T> {
+  _geometry: Geometry<T, CellBase<T>>;
   _parentTable: Table;
-  _text: string;
 
-  constructor(block: ApiCellBlock, parentTable: Table) {
+  constructor(block: T, parentTable: Table) {
     super(block);
-    const parentDocument = parentTable.parentPage.parentDocument;
     this._geometry = new Geometry(block.Geometry, this);
-    this._content = [];
     this._parentTable = parentTable;
-    this._text = "";
-    (block.Relationships || []).forEach((rs) => {
-      if (rs.Type == ApiRelationshipType.Child) {
-        rs.Ids.forEach((cid) => {
-          const childBlock = parentDocument.getBlockById(cid);
-          if (!childBlock) {
-            console.warn(`Document missing child block ${cid} referenced by table cell ${this.id}`);
-            return;
-          }
-          const blockType = childBlock.BlockType;
-          if (blockType == ApiBlockType.Word) {
-            const w = new Word(childBlock as ApiWordBlock);
-            this._content.push(w);
-            this._text += w.text + " ";
-          } else if (blockType == ApiBlockType.SelectionElement) {
-            const se = new SelectionElement(childBlock as ApiSelectionElementBlock);
-            this._content.push(se);
-            this._text += se.selectionStatus + ", ";
-          }
-        });
-      }
-    });
   }
 
   get columnIndex(): number {
@@ -500,9 +478,10 @@ export class Cell extends ApiBlockWrapper<ApiCellBlock> {
   set confidence(newVal: number) {
     this._dict.Confidence = newVal;
   }
-  get geometry(): Geometry<ApiCellBlock, Cell> {
+  get geometry(): Geometry<T, CellBase<T>> {
     return this._geometry;
   }
+
   get parentTable(): Table {
     return this._parentTable;
   }
@@ -512,6 +491,49 @@ export class Cell extends ApiBlockWrapper<ApiCellBlock> {
   get rowSpan(): number {
     return this._dict.RowSpan || 1;
   }
+
+  abstract get text(): string;
+  abstract listContent(): Array<SelectionElement | Word>;
+  abstract str(): string;
+}
+
+/**
+ * A non-merged table cell (or sub-cell of a merged cell)
+ */
+export class Cell extends CellBase<ApiCellBlock> {
+  _content: Array<SelectionElement | Word>;
+  _text: string;
+
+  constructor(block: ApiCellBlock, parentTable: Table) {
+    super(block, parentTable);
+    const parentDocument = parentTable.parentPage.parentDocument;
+    this._geometry = new Geometry(block.Geometry, this);
+    this._content = [];
+    const texts: string[] = [];
+    (block.Relationships || []).forEach((rs) => {
+      if (rs.Type == ApiRelationshipType.Child) {
+        rs.Ids.forEach((cid) => {
+          const childBlock = parentDocument.getBlockById(cid);
+          if (!childBlock) {
+            console.warn(`Document missing child block ${cid} referenced by table cell ${this.id}`);
+            return;
+          }
+          const blockType = childBlock.BlockType;
+          if (blockType == ApiBlockType.Word) {
+            const w = new Word(childBlock as ApiWordBlock);
+            this._content.push(w);
+            texts.push(w.text);
+          } else if (blockType == ApiBlockType.SelectionElement) {
+            const se = new SelectionElement(childBlock as ApiSelectionElementBlock);
+            this._content.push(se);
+            texts.push(se.selectionStatus + ",");
+          }
+        });
+      }
+    });
+    this._text = texts.join(" ");
+  }
+
   get text(): string {
     return this._text;
   }
@@ -519,16 +541,48 @@ export class Cell extends ApiBlockWrapper<ApiCellBlock> {
   listContent(): Array<SelectionElement | Word> {
     return this._content.slice();
   }
+
   str(): string {
     return this._text;
   }
 }
 
-export class Row {
+/**
+ * A merged table cell (Spanning more than one row or column of the table)
+ */
+export class MergedCell extends CellBase<ApiMergedCellBlock> {
   _cells: Cell[];
+
+  constructor(block: ApiMergedCellBlock, parentTable: Table) {
+    super(block, parentTable);
+
+    let cells: Cell[] = [];
+    (block.Relationships || []).forEach((rs) => {
+      if (rs.Type == ApiRelationshipType.Child) {
+        cells = cells.concat(rs.Ids.map((cid) => parentTable._getSplitCellByBlockId(cid)));
+      }
+    });
+    this._cells = cells;
+  }
+
+  get text(): string {
+    return this._cells.map((c) => c.text).join(" ");
+  }
+
+  listContent(): Array<SelectionElement | Word> {
+    return ([] as Array<SelectionElement | Word>).concat(...this._cells.map((c) => c.listContent()));
+  }
+
+  str(): string {
+    return this.text;
+  }
+}
+
+export class Row {
+  _cells: Array<Cell | MergedCell>;
   _parentTable: Table;
 
-  constructor(cells: Cell[] = [], parentTable: Table) {
+  constructor(cells: Array<Cell | MergedCell> = [], parentTable: Table) {
     this._cells = cells;
     this._parentTable = parentTable;
   }
@@ -551,11 +605,11 @@ export class Row {
    *   (cell) => console.log(cell.text)
    * );
    */
-  iterCells(): Iterable<Cell> {
+  iterCells(): Iterable<Cell | MergedCell> {
     return getIterable(() => this._cells);
   }
 
-  listCells(): Cell[] {
+  listCells(): Array<Cell | MergedCell> {
     return this._cells.slice();
   }
 
@@ -566,6 +620,8 @@ export class Row {
 
 export class Table extends ApiBlockWrapper<ApiTableBlock> {
   _cells: Cell[];
+  _cellsById: { [id: string]: Cell };
+  _mergedCells: MergedCell[];
   _geometry: Geometry<ApiTableBlock, Table>;
   _nCols: number;
   _nRows: number;
@@ -585,7 +641,7 @@ export class Table extends ApiBlockWrapper<ApiTableBlock> {
             rs.Ids.map((cid) => {
               const cellBlock = parentDocument.getBlockById(cid);
               if (!cellBlock) {
-                console.warn(`Document missing child block ${cid} referenced by table cell ${this.id}`);
+                console.warn(`Document missing child block ${cid} referenced by TABLE ${this.id}`);
                 return;
               }
               return new Cell(cellBlock as ApiCellBlock, this);
@@ -593,30 +649,92 @@ export class Table extends ApiBlockWrapper<ApiTableBlock> {
         )
     );
 
+    this._sortCellsByLocation(this._cells);
     // This indexing could be moved to a utility function if supporting more mutation operations in future:
-    this._cells.sort((a, b) => a.rowIndex - b.rowIndex || a.columnIndex - b.columnIndex);
     this._nCols = this._cells.reduce((acc, next) => Math.max(acc, next.columnIndex + next.columnSpan - 1), 0);
     this._nRows = this._cells.reduce((acc, next) => Math.max(acc, next.rowIndex + next.rowSpan - 1), 0);
+
+    this._cellsById = {};
+    this._updateCellsById();
+    this._mergedCells = ([] as MergedCell[]).concat(
+      ...(block.Relationships || [])
+        .filter((rs) => rs.Type == ApiRelationshipType.MergedCell)
+        .map(
+          (rs) =>
+            rs.Ids.map((cid) => {
+              const cellBlock = parentDocument.getBlockById(cid);
+              if (!cellBlock) {
+                console.warn(`Document missing merged cell block ${cid} referenced by TABLE ${this.id}`);
+                return;
+              }
+              return new MergedCell(cellBlock as ApiMergedCellBlock, this);
+            }).filter((cell) => cell) as MergedCell[]
+        )
+    );
+  }
+
+  /**
+   * Sort an array of table cells by position (row, column) in-place
+   * @param cells Array of (merged or raw) cells
+   */
+  _sortCellsByLocation<T extends Cell | MergedCell>(cells: Array<T>): void {
+    cells.sort((a, b) => a.rowIndex - b.rowIndex || a.columnIndex - b.columnIndex);
+  }
+
+  /**
+   * Update this Table instance's map of (split) Cells by ID for efficient retrieval
+   */
+  _updateCellsById(): void {
+    this._cellsById = this._cells.reduce((acc, next) => {
+      acc[next.id] = next;
+      return acc;
+    }, {} as { [id: string]: Cell });
+  }
+
+  /**
+   * Efficiently retrieve a (split) Cell in this table by Textract block ID
+   * 
+   * This allows MergedCell objects to retrieve references to parsed Cells they wrap, instead of raw
+   * ApiCellBlocks.
+   * @throws (Rather than returning undefined) if the block ID is missing from the table.
+   */
+  _getSplitCellByBlockId(id: string): Cell {
+    let result: Cell = this._cellsById[id];
+    if (result) {
+      return result;
+    } else {
+      this._updateCellsById();
+      result = this._cellsById[id];
+      if (!result) {
+        throw new Error(`Referenced cell ID ${id} missing from TABLE ${this.id}`);
+      }
+
+      return result;
+    }
   }
 
   /**
    * Get the Cell at a particular Y, X coordinate in the table.
    * @param rowIndex 1-based index of the target row in the table
    * @param columnIndex 1-based index of the target column in the table
-   * @param strict Set `true` to exclude cells rowspan/colspan cells which don't *start* at the target indices.
+   * @param ignoreMerged Set `true` to ignore merged cells (returning specific sub-cells)
    * @returns Cell at the specified row & column, or undefined if none is present.
    */
-  cellAt(rowIndex: number, columnIndex: number, strict = false): Cell | undefined {
-    if (strict) {
-      return this._cells.find((c) => c.columnIndex === columnIndex && c.rowIndex === rowIndex);
-    } else {
-      return this._cells.find(
+  cellAt(rowIndex: number, columnIndex: number, ignoreMerged = false): Cell | MergedCell | undefined {
+    const mergedResult =
+      !ignoreMerged &&
+      this._mergedCells.find(
         (c) =>
           c.columnIndex <= columnIndex &&
           c.columnIndex + c.columnSpan > columnIndex &&
           c.rowIndex <= rowIndex &&
           c.rowIndex + c.rowSpan > rowIndex
       );
+    if (mergedResult) {
+      return mergedResult;
+    } else {
+      // Non-merged cells cannot have rowSpan/columnSpan > 1 anyway:
+      return this._cells.find((c) => c.columnIndex === columnIndex && c.rowIndex === rowIndex);
     }
   }
 
@@ -624,19 +742,37 @@ export class Table extends ApiBlockWrapper<ApiTableBlock> {
    * List the cells at a particular {row, column, or combination} in the table
    * @param rowIndex 1-based index of the target row in the table
    * @param columnIndex 1-based index of the target column in the table
-   * @param strict Set `true` to exclude cells rowspan/colspan cells which don't *start* at the target indices.
+   * @param ignoreMerged Set `true` to ignore merged cells (returning specific sub-cells)
    * @returns Cell at the specified row & column, or undefined if none is present.
    */
-  cellsAt(rowIndex: number | null, columnIndex: number | null, strict = false): Cell[] {
-    return this._cells.filter(
+  cellsAt(
+    rowIndex: number | null,
+    columnIndex: number | null,
+    ignoreMerged = false
+  ): Array<Cell | MergedCell> {
+    const mergedCells = ignoreMerged
+      ? []
+      : this._mergedCells.filter(
+          (c) =>
+            (rowIndex == null || (c.rowIndex <= rowIndex && c.rowIndex + c.rowSpan > rowIndex)) &&
+            (columnIndex == null ||
+              (c.columnIndex <= columnIndex && c.columnIndex + c.columnSpan > columnIndex))
+        );
+    const mergedCellChildIds = mergedCells.reduce((acc, next) => {
+      next._cells.forEach((c) => {
+        acc[c.id] = true;
+      });
+      return acc;
+    }, {} as { [id: string]: true });
+    const rawCells = this._cells.filter(
       (c) =>
-        (rowIndex == null ||
-          (strict ? c.rowIndex === rowIndex : c.rowIndex <= rowIndex && c.rowIndex + c.rowSpan > rowIndex)) &&
-        (columnIndex == null ||
-          (strict
-            ? c.columnIndex === columnIndex
-            : c.columnIndex <= columnIndex && c.columnIndex + c.columnSpan > columnIndex))
+        (rowIndex == null || c.rowIndex === rowIndex) &&
+        (columnIndex == null || c.columnIndex === columnIndex) &&
+        !(c.id in mergedCellChildIds)
     );
+    const result = (mergedCells as Array<Cell | MergedCell>).concat(rawCells);
+    this._sortCellsByLocation(result);
+    return result;
   }
 
   /**
@@ -660,15 +796,17 @@ export class Table extends ApiBlockWrapper<ApiTableBlock> {
       let ixRow = 0;
       return {
         next: (): IteratorResult<Row> => {
-          return ixRow < this._nRows
-            ? {
-                done: false,
-                value: new Row(this.cellsAt(++ixRow, null, !repeatMultiRowCells), this),
-              }
-            : {
-                done: true,
-                value: undefined,
-              };
+          if (ixRow < this._nRows) {
+            return {
+              done: false,
+              value: this.rowAt(++ixRow, repeatMultiRowCells),
+            };
+          } else {
+            return {
+              done: true,
+              value: undefined,
+            };
+          }
         },
       };
     };
@@ -682,8 +820,19 @@ export class Table extends ApiBlockWrapper<ApiTableBlock> {
    * @param repeatMultiRowCells Set `true` to include rowspan>1 cells in every `Row` they intersect with.
    */
   listRows(repeatMultiRowCells = false): Row[] {
-    return [...Array(this._nRows).keys()].map(
-      (ixRow) => new Row(this.cellsAt(++ixRow, null, !repeatMultiRowCells), this)
+    return [...Array(this._nRows).keys()].map((ixRow) => this.rowAt(ixRow + 1, repeatMultiRowCells));
+  }
+
+  /**
+   * List the cells at a particular {row, column, or combination} in the table
+   * @param rowIndex 1-based index of the target row in the table
+   * @param repeatMultiRowCells Set `true` to include rowspan>1 cells in every `Row` they intersect with.
+   */
+  rowAt(rowIndex: number, repeatMultiRowCells = false): Row {
+    const allRowCells = this.cellsAt(rowIndex, null);
+    return new Row(
+      repeatMultiRowCells ? allRowCells : allRowCells.filter((c) => c.rowIndex === rowIndex),
+      this
     );
   }
 
