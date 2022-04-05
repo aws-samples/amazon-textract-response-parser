@@ -4,7 +4,7 @@
 
 // Local Dependencies:
 import { ApiBlockType, ApiKeyValueSetBlock, ApiRelationshipType } from "./api-models/document";
-import { ApiBlockWrapper, getIterable, WithParentDocBlocks } from "./base";
+import { ApiBlockWrapper, getIterable, IDocBlocks, WithParentDocBlocks } from "./base";
 import { SelectionElement, Word, WithWords } from "./content";
 import { Geometry } from "./geometry";
 
@@ -198,6 +198,9 @@ export class FieldGeneric<TPage extends WithParentDocBlocks> {
   get parentForm(): FormGeneric<TPage> {
     return this._parentForm;
   }
+  get parentPage(): TPage {
+    return this._parentForm.parentPage;
+  }
   get value(): FieldValueGeneric<TPage> | null {
     return this._value;
   }
@@ -210,7 +213,7 @@ export class FieldGeneric<TPage extends WithParentDocBlocks> {
 }
 
 /**
- * Generic base class for a Form, as the parent Page is not defined here.
+ * Generic class for a Form, as the parent Page is not defined here.
  *
  * If you're consuming this library, you probably just want to use `document.ts/Form`.
  */
@@ -284,5 +287,78 @@ export class FormGeneric<TPage extends WithParentDocBlocks> {
 
   str(): string {
     return this._fields.map((f) => f.str()).join("\n");
+  }
+}
+
+/**
+ * Generic base class for a composite of multiple Forms, as Page and TextractDocument are not defined here.
+ *
+ * If you're consuming this library, you probably just want to use `document.ts/FormsComposite`.
+ *
+ * While a Form is associated with a particular page, the FormsComposite class exposes a similar interface
+ * for querying detected fields across all pages of the document at once. In general, results are analyzed
+ * and presented in page order.
+ */
+export class FormsCompositeGeneric<TPage extends WithParentDocBlocks, TDocument extends IDocBlocks> {
+  _forms: FormGeneric<TPage>[];
+  _parentDocument: TDocument;
+
+  constructor(forms: FormGeneric<TPage>[], parentDocument: TDocument) {
+    this._forms = forms;
+    this._parentDocument = parentDocument;
+  }
+
+  get nFields(): number {
+    return this._forms.reduce((acc, next) => acc + next.nFields, 0);
+  }
+  get parentDocument(): TDocument {
+    return this._parentDocument;
+  }
+
+  getFieldByKey(key: string): FieldGeneric<TPage> | null {
+    for (const form of this._forms) {
+      const result = form.getFieldByKey(key);
+      if (result) return result;
+    }
+    return null;
+  }
+
+  /**
+   * Iterate through the Fields in all Forms.
+   * @param skipFieldsWithoutKey Set `true` to skip fields with no field.key (Included by default)
+   * @example
+   * for (const field of form.iterFields()) {
+   *   console.log(field?.key.text);
+   * }
+   * @example
+   * const fields = [...form.iterFields()];
+   */
+  iterFields(skipFieldsWithoutKey = false): Iterable<FieldGeneric<TPage>> {
+    return getIterable(() => this.listFields(skipFieldsWithoutKey));
+  }
+
+  /**
+   * List the Fields in all Forms.
+   * @param skipFieldsWithoutKey Set `true` to skip fields with no field.key (Included by default)
+   */
+  listFields(skipFieldsWithoutKey = false): FieldGeneric<TPage>[] {
+    const allFields = ([] as FieldGeneric<TPage>[]).concat(...this._forms.map((form) => form.listFields()));
+    if (skipFieldsWithoutKey) {
+      return allFields.filter((f) => f.key);
+    } else {
+      return allFields;
+    }
+  }
+
+  /**
+   * List the Fields in the Form with key text containing (case-insensitive) `key`
+   * @param key The text to search for in field keys
+   */
+  searchFieldsByKey(key: string): FieldGeneric<TPage>[] {
+    return ([] as FieldGeneric<TPage>[]).concat(...this._forms.map((f) => f.searchFieldsByKey(key)));
+  }
+
+  str(): string {
+    return this._forms.map((f) => f.str()).join("\n");
   }
 }

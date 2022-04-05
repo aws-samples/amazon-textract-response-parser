@@ -29,7 +29,7 @@ import {
   WithParentDocBlocks,
 } from "./base";
 import { LineGeneric } from "./content";
-import { FieldGeneric, FieldKeyGeneric, FieldValueGeneric, FormGeneric } from "./form";
+import { FieldGeneric, FieldKeyGeneric, FieldValueGeneric, FormsCompositeGeneric, FormGeneric } from "./form";
 import { BoundingBox, Geometry } from "./geometry";
 import { CellBaseGeneric, CellGeneric, MergedCellGeneric, RowGeneric, TableGeneric } from "./table";
 
@@ -793,6 +793,18 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
   get nTables(): number {
     return this._tables.length;
   }
+
+  /**
+   * 1-based page number of this Page in the parent TextractDocument
+   */
+  get pageNumber(): number {
+    const pageIndex = this._parentDocument._pages.indexOf(this);
+    if (pageIndex < 0) {
+      throw new Error("parentDocument does not seem to contain this Page");
+    } else {
+      return pageIndex + 1;
+    }
+  }
   get parentDocument(): TextractDocument {
     return this._parentDocument;
   }
@@ -828,6 +840,7 @@ export class TextractDocument
   implements IDocBlocks
 {
   _blockMap: { [blockId: string]: ApiBlock };
+  _form: FormsCompositeGeneric<Page, TextractDocument>;
   _pages: Page[];
 
   /**
@@ -851,6 +864,7 @@ export class TextractDocument
 
     this._blockMap = {};
     this._pages = [];
+    this._form = new FormsCompositeGeneric([], this);
     this._parse();
   }
 
@@ -877,6 +891,11 @@ export class TextractDocument
     if (currentPageBlock) {
       this._pages.push(new Page(currentPageBlock, currentPageContent, this));
     }
+
+    this._form = new FormsCompositeGeneric(
+      this._pages.map((p) => p.form),
+      this
+    );
   }
 
   static _consolidateMultipleResponses(
@@ -978,6 +997,10 @@ export class TextractDocument
     };
   }
 
+  get form(): FormsComposite {
+    return this._form;
+  }
+
   get nPages(): number {
     return this._pages.length;
   }
@@ -1018,3 +1041,5 @@ export class TextractDocument
     return `\nDocument\n==========\n${this._pages.map((p) => p.str()).join("\n\n")}\n\n`;
   }
 }
+
+export class FormsComposite extends FormsCompositeGeneric<Page, TextractDocument> {}

@@ -109,19 +109,28 @@ These arrays are in the raw order returned by Amazon Textract, which is not nece
 
 ## Forms
 
-As well as looping through the [form data key-value pairs](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html) on a page, you can query fields by key:
+As well as looping through the [form data key-value pairs](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html) in the document, you can query fields by key:
 
 ```typescript
-const page = doc.pageNumber(1);
-console.log(page.form.nFields);
-const fields = page.form.listFields();
+console.log(doc.form.nFields);
+const fields = doc.form.listFields();
 
 // Exact match:
-const addr = page.form.getFieldByKey("Address").value?.text;
+const addr = doc.form.getFieldByKey("Address").value?.text;
 
 // Search key containing (case-insensitive):
-const addresses = page.form.searchFieldsByKey("address");
+const addresses = doc.form.searchFieldsByKey("address");
 addresses.forEach((addrField) => { console.log(addrField.key.text); });
+```
+
+You can also search form keys at the individual page level, or look up the page number for detected fields:
+
+```typescript
+const fieldByDoc = doc.form.getFieldByKey("Address");
+console.log(`Detected Address on page ${fieldByDoc.parentPage.pageNumber}`);
+
+const page = doc.pageNumber(1);
+const fieldByPage = page.form.getFieldByKey("Address");
 ```
 
 ## Tables
