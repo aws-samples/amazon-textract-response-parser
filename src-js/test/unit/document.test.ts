@@ -1,8 +1,6 @@
 import { ApiBlockType, ApiResponsePage, ApiResponsePages } from "../../src/api-models";
-import { Line, TextractDocument, Word } from "../../src/document";
+import { Line, TextractDocument } from "../../src/document";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const testTableMergedCellsJson: ApiResponsePage = require("../data/table-example-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testFailedJson: ApiResponsePage = require("../data/test-failed-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires

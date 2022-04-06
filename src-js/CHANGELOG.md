@@ -2,6 +2,7 @@
 
 ## Unreleased
 ### Added
+- Initial support for Amazon Textract [identity document APIs](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-identity.html).
 - Document-level Form field access and querying via `TextractDocument.form` in addition to `Page.form`.
 - `Page.pageNumber` to find and return 1-based index of the current page in the parent document.
 - New ES (esnext) module output in `dist/es` and `module` hint in package.json to encourage compatible tools to use this output.

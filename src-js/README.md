@@ -17,7 +17,7 @@ $ npm install amazon-textract-response-parser
 
 ```js
 import { TextractDocument, TextractExpense } from "amazon-textract-response-parser";
-const { TextractDocument, TextractExpense } = require("amazon-textract-response-parser");
+const { TextractDocument, TextractIdentity } = require("amazon-textract-response-parser");
 ```
 
 ...Or link directly in the browser - for example via the [unpkg CDN](https://unpkg.com/):
@@ -40,7 +40,7 @@ At a low level, the distribution of this library provides multiple builds:
 
 ## Loading data
 
-Initialize a `TextractDocument` (or `TextractExpense`) by providing the parsed response JSON object from [Amazon Textract APIs](https://docs.aws.amazon.com/textract/latest/dg/API_Reference.html) such as [AnalyzeExpense](https://docs.aws.amazon.com/textract/latest/dg/API_AnalyzeExpense.html) or [GetDocumentAnalysis](https://docs.aws.amazon.com/textract/latest/dg/API_GetDocumentAnalysis.html). Providing a list of response objects is also supported (for use when a large Amazon Textract response was split/paginated).
+Initialize a `TextractDocument` (or `TextractExpense`, `TextractIdentity`) by providing the parsed response JSON object from the corresponding [Amazon Textract APIs](https://docs.aws.amazon.com/textract/latest/dg/API_Reference.html) such as [GetDocumentAnalysis](https://docs.aws.amazon.com/textract/latest/dg/API_GetDocumentAnalysis.html), [AnalyzeID](https://docs.aws.amazon.com/textract/latest/dg/API_AnalyzeID.html), or [AnalyzeExpense](https://docs.aws.amazon.com/textract/latest/dg/API_AnalyzeExpense.html). In most cases, providing an **array** of response objects is also supported (for use when a large Amazon Textract response was split/paginated).
 
 For example, loading a response JSON from file in NodeJS:
 
@@ -71,7 +71,7 @@ async function main() {
 }
 ```
 
-With your data loaded in to a TRP `TextractDocument` or `TextractExpense`, you're ready to take advantage of the higher-level TRP.js functions to navigate and analyze the result.
+With your data loaded in to a TRP `TextractDocument` or similar, you're ready to take advantage of the higher-level TRP.js functions to navigate and analyze the result.
 
 
 ## Generic document text navigation
@@ -245,6 +245,52 @@ const vendorNameFields = expenseDoc.searchSummaryFieldsByType("VENDOR_NAME");
 console.log(`Found ${vendorNameFields.length} vendor name fields in doc summary`);
 console.log(vendorNameFields[0].fieldType.text); // "VENDOR_NAME"
 console.log(vendorNameFields[0].value.text); // e.g. "Amazon.com"
+```
+
+
+## Identity document objects
+
+Similarly to expenses mentioned above, Amazon Textract offers specific APIs for [identity document analysis](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-identity.html). You can use the separate `TextractIdentity` class in this library to process these.
+
+```typescript
+import { ApiAnalyzeIdResponse, TextractIdentity } from "amazon-textract-response-parser";
+import { TextractClient, AnalyzeIDCommand } from "@aws-sdk/client-textract";
+const textract = new TextractClient({});
+
+async function main() {
+  const textractResponse = await textract.send(
+    new AnalyzeIDCommand({
+      Document: { Bytes: await fs.readFile("...") },
+    })
+  );
+  const identity = new TextractIdentity((textractResponse as unknown) as ApiAnalyzeIdResponse);
+}
+```
+
+The library implements some enumerations of known values (for field types, ID types, and so on) to make processing AnalyzeID responses a little simpler:
+
+```typescript
+import { IdDocumentType, IdFieldType } from "amazon-textract-response-parser";
+
+const idDoc = identity.getDocAtIndex(0); // (Or iterate, list docs in a result)
+
+if (idDoc.idType === IdDocumentType.Passport) {
+  // Fetch fields by known type:
+  const passNumField = idDoc.getFieldByType(IdFieldType.DocumentNumber);
+  console.log(
+    `Passport number ${passNumField.value}, confidence ${passNumField.valueConfidence}%`
+  );
+
+} else if (idDoc.idType === IdDocumentType.DrivingLicense) {
+  // ...Or list or iterate the document's fields:
+  for (const field of idDoc.iterFields()) {
+    console.log(`${field.fieldTypeRaw}: ${field.valueRaw}`);
+  }
+
+} else {
+  // Produce human-readable representations of fields, documents, or whole responses:
+  console.log(idDoc.str());
+}
 ```
 
 

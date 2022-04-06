@@ -6,6 +6,7 @@
 
 // Local Dependencies:
 import { ApiExpenseDocument } from "./expense";
+import { ApiIdentityDocument } from "./id";
 import { ApiBlock } from "./document";
 
 export const enum ApiJobStatus {
@@ -22,6 +23,12 @@ export interface ApiDocumentMetadata {
 export interface ApiAnalyzeExpenseResponse {
   DocumentMetadata: ApiDocumentMetadata;
   ExpenseDocuments: ApiExpenseDocument[];
+}
+
+export interface ApiAnalyzeIdResponse {
+  readonly AnalyzeIDModelVersion: string;
+  DocumentMetadata: ApiDocumentMetadata;
+  IdentityDocuments: ApiIdentityDocument[];
 }
 
 export interface ApiResponseWithContent {

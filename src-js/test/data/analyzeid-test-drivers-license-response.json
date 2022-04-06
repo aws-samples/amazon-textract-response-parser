@@ -1,0 +1,206 @@
+{
+  "Comment": "AnalyzeId response for synthetic example drivers license per the Amazon Textract console",
+  "IdentityDocuments": [
+    {
+      "DocumentIndex": 1,
+      "IdentityDocumentFields": [
+        {
+          "Type": {
+            "Text": "FIRST_NAME"
+          },
+          "ValueDetection": {
+            "Text": "GARCIA",
+            "Confidence": 99.48689270019531
+          }
+        },
+        {
+          "Type": {
+            "Text": "LAST_NAME"
+          },
+          "ValueDetection": {
+            "Text": "MARIA",
+            "Confidence": 98.49578857421875
+          }
+        },
+        {
+          "Type": {
+            "Text": "MIDDLE_NAME"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.1700439453125
+          }
+        },
+        {
+          "Type": {
+            "Text": "SUFFIX"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.64495849609375
+          }
+        },
+        {
+          "Type": {
+            "Text": "CITY_IN_ADDRESS"
+          },
+          "ValueDetection": {
+            "Text": "BIGTOWN",
+            "Confidence": 98.14332580566406
+          }
+        },
+        {
+          "Type": {
+            "Text": "ZIP_CODE_IN_ADDRESS"
+          },
+          "ValueDetection": {
+            "Text": "02801",
+            "Confidence": 98.75949096679688
+          }
+        },
+        {
+          "Type": {
+            "Text": "STATE_IN_ADDRESS"
+          },
+          "ValueDetection": {
+            "Text": "MA",
+            "Confidence": 99.49725341796875
+          }
+        },
+        {
+          "Type": {
+            "Text": "STATE_NAME"
+          },
+          "ValueDetection": {
+            "Text": "MASSACHUSETTS",
+            "Confidence": 98.30329132080078
+          }
+        },
+        {
+          "Type": {
+            "Text": "DOCUMENT_NUMBER"
+          },
+          "ValueDetection": {
+            "Text": "736HDV7874JSB",
+            "Confidence": 95.6583251953125
+          }
+        },
+        {
+          "Type": {
+            "Text": "EXPIRATION_DATE"
+          },
+          "ValueDetection": {
+            "Text": "01/20/2028",
+            "NormalizedValue": {
+              "Value": "2028-01-20T00:00:00",
+              "ValueType": "Date"
+            },
+            "Confidence": 98.64090728759766
+          }
+        },
+        {
+          "Type": {
+            "Text": "DATE_OF_BIRTH"
+          },
+          "ValueDetection": {
+            "Text": "03/18/2001",
+            "NormalizedValue": {
+              "Value": "2001-03-18T00:00:00",
+              "ValueType": "Date"
+            },
+            "Confidence": 97.46344757080078
+          }
+        },
+        {
+          "Type": {
+            "Text": "DATE_OF_ISSUE"
+          },
+          "ValueDetection": {
+            "Text": "03/18/2018",
+            "NormalizedValue": {
+              "Value": "2018-03-18T00:00:00",
+              "ValueType": "Date"
+            },
+            "Confidence": 98.7216567993164
+          }
+        },
+        {
+          "Type": {
+            "Text": "ID_TYPE"
+          },
+          "ValueDetection": {
+            "Text": "DRIVER LICENSE FRONT",
+            "Confidence": 98.71986389160156
+          }
+        },
+        {
+          "Type": {
+            "Text": "ENDORSEMENTS"
+          },
+          "ValueDetection": {
+            "Text": "NONE",
+            "Confidence": 99.265869140625
+          }
+        },
+        {
+          "Type": {
+            "Text": "VETERAN"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.63630676269531
+          }
+        },
+        {
+          "Type": {
+            "Text": "RESTRICTIONS"
+          },
+          "ValueDetection": {
+            "Text": "NONE",
+            "Confidence": 99.33734130859375
+          }
+        },
+        {
+          "Type": {
+            "Text": "CLASS"
+          },
+          "ValueDetection": {
+            "Text": "D",
+            "Confidence": 99.08406829833984
+          }
+        },
+        {
+          "Type": {
+            "Text": "ADDRESS"
+          },
+          "ValueDetection": {
+            "Text": "100 MARKET STREET",
+            "Confidence": 99.20429229736328
+          }
+        },
+        {
+          "Type": {
+            "Text": "COUNTY"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.57963562011719
+          }
+        },
+        {
+          "Type": {
+            "Text": "PLACE_OF_BIRTH"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.62541198730469
+          }
+        }
+      ]
+    }
+  ],
+  "DocumentMetadata": {
+    "Pages": 1
+  },
+  "AnalyzeIDModelVersion": "1.0"
+}
