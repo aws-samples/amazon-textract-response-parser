@@ -68,8 +68,10 @@ describe("Table", () => {
     expect(table.cellAt(2, 4)?.text).toMatch("Previous Balance");
     expect(table.cellAt(2, 4, true)?.text).toStrictEqual("");
     // Merged cell contents equals sum of split cell contents:
-    const mergedContents = table.cellAt(2, 1)?.listContent();
-    const splitContents = [1, 2, 3, 4].map((ixCol) => table.cellAt(2, ixCol, true)?.listContent()).flat();
+    const mergedContents = table.cellAt(2, 1)?.listContent() || [];
+    const splitContents = [1, 2, 3, 4]
+      .map((ixCol) => table.cellAt(2, ixCol, true)?.listContent() || [])
+      .flat();
     expect(mergedContents.map((c) => c.id)).toStrictEqual(splitContents.map((c) => c.id));
     // Vertical merge:
     expect(table.cellAt(3, 1)?.text).toMatch("2022-01-01");

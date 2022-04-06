@@ -10,4 +10,9 @@ export * from "./document";
 export * from "./expense";
 
 // Re-export the API types that users will most likely need to reference (for inputs):
-export { ApiAnalyzeExpenseResponse, ApiResponsePage, ApiResponsePages } from "./api-models";
+export {
+  ApiAnalyzeDocumentResponse,
+  ApiAnalyzeExpenseResponse,
+  ApiResponsePage,
+  ApiResponsePages,
+} from "./api-models";

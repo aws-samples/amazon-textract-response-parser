@@ -185,8 +185,8 @@ describe("TextractDocument", () => {
     const line = page.lineAtIndex(1);
     const word = line.wordAtIndex(0);
 
-    expect(word.geometry.boundingBox.parentGeometry.parentObject).toBe(word);
-    expect(line.geometry.boundingBox.parentGeometry.parentObject.parentPage).toBe(page);
+    expect(word.geometry.boundingBox.parentGeometry?.parentObject).toBe(word);
+    expect(line.geometry.boundingBox.parentGeometry?.parentObject?.parentPage).toBe(page);
 
     expect(page.geometry.boundingBox.top).toBeLessThan(line.geometry.boundingBox.top);
     expect(page.geometry.boundingBox.bottom).toBeGreaterThan(line.geometry.boundingBox.bottom);

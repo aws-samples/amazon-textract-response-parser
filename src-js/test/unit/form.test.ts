@@ -1,5 +1,5 @@
-import { ApiBlockType, ApiResponsePage, ApiResponsePages } from "../../src/api-models";
-import { Line, TextractDocument, Word } from "../../src/document";
+import { ApiBlockType, ApiResponsePage } from "../../src/api-models";
+import { Field, TextractDocument } from "../../src/document";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testResponseJson: ApiResponsePage = require("../data/test-response.json");
@@ -37,7 +37,7 @@ describe("Form", () => {
     for (let ix = 0; ix < doc.form.nFields; ++ix) {
       expect(iterFields[ix]).toBe(fieldList[ix]);
     }
-    const allPageFields = [].concat(...doc.listPages().map((p) => p.form.listFields()));
+    const allPageFields = ([] as Field[]).concat(...doc.listPages().map((p) => p.form.listFields()));
     allPageFields.forEach((fieldFromPages, ix) => {
       expect(fieldList[ix]).toBe(fieldFromPages);
     });
@@ -134,6 +134,6 @@ describe("Form", () => {
   it("exposes parent page from document-level field queries", () => {
     const doc = new TextractDocument(testResponseJson);
     const field = doc.form.getFieldByKey("Phone Number:");
-    expect(field.parentPage.pageNumber).toStrictEqual(1);
+    expect(field?.parentPage.pageNumber).toStrictEqual(1);
   });
 });

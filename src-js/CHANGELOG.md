@@ -4,10 +4,14 @@
 ### Added
 - Document-level Form field access and querying via `TextractDocument.form` in addition to `Page.form`.
 - `Page.pageNumber` to find and return 1-based index of the current page in the parent document.
+- New ES (esnext) module output in `dist/es` and `module` hint in package.json to encourage compatible tools to use this output.
 ### Changed
+- Use CommonJS `dist/cjs` as default NPM module format instead of previous UMD `dist/umd`.
+- Separate type declarations into `dist/types` to reduce duplication and build size.
 - Use new [merged table cells](https://aws.amazon.com/about-aws/whats-new/2022/03/amazon-textract-updates-tables-check-detection/) feature by default, rather than classic split cells.
-- Eliminate trailing whitespace automatically added to Cell.text
-
+- Eliminate trailing whitespace previously automatically added to Cell.text
+### Deprecated
+- UMD module output `dist/umd` slated to be removed in a future version: Please let us know if the other format options don't work for you!
 
 ## 0.1.2 (2021-12-16)
 ### Added

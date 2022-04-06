@@ -20,10 +20,15 @@
 import { ApiResponsePages } from "../../../src/api-models";
 import { TextractDocument } from "../../../src/document";
 
+interface ReadingOrderTest {
+  textractJsonFile: string;
+  sequence: string[][];
+}
+
 // Define your tests in a .ts file in the corpus folder alongside your documents:
 //import { READING_ORDER_TESTS } from "../../data/corpus/reading-order-spec";
 // OR here inline:
-const READING_ORDER_TESTS = [
+const READING_ORDER_TESTS: ReadingOrderTest[] = [
   // {
   //   textractJsonFile: "../../data/corpus/...textract.json",
   //   sequence: [
@@ -40,7 +45,14 @@ const READING_ORDER_TESTS = [
   // },
 ];
 
-function checkReadingOrder(filename: string, expectedDocReadingOrder: string[][]) {
+type CheckReadingOrderResult = {
+  readingOrderPassed: boolean;
+  readingOrderFailedAfterPara: number | null;
+  extraParas: { after: number }[];
+  missingBreaks: { after: number }[];
+};
+
+function checkReadingOrder(filename: string, expectedDocReadingOrder: string[][]): CheckReadingOrderResult[] {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const textractJson: ApiResponsePages = require(filename);
   const doc = new TextractDocument(textractJson);
@@ -93,7 +105,7 @@ function checkReadingOrder(filename: string, expectedDocReadingOrder: string[][]
   });
 }
 
-function expectReadingOrderSuccessful(result) {
+function expectReadingOrderSuccessful(result: CheckReadingOrderResult[]): void {
   const pagesFailed = result
     .map((pageResult, ixPage) =>
       pageResult.readingOrderPassed

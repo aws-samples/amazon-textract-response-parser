@@ -33,10 +33,10 @@ const { TextractDocument, TextractExpense } = require("amazon-textract-response-
 
 At a low level, the distribution of this library provides multiple builds:
 
-- `dist/umd`, for NodeJS or other [Universal Module Definition](https://github.com/umdjs/umd)-compatible environments, and
-- `dist/cjs`, specifically for CommonJS environments like NodeJS, and
-- `dist/browser`, for use directly in the browser with no module framework (IIFE).
-
+- `dist/cjs` (default `main`), for CommonJS environments like NodeJS,
+- `dist/es` (default `module`), for ES6/ES2015/esnext capable environments,
+- `dist/browser` (default `browser`), for use directly in the browser with no module framework (IIFE), and
+- **(Deprecated):** `dist/umd`, for other [Universal Module Definition](https://github.com/umdjs/umd)-compatible environments. This build is slated to be removed in a future release so please let us know via GitHub issues if you have blockers for migrating to another build.
 
 ## Loading data
 

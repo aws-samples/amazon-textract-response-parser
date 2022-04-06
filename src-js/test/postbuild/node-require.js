@@ -5,11 +5,11 @@
 const assert = require("assert").strict;
 
 // Local Dependencies:
-const { TextractDocument, TextractExpense } = require("../../dist/umd");
+const { TextractDocument, TextractExpense } = require("../..");
 const testResponse = require("../data/test-response.json");
 const testExpenseResponse = require("../data/invoice-expense-response.json");
 
-console.log("Checking built assets can be used with NodeJS...");
+console.log("Checking built assets can be used with NodeJS via 'require'...");
 
 // Quick smoke tests:
 const doc = new TextractDocument(testResponse);

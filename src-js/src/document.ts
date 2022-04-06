@@ -821,6 +821,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
 export class Line extends LineGeneric<Page> {}
 
 // form.ts concrete Page-dependent types:
+export class Field extends FieldGeneric<Page> {}
 export class FieldKey extends FieldKeyGeneric<Page> {}
 export class FieldValue extends FieldValueGeneric<Page> {}
 export class Form extends FormGeneric<Page> {}
