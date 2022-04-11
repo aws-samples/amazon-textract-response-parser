@@ -305,8 +305,7 @@ class Form:
                 results.append(field)
         return results
 
-
-class Cell(BaseBlock):
+class BaseCell(BaseBlock):
     def __init__(self, block, blockMap):
         super().__init__(block, blockMap)
         self._rowIndex = block['RowIndex']
@@ -316,8 +315,20 @@ class Cell(BaseBlock):
         self._content = []
         self._entityTypes: List[str] = list()
         self._isChildOfMergedCell = False
-        self._mergedCellParent: MergedCell = None
         self._mergedText = None
+
+    @property
+    def mergedText(self):
+        if self._isChildOfMergedCell and self._mergedCellParent != None:
+            return self._mergedCellParent._text
+        else:
+            return self._text
+
+class Cell(BaseCell):
+    def __init__(self, block, blockMap):
+        super().__init__(block, blockMap)
+        self._mergedCellParent: MergedCell = None
+        
         if 'Relationships' in block and block['Relationships']:
             for rs in block['Relationships']:
                 if rs['Type'] == 'CHILD':
@@ -359,16 +370,9 @@ class Cell(BaseBlock):
         """at the moment for COLUMN_HEADER"""
         return self._entityTypes
 
-    @property
-    def mergedText(self):
-        if self._isChildOfMergedCell and self._mergedCellParent != None:
-            return self._mergedCellParent._text
-        else:
-            return self._text
-
-class MergedCell(Cell):
+class MergedCell(BaseCell):
     def __init__(self, block, blockMap, rows):
-        super(Cell, self).__init__(block, blockMap)
+        super().__init__(block, blockMap)
         self._rowIndex = block['RowIndex']
         self._columnIndex = block['ColumnIndex']
         self._rowSpan = block['RowSpan']
@@ -377,9 +381,6 @@ class MergedCell(Cell):
         if 'Relationships' in block and block['Relationships']:
             for rs in block['Relationships']:
                 if rs['Type'] == 'CHILD':
-                    #min_row_index = int(self._rowIndex)
-                    #max_row_index = min_row_index + int(self._rowSpan)
-                    #matching_rows = [r for r in rows if r._rowIndex>=min_row_index and r._rowIndex<max_row_index]
                     cells = []
                     for row in rows:
                         cells.extend(row._cells)
@@ -455,25 +456,40 @@ class Table(BaseBlock):
             self._merged_cells.append(merged_cell)
 
     def get_header_field_names(self):
-        header_cells = self.header
-        s = []
-        for cell in header_cells:
-            s.append(cell.text.strip())
-        return s
+        header_cells = self.get_header(pos=-1)
+        header_names = []
+        for header in header_cells:
+            s = []
+            for cell in header:
+                if cell._isChildOfMergedCell:
+                    s.append(cell.mergedText)
+                else:
+                    s.append(cell.text.strip())
+            header_names.append(s)
+        return header_names
 
     @property
     def rows(self) -> List[Row]:
         return self._rows
 
-    @property
-    def header(self) -> List[Cell]:
-        header_cells: List[Cell] = list()
-        for row in self.rows:
+    def get_header(self, pos=0) -> List[Cell]:
+        header_rows = []
+        for row in self._rows:
+            header_cells: List[Cell] = list()
             for cell in row.cells:
                 for entity_type in cell.entityTypes:
                     if entity_type == ENTITY_TYPE_COLUMN_HEADER:
                         header_cells.append(cell)
-        return header_cells
+            if(len(header_cells)>0):
+                header_rows.append(header_cells)
+        
+        nb_headers = len(header_rows)
+        if nb_headers==1:
+            return header_rows[0]
+        elif pos<0 or nb_headers ==0:
+            return header_rows
+        else: 
+            return header_rows[pos]
 
     @property
     def rows_without_header(self) -> List[Row]:
@@ -484,8 +500,8 @@ class Table(BaseBlock):
                 for entity_type in cell.entityTypes:
                     if entity_type == ENTITY_TYPE_COLUMN_HEADER:
                         header = True
-                if not header:
-                    non_header_rows.append(row)
+            if not header:
+                non_header_rows.append(row)
         return non_header_rows
 
     @property

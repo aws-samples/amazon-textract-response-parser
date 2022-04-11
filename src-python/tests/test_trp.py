@@ -124,3 +124,18 @@ def test_table_with_merged_cells_2(caplog):
                     '2_0': '02/02/22'
                 })
     assert res == 2
+
+def test_table_with_header(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "tables_with_merged_cells_sample2.json"))
+    j = json.load(f)
+    doc = Document(j)
+    
+    page = doc.pages[0]
+    table = page.tables[1]
+    header = table.get_header()
+    assert len(header) == 6
+
+    rows = table.rows_without_header
+    assert len(rows) == 7
