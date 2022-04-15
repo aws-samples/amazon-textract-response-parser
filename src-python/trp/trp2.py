@@ -1,6 +1,6 @@
 from __future__ import annotations
 from functools import lru_cache
-from typing import List, Set, Optional
+from typing import List, Set, Optional, Iterator
 from dataclasses import dataclass, field
 import marshmallow as m
 from marshmallow import post_load
@@ -479,7 +479,7 @@ class TDocument():
                 return b
         raise ValueError(f"no block for id: {id}")
 
-    def __relationships_recursive(self, block: TBlock) -> List[TBlock]:
+    def __relationships_recursive(self, block: TBlock) -> Iterator[TBlock]:
         import itertools
         if block and block.relationships:
             all_relations = list(itertools.chain(*[r.ids for r in block.relationships if r and r.ids]))
@@ -544,9 +544,10 @@ class TDocument():
         return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.KEY_VALUE_SET)
 
     def keys(self, page: TBlock = None) -> List[TBlock]:
-        for key_entities in self.forms(page=page):
-            if TextractEntityTypes.KEY.name in key_entities.entity_types:
-                yield key_entities
+        return [x for x in self.forms(page=page) if TextractEntityTypes.KEY.name in x.entity_types]
+        # for key_entities in self.forms(page=page):
+        #     if TextractEntityTypes.KEY.name in key_entities.entity_types:
+        #         yield key_entities
 
     def queries(self, page: TBlock) -> List[TBlock]:
         return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.QUERY)
@@ -561,22 +562,13 @@ class TDocument():
 
     def get_query_answers(self, page: TBlock) -> List[List[str]]:
         result_list: List[List[str]] = list()
-        geo_empty: List[str] = ["0", "0", "0", "0"]
         for query in self.queries(page=page):
             answers = [x for x in self.get_answers_for_query(block=query)]
             if answers:
                 for answer in answers:
-                    geo = geo_empty
-                    if answer.geometry and answer.geometry.bounding_box:
-                        bb = answer.geometry.bounding_box
-                        geo: List[str] = [str(bb.height), str(bb.left), str(bb.top), str(bb.width)]
-                    base_information = [query.query.text, query.query.alias, answer.text, answer.confidence]
-                    base_information.extend(geo)
-                    result_list.append(base_information)
+                    result_list.append([query.query.text, query.query.alias, answer.text])
             else:
-                base_information = [query.query.text, query.query.alias, ""]
-                base_information.extend(geo_empty)
-                result_list.append(base_information)
+                result_list.append([query.query.text, query.query.alias, ""])
         return result_list
 
     def get_key_by_name(self, key_name: str) -> List[TBlock]:
