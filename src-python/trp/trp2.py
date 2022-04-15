@@ -1,6 +1,6 @@
 from __future__ import annotations
 from functools import lru_cache
-from typing import List, Set, Optional
+from typing import List, Set, Optional, Iterator
 from dataclasses import dataclass, field
 import marshmallow as m
 from marshmallow import post_load
@@ -44,6 +44,8 @@ class TextractBlockTypes(Enum):
     KEY_VALUE_SET = auto()
     PAGE = auto()
     SELECTION_ELEMENT = auto()
+    QUERY = auto()
+    QUERY_RESULT = auto()
 
 
 @dataclass
@@ -199,6 +201,21 @@ class TGeometrySchema(BaseSchema):
 
 
 @dataclass(eq=True, init=True, repr=True)
+class TQuery:
+    text: str = field(default=None)    # type: ignore
+    alias: str = field(default=None)    # type: ignore
+
+
+class TQuerySchema(BaseSchema):
+    text = m.fields.String(data_key="Text", required=False)
+    alias = m.fields.String(data_key="Alias", required=False)
+
+    @post_load
+    def make_tquery(self, data, **kwargs):
+        return TQuery(**data)
+
+
+@dataclass(eq=True, init=True, repr=True)
 class TRelationship():
     type: str = field(default=None)    #type: ignore
     ids: List[str] = field(default=None)    #type: ignore
@@ -234,6 +251,7 @@ class TBlock():
     selection_status: str = field(default=None)    #type: ignore
     text_type: str = field(default=None)    #type: ignore
     custom: dict = field(default=None)    #type: ignore
+    query: TQuery = field(default=None)    #type: ignore
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, TBlock):
@@ -286,6 +304,7 @@ class TBlockSchema(BaseSchema):
     selection_status = m.fields.String(data_key="SelectionStatus", required=False, allow_none=False)
     text_type = m.fields.String(data_key="TextType", required=False, allow_none=False)
     custom = m.fields.Dict(data_key="Custom", required=False, allow_none=False)
+    query = m.fields.Nested(TQuerySchema, data_key="Query")
 
     @post_load
     def make_tblock(self, data, **kwargs):
@@ -460,7 +479,7 @@ class TDocument():
                 return b
         raise ValueError(f"no block for id: {id}")
 
-    def __relationships_recursive(self, block: TBlock) -> List[TBlock]:
+    def __relationships_recursive(self, block: TBlock) -> Iterator[TBlock]:
         import itertools
         if block and block.relationships:
             all_relations = list(itertools.chain(*[r.ids for r in block.relationships if r and r.ids]))
@@ -525,9 +544,32 @@ class TDocument():
         return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.KEY_VALUE_SET)
 
     def keys(self, page: TBlock = None) -> List[TBlock]:
-        for key_entities in self.forms(page=page):
-            if TextractEntityTypes.KEY.name in key_entities.entity_types:
-                yield key_entities
+        return [x for x in self.forms(page=page) if TextractEntityTypes.KEY.name in x.entity_types]
+        # for key_entities in self.forms(page=page):
+        #     if TextractEntityTypes.KEY.name in key_entities.entity_types:
+        #         yield key_entities
+
+    def queries(self, page: TBlock) -> List[TBlock]:
+        return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.QUERY)
+
+    def get_answers_for_query(self, block: TBlock) -> List[TBlock]:
+        result_list: List[TBlock] = list()
+        rels = block.get_relationships_for_type(relationship_type="ANSWER")
+        if rels:
+            for r in rels.ids:
+                result_list.append(self.get_block_by_id(r))
+        return result_list
+
+    def get_query_answers(self, page: TBlock) -> List[List[str]]:
+        result_list: List[List[str]] = list()
+        for query in self.queries(page=page):
+            answers = [x for x in self.get_answers_for_query(block=query)]
+            if answers:
+                for answer in answers:
+                    result_list.append([query.query.text, query.query.alias, answer.text])
+            else:
+                result_list.append([query.query.text, query.query.alias, ""])
+        return result_list
 
     def get_key_by_name(self, key_name: str) -> List[TBlock]:
         result_blocks: List[TBlock] = list()
