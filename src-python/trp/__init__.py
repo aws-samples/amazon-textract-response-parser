@@ -320,9 +320,9 @@ class BaseCell(BaseBlock):
     @property
     def mergedText(self):
         if self._isChildOfMergedCell and self._mergedCellParent != None:
-            return self._mergedCellParent._text
+            return self._mergedCellParent._text.strip()
         else:
-            return self._text
+            return self._text.strip()
 
 class Cell(BaseCell):
     def __init__(self, block, blockMap):
@@ -392,7 +392,7 @@ class MergedCell(BaseCell):
                                 child_cell._isChildOfMergedCell = True
                                 child_cell._mergedCellParent = self
                                 if len(self._text)==0 and len(child_cell.text)>0:
-                                    self._text = child_cell.text
+                                    self._text = child_cell.text.strip()
         if ('EntityTypes' in block and block['EntityTypes']):
             self._entityTypes = block['EntityTypes']
 
@@ -456,13 +456,13 @@ class Table(BaseBlock):
             self._merged_cells.append(merged_cell)
 
     def get_header_field_names(self):
-        header_cells = self.get_header(pos=-1)
+        header_cells = self.header
         header_names = []
         for header in header_cells:
             s = []
             for cell in header:
                 if cell._isChildOfMergedCell:
-                    s.append(cell.mergedText)
+                    s.append(cell.mergedText.strip())
                 else:
                     s.append(cell.text.strip())
             header_names.append(s)
@@ -472,7 +472,8 @@ class Table(BaseBlock):
     def rows(self) -> List[Row]:
         return self._rows
 
-    def get_header(self, pos=0) -> List[Cell]:
+    @property
+    def header(self) -> List[List[Cell]]:
         header_rows = []
         for row in self._rows:
             header_cells: List[Cell] = list()
@@ -483,13 +484,7 @@ class Table(BaseBlock):
             if(len(header_cells)>0):
                 header_rows.append(header_cells)
         
-        nb_headers = len(header_rows)
-        if nb_headers==1:
-            return header_rows[0]
-        elif pos<0 or nb_headers ==0:
-            return header_rows
-        else: 
-            return header_rows[pos]
+        return header_rows
 
     @property
     def rows_without_header(self) -> List[Row]:
