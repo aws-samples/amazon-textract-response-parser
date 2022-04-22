@@ -1,0 +1,5 @@
+region: "us-east-2"
+profile: "test-profile"
+bucketToTest: "frgud-ml-tfc-bucket"
+keyToTest: "textractor/3MSDS.pdf"
+featuresListItem: "FORMS"  #FORMS or TABLES
