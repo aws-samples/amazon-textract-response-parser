@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2022-04-28)
 ### Added
 - Initial support for Amazon Textract [identity document APIs](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-identity.html).
 - Document-level Form field access and querying via `TextractDocument.form` in addition to `Page.form`.

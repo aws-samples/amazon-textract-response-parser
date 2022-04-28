@@ -88,7 +88,9 @@ For example:
 ```typescript
 // Navigate the document hierarchy:
 console.log(`Opened doc with ${doc.nPages} pages`);
-console.log(`The first word of the first line is ${doc.pageNumber(1).lineAtIndex(0).wordAtIndex(0).text}`);
+console.log(
+  `The first word of the first line is ${doc.pageNumber(1).lineAtIndex(0).wordAtIndex(0).text}`
+);
 
 // Iterate through content:
 for (const page of doc.iterPages()) {
@@ -300,7 +302,7 @@ Easier analysis and querying of Textract results is useful, but what if you want
 
 In general:
 
-- Where the library classes (`TextractDocument`, `Page`, `Word`, etc) offer mutation operations, these should modify the source API JSON object in-place and ensure self-consistency.
+- Where the library classes (`TextractDocument`, `Page`, `Word`, etc) offer mutation operations, these should modify the source API JSON object **in-place** and ensure self-consistency.
 - For library classes that are backed by a specific object in the source API JSON, you can access it via the `.dict` property (`word.dict`, `table.dict`, etc) but are responsible for updating any required references in other objects if making changes there.
 
 In particular for **array properties**, you'll note that TRP generally exposes getters and iterators (such as `table.nRows`, `table.iterRows()`, `table.listRows()`, `table.cellsAt()`) rather than direct access to lists - to avoid implying that arbitrary array mutations (such as `table.rows.pop()`) are properly supported.
