@@ -84,6 +84,7 @@ def test_tables_after_sort_cells():
             sorted_cells = sorted(cells_in_child_order, key=lambda row: (row[0], row[1]))
             assert sorted_cells == cells_in_child_order
 
+
 def _test_table_with_merged_cells(datafile, expected_merged_cells):
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data", datafile))
@@ -97,33 +98,33 @@ def _test_table_with_merged_cells(datafile, expected_merged_cells):
             for r, row in enumerate(table.rows):
                 for c, cell in enumerate(row.cells):
                     cell_coord = '{}_{}'.format(r, c)
-                    if cell_coord in expected_merged_cells and cell.mergedText.strip() == expected_merged_cells[cell_coord]:
-                        hitCount = hitCount+1
+                    if cell_coord in expected_merged_cells and cell.mergedText.strip(
+                    ) == expected_merged_cells[cell_coord]:
+                        hitCount = hitCount + 1
                     print("Table[{}][{}] = {}-{}".format(r, c, cell.mergedText, cell.confidence))
 
     return hitCount
 
+
 def test_table_with_merged_cells_1(caplog):
     caplog.set_level(logging.DEBUG)
-    res = _test_table_with_merged_cells("tables_with_merged_cells_sample1.json",
-                {
-                    '2_0': 'Monday, February 28, 2022',
-                    '3_0': 'Monday, February 28, 2022',
-                    '4_0': 'Tuesday, March 01, 2022',
-                    '5_0': 'Tuesday, March 01, 2022',
-                    '6_0': 'Wednesday, March 02, 2022',
-                    '7_0': 'Wednesday, March 02, 2022',
-                })
+    res = _test_table_with_merged_cells(
+        "tables_with_merged_cells_sample1.json", {
+            '2_0': 'Monday, February 28, 2022',
+            '3_0': 'Monday, February 28, 2022',
+            '4_0': 'Tuesday, March 01, 2022',
+            '5_0': 'Tuesday, March 01, 2022',
+            '6_0': 'Wednesday, March 02, 2022',
+            '7_0': 'Wednesday, March 02, 2022',
+        })
     assert res == 6
+
 
 def test_table_with_merged_cells_2(caplog):
     caplog.set_level(logging.DEBUG)
-    res = _test_table_with_merged_cells("tables_with_merged_cells_sample2.json",
-                {
-                    '1_0': '02/02/22',
-                    '2_0': '02/02/22'
-                })
+    res = _test_table_with_merged_cells("tables_with_merged_cells_sample2.json", {'1_0': '02/02/22', '2_0': '02/02/22'})
     assert res == 2
+
 
 def test_table_with_header(caplog):
     caplog.set_level(logging.DEBUG)
@@ -131,11 +132,12 @@ def test_table_with_header(caplog):
     f = open(os.path.join(p, "data", "tables_with_merged_cells_sample2.json"))
     j = json.load(f)
     doc = Document(j)
-    
+
     page = doc.pages[0]
     table = page.tables[1]
-    header = table.get_header()
-    assert len(header) == 6
+    header = table.header
+    assert len(header) == 1
+    assert len(header[0]) == 6
 
     rows = table.rows_without_header
     assert len(rows) == 7
