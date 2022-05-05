@@ -17,10 +17,19 @@
 import { ApiResponsePages } from "../../../src/api-models";
 import { HeaderFooterSegmentModelParams, Line, TextractDocument } from "../../../src/document";
 
+interface HeaderFooterTest {
+  textractJsonFile: string;
+  pages: Array<{
+    pageNum: number;
+    headerLinesLike: string[];
+    footerLinesLike: string[];
+  }>
+}
+
 // Define your tests in a .ts file in the corpus folder alongside your documents:
 // import { HEADER_FOOTER_TESTS } from "../../data/corpus/header-footer-spec";
 // OR here inline:
-const HEADER_FOOTER_TESTS = [
+const HEADER_FOOTER_TESTS: HeaderFooterTest[] = [
   // {
   //   textractJsonFile: "../../data/corpus/...textract.json",
   //   pages: [

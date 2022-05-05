@@ -1,0 +1,206 @@
+{
+  "Comment": "AnalyzeId response for synthetic example passport per the Amazon Textract console",
+  "IdentityDocuments": [
+    {
+      "DocumentIndex": 1,
+      "IdentityDocumentFields": [
+        {
+          "Type": {
+            "Text": "FIRST_NAME"
+          },
+          "ValueDetection": {
+            "Text": "LI",
+            "Confidence": 98.9061508178711
+          }
+        },
+        {
+          "Type": {
+            "Text": "LAST_NAME"
+          },
+          "ValueDetection": {
+            "Text": "JUAN",
+            "Confidence": 99.0864486694336
+          }
+        },
+        {
+          "Type": {
+            "Text": "MIDDLE_NAME"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.58706665039062
+          }
+        },
+        {
+          "Type": {
+            "Text": "SUFFIX"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 97.21086120605469
+          }
+        },
+        {
+          "Type": {
+            "Text": "CITY_IN_ADDRESS"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.6075439453125
+          }
+        },
+        {
+          "Type": {
+            "Text": "ZIP_CODE_IN_ADDRESS"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.6566390991211
+          }
+        },
+        {
+          "Type": {
+            "Text": "STATE_IN_ADDRESS"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.630615234375
+          }
+        },
+        {
+          "Type": {
+            "Text": "STATE_NAME"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.62137603759766
+          }
+        },
+        {
+          "Type": {
+            "Text": "DOCUMENT_NUMBER"
+          },
+          "ValueDetection": {
+            "Text": "0002028373",
+            "Confidence": 97.796142578125
+          }
+        },
+        {
+          "Type": {
+            "Text": "EXPIRATION_DATE"
+          },
+          "ValueDetection": {
+            "Text": "09 MAY 2029",
+            "NormalizedValue": {
+              "Value": "2029-05-09T00:00:00",
+              "ValueType": "Date"
+            },
+            "Confidence": 98.75630187988281
+          }
+        },
+        {
+          "Type": {
+            "Text": "DATE_OF_BIRTH"
+          },
+          "ValueDetection": {
+            "Text": "01 MAY 1982",
+            "NormalizedValue": {
+              "Value": "1982-05-01T00:00:00",
+              "ValueType": "Date"
+            },
+            "Confidence": 99.00655364990234
+          }
+        },
+        {
+          "Type": {
+            "Text": "DATE_OF_ISSUE"
+          },
+          "ValueDetection": {
+            "Text": "09 MAY 2019",
+            "NormalizedValue": {
+              "Value": "2019-05-09T00:00:00",
+              "ValueType": "Date"
+            },
+            "Confidence": 98.68514251708984
+          }
+        },
+        {
+          "Type": {
+            "Text": "ID_TYPE"
+          },
+          "ValueDetection": {
+            "Text": "PASSPORT",
+            "Confidence": 99.3958740234375
+          }
+        },
+        {
+          "Type": {
+            "Text": "ENDORSEMENTS"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 98.99522399902344
+          }
+        },
+        {
+          "Type": {
+            "Text": "VETERAN"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.62472534179688
+          }
+        },
+        {
+          "Type": {
+            "Text": "RESTRICTIONS"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.49139404296875
+          }
+        },
+        {
+          "Type": {
+            "Text": "CLASS"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.62535095214844
+          }
+        },
+        {
+          "Type": {
+            "Text": "ADDRESS"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.62577819824219
+          }
+        },
+        {
+          "Type": {
+            "Text": "COUNTY"
+          },
+          "ValueDetection": {
+            "Text": "",
+            "Confidence": 99.6469955444336
+          }
+        },
+        {
+          "Type": {
+            "Text": "PLACE_OF_BIRTH"
+          },
+          "ValueDetection": {
+            "Text": "NEW YORK CITY",
+            "Confidence": 98.29044342041016
+          }
+        }
+      ]
+    }
+  ],
+  "DocumentMetadata": {
+    "Pages": 1
+  },
+  "AnalyzeIDModelVersion": "1.0"
+}

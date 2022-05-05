@@ -1,6 +1,6 @@
 // External Dependencies:
-import commonjs from "rollup-plugin-commonjs";
-import resolve from "rollup-plugin-node-resolve";
+import resolve from "@rollup/plugin-node-resolve";
+import typescript from "@rollup/plugin-typescript";
 import { terser } from "rollup-plugin-terser";
 
 // Local Dependencies:
@@ -8,7 +8,7 @@ import pkg from "./package.json";
 
 export default [
   {
-    input: "dist/cjs/index.js",
+    input: "src/index.ts",
     output: {
       name: "trp",
       file: pkg.browser,
@@ -21,6 +21,9 @@ export default [
         }),
       ],
     },
-    plugins: [resolve(), commonjs()],
+    plugins: [
+      resolve({ extensions: [".js", ".json", ".ts"] }),
+      typescript({ tsconfig: "tsconfig.browser.json" }),
+    ],
   },
 ];

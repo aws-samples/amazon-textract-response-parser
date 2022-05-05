@@ -1,5 +1,9 @@
+/**
+ * Common shared utilities, interfaces, etc.
+ */
+
 // Local Dependencies:
-import { ApiDocumentMetadata } from "./api-models";
+import { ApiBlock, ApiBlockType, ApiDocumentMetadata } from "./api-models";
 
 /**
  * Base class for all classes which wrap over an actual Textract API object.
@@ -15,6 +19,19 @@ export class ApiObjectWrapper<T> {
 
   get dict(): T {
     return this._dict;
+  }
+}
+
+/**
+ * Base class for classes which wrap over a Textract API 'Block' object.
+ */
+export class ApiBlockWrapper<T extends ApiBlock> extends ApiObjectWrapper<T> {
+  get id(): string {
+    return this._dict.Id;
+  }
+
+  get blockType(): ApiBlockType {
+    return this._dict.BlockType;
   }
 }
 
@@ -81,4 +98,25 @@ export function modalAvg(arr: Iterable<number>): number | null {
     }
   }
   return mode;
+}
+
+/**
+ * Interface for a (TextractDocument-like) object that can query Textract Blocks
+ *
+ * This is used to avoid circular references in child classes which need to reference some
+ * TextractDocument-like parent, before the actual TextractDocument class is defined.
+ */
+export interface IDocBlocks {
+  getBlockById: { (blockId: string): ApiBlock | undefined };
+  listBlocks: { (): ApiBlock[] };
+}
+
+/**
+ * Interface for a (Page-like) object that references a parent document
+ *
+ * This is used to avoid circular references in child classes which need to reference some
+ * Page-like parent, before the actual Page class is defined.
+ */
+export interface WithParentDocBlocks {
+  readonly parentDocument: IDocBlocks;
 }

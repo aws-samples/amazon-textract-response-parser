@@ -10,6 +10,7 @@ import { ApiGeometry } from "./geometry";
 export const enum ApiRelationshipType {
   Child = "CHILD",
   ComplexFeatures = "COMPLEX_FEATURES",
+  MergedCell = "MERGED_CELL",
   Value = "VALUE",
 }
 
@@ -18,10 +19,27 @@ export interface ApiRelationship {
   Type: ApiRelationshipType;
 }
 
+export interface ApiChildRelationship extends ApiRelationship {
+  Type: ApiRelationshipType.Child;
+}
+
+export interface ApiComplexFeaturesRelationship extends ApiRelationship {
+  Type: ApiRelationshipType.ComplexFeatures;
+}
+
+export interface ApiMergedCellRelationship extends ApiRelationship {
+  Type: ApiRelationshipType.MergedCell;
+}
+
+export interface ApiValueRelationship extends ApiRelationship {
+  Type: ApiRelationshipType.Value;
+}
+
 export const enum ApiBlockType {
   Cell = "CELL",
   KeyValueSet = "KEY_VALUE_SET",
   Line = "LINE",
+  MergedCell = "MERGED_CELL",
   Page = "PAGE",
   SelectionElement = "SELECTION_ELEMENT",
   Table = "TABLE",
@@ -76,17 +94,29 @@ export interface ApiTableBlock {
   Confidence: number;
   Geometry: ApiGeometry;
   readonly Id: string;
-  Relationships: ApiRelationship[];
+  Relationships: Array<ApiChildRelationship | ApiMergedCellRelationship>;
 }
 
 export interface ApiCellBlock {
   BlockType: ApiBlockType.Cell;
   ColumnIndex: number;
+  ColumnSpan: 1;
+  Confidence: number;
+  Geometry: ApiGeometry;
+  readonly Id: string;
+  Relationships: ApiChildRelationship[];
+  RowIndex: 1;
+  RowSpan: number;
+}
+
+export interface ApiMergedCellBlock {
+  BlockType: ApiBlockType.MergedCell;
+  ColumnIndex: number;
   ColumnSpan: number;
   Confidence: number;
   Geometry: ApiGeometry;
   readonly Id: string;
-  Relationships: ApiRelationship[];
+  Relationships: ApiChildRelationship[];
   RowIndex: number;
   RowSpan: number;
 }
@@ -108,6 +138,7 @@ export type ApiBlock =
   | ApiCellBlock
   | ApiKeyValueSetBlock
   | ApiLineBlock
+  | ApiMergedCellBlock
   | ApiPageBlock
   | ApiSelectionElementBlock
   | ApiTableBlock

@@ -10,4 +10,5 @@
 export * from "./document";
 export * from "./expense";
 export * from "./geometry";
+export * from "./id";
 export * from "./response";

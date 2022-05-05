@@ -1,9 +1,10 @@
 /**
  * Basic script to extract and save reading-order text from Amazon Textract JSONs.
  *
- * This script uses the built NodeJS library, so check your build is up-to-date! JSON files are read from
- * IN_FOLDER, parsed with the TRP, and reading-order text files output to the OUT_FOLDER. This can be a
- * helpful tool for debugging issues with (or writing corpus tests for) the 'inReadingOrder' functions.
+ * This script uses the built NodeJS library, so check your build is up-to-date by first running
+ * `npm run build`! JSON files are read from IN_FOLDER, parsed with the TRP, and reading-order text
+ * files output to the OUT_FOLDER. This can be a helpful tool for debugging issues with (or writing
+ * corpus tests for) the 'inReadingOrder' functions.
  */
 /* eslint-disable no-undef */
 /* eslint-disable @typescript-eslint/no-var-requires */

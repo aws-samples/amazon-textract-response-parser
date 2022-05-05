@@ -1,10 +1,12 @@
 {
   "name": "amazon-textract-response-parser",
-  "version": "0.1.2-dev",
+  "version": "0.2.0",
   "description": "Parse API responses from Amazon Textract with higher-level helpers",
+  "keywords": ["aws", "amazon-textract", "textract"],
   "browser": "dist/browser/trp.min.js",
-  "main": "dist/umd/index.js",
-  "types": "dist/umd/index.d.ts",
+  "main": "dist/cjs/index.js",
+  "module": "dist/es/index.js",
+  "types": "dist/types/index.d.ts",
   "unpkg": "dist/browser/trp.min.js",
   "directories": {
     "lib": "lib"
@@ -13,14 +15,19 @@
     "/dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.cjs.json && rollup -c && tsc -p tsconfig.umd.json",
-    "clean": "rm -rf dist",
+    "build:browser": "rollup -c",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:es": "tsc -p tsconfig.es.json",
+    "build:types": "tsc -p tsconfig.types.json",
+    "build:umd": "tsc -p tsconfig.umd.json",
+    "build": "concurrently -n 'iife,cjs,es,types,umd' 'npm run build:browser' 'npm run build:cjs' 'npm run build:es' 'npm run build:types' 'npm run build:umd'",
+    "clean": "rimraf dist",
     "prepublishOnly": "npm run clean && npm run build && npm run test:postbuild",
     "prettify": "prettier --config .prettierrc.js 'src/**/*.{js,ts,tsx}' --write",
     "lint": "eslint 'src/**/*.{js,ts,tsx}' --quiet --fix",
     "reading-order-diagnostic": "npm run build && node bin/reading-order-diagnostic.js",
     "test": "jest --coverage",
-    "test:postbuild": "node test/postbuild/node.js && node test/postbuild/browser.js",
+    "test:postbuild": "node test/postbuild/browser.js && node test/postbuild/node-require.js && node --experimental-specifier-resolution=node test/postbuild/node-import.mjs",
     "test:unit": "jest --coverage --testPathPattern=test/unit"
   },
   "repository": {
@@ -34,23 +41,25 @@
   },
   "homepage": "https://github.com/aws-samples/amazon-textract-response-parser#readme",
   "devDependencies": {
-    "@aws-sdk/client-textract": "^3.38.0",
+    "@aws-sdk/client-textract": "^3.43.0",
+    "@rollup/plugin-node-resolve": "^13.2.0",
+    "@rollup/plugin-typescript": "^8.3.1",
     "@types/jest": "^27.0.2",
-    "@typescript-eslint/eslint-plugin": "^4.33.0",
-    "@typescript-eslint/parser": "^4.33.0",
-    "eslint": "^7.32.0",
+    "@typescript-eslint/eslint-plugin": "^5.10.0",
+    "@typescript-eslint/parser": "^5.10.0",
+    "concurrently": "^7.1.0",
+    "eslint": "^8.0.0",
     "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-prettier": "^3.4.1",
+    "eslint-plugin-prettier": "^4.0.0",
     "husky": "^7.0.4",
-    "jest": "^27.3.1",
-    "lint-staged": "^11.2.5",
-    "prettier": "^2.4.1",
-    "rollup": "^2.58.3",
-    "rollup-plugin-commonjs": "^10.1.0",
-    "rollup-plugin-node-resolve": "^5.2.0",
+    "jest": "^27.4.5",
+    "lint-staged": "^12.3.7",
+    "prettier": "^2.5.1",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.61.1",
     "rollup-plugin-terser": "^7.0.2",
-    "ts-jest": "^27.0.7",
-    "typescript": "^4.4.4"
+    "ts-jest": "^27.1.1",
+    "typescript": "^4.5.4"
   },
   "husky": {
     "hooks": {
