@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 __version__ = '0.1.29'
 
 ENTITY_TYPE_COLUMN_HEADER = "COLUMN_HEADER"
-
+ENTITY_TYPE_MERGED_CELL = "MERGED_CELL"
 
 class BaseBlock():
     def __init__(self, block, blockMap):
@@ -305,8 +305,7 @@ class Form:
                 results.append(field)
         return results
 
-
-class Cell(BaseBlock):
+class BaseCell(BaseBlock):
     def __init__(self, block, blockMap):
         super().__init__(block, blockMap)
         self._rowIndex = block['RowIndex']
@@ -315,9 +314,24 @@ class Cell(BaseBlock):
         self._columnSpan = block['ColumnSpan']
         self._content = []
         self._entityTypes: List[str] = list()
-        if ('Relationships' in block and block['Relationships']):
+        self._isChildOfMergedCell = False
+        self._mergedText = None
+
+    @property
+    def mergedText(self):
+        if self._isChildOfMergedCell and self._mergedCellParent != None:
+            return self._mergedCellParent._text.strip()
+        else:
+            return self._text.strip()
+
+class Cell(BaseCell):
+    def __init__(self, block, blockMap):
+        super().__init__(block, blockMap)
+        self._mergedCellParent: MergedCell = None
+        
+        if 'Relationships' in block and block['Relationships']:
             for rs in block['Relationships']:
-                if (rs['Type'] == 'CHILD'):
+                if rs['Type'] == 'CHILD':
                     for cid in rs['Ids']:
                         blockType = blockMap[cid]["BlockType"]
                         if (blockType == "WORD"):
@@ -356,6 +370,31 @@ class Cell(BaseBlock):
         """at the moment for COLUMN_HEADER"""
         return self._entityTypes
 
+class MergedCell(BaseCell):
+    def __init__(self, block, blockMap, rows):
+        super().__init__(block, blockMap)
+        self._rowIndex = block['RowIndex']
+        self._columnIndex = block['ColumnIndex']
+        self._rowSpan = block['RowSpan']
+        self._columnSpan = block['ColumnSpan']
+        self._entityTypes: List[str] = list()
+        if 'Relationships' in block and block['Relationships']:
+            for rs in block['Relationships']:
+                if rs['Type'] == 'CHILD':
+                    cells = []
+                    for row in rows:
+                        cells.extend(row._cells)
+                    for cid in rs['Ids']:
+                        blockType = blockMap[cid]["BlockType"]
+                        if (blockType == "CELL"):
+                            child_cell = next((x for x in cells if x.id == cid), None)
+                            if child_cell != None:
+                                child_cell._isChildOfMergedCell = True
+                                child_cell._mergedCellParent = self
+                                if len(self._text)==0 and len(child_cell.text)>0:
+                                    self._text = child_cell.text.strip()
+        if ('EntityTypes' in block and block['EntityTypes']):
+            self._entityTypes = block['EntityTypes']
 
 class Row:
     def __init__(self):
@@ -384,6 +423,8 @@ class Table(BaseBlock):
     def __init__(self, block, blockMap):
         super().__init__(block, blockMap)
         self._rows: List[Row] = []
+        self._merged_cells: List[Cell] = []
+        self._merged_cells_ids = []
         if ('Relationships' in block and block['Relationships']):
             for rs in block['Relationships']:
                 if (rs['Type'] == 'CHILD'):
@@ -396,6 +437,11 @@ class Table(BaseBlock):
                         new_row: Row = Row()
                         new_row.cells = [x for x in cells if x.rowIndex == row_index]
                         self._rows.append(new_row)
+                elif (rs['Type'] == 'MERGED_CELL'):
+                    self._merged_cells_ids = rs['Ids']
+            
+            if len(self._merged_cells_ids)>0:
+                self._resolve_merged_cells(blockMap)
 
     def __str__(self):
         s = "Table\n==========\n"
@@ -404,19 +450,41 @@ class Table(BaseBlock):
             s = s + str(row) + "\n"
         return s
 
+    def _resolve_merged_cells(self, blockMap):
+        for cid in self._merged_cells_ids:
+            merged_cell = MergedCell(blockMap[cid], blockMap, self._rows)
+            self._merged_cells.append(merged_cell)
+
+    def get_header_field_names(self):
+        header_cells = self.header
+        header_names = []
+        for header in header_cells:
+            s = []
+            for cell in header:
+                if cell._isChildOfMergedCell:
+                    s.append(cell.mergedText.strip())
+                else:
+                    s.append(cell.text.strip())
+            header_names.append(s)
+        return header_names
+
     @property
     def rows(self) -> List[Row]:
         return self._rows
 
     @property
-    def header(self) -> List[Cell]:
-        header_cells: List[Cell] = list()
-        for row in self.rows:
+    def header(self) -> List[List[Cell]]:
+        header_rows = []
+        for row in self._rows:
+            header_cells: List[Cell] = list()
             for cell in row.cells:
                 for entity_type in cell.entityTypes:
                     if entity_type == ENTITY_TYPE_COLUMN_HEADER:
                         header_cells.append(cell)
-        return header_cells
+            if(len(header_cells)>0):
+                header_rows.append(header_cells)
+        
+        return header_rows
 
     @property
     def rows_without_header(self) -> List[Row]:
@@ -427,11 +495,14 @@ class Table(BaseBlock):
                 for entity_type in cell.entityTypes:
                     if entity_type == ENTITY_TYPE_COLUMN_HEADER:
                         header = True
-                if not header:
-                    non_header_rows.append(row)
+            if not header:
+                non_header_rows.append(row)
         return non_header_rows
 
-
+    @property
+    def merged_cells(self)->List[MergedCell]:
+        return self._merged_cells
+            
 class Page:
     def __init__(self, blocks, blockMap):
         self._blocks = blocks
