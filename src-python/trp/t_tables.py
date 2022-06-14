@@ -97,11 +97,14 @@ def ExecuteTableValidations(t_doc: t2.TDocument, header_footer_type: HeaderFoote
 
         if (page_compare_proc >= len(trp_doc.pages) - 1):
             break
-        if (len(current_page.tables) == 0 or len(current_page.tables) == 0):
+        if len(current_page.tables) == 0:
             page_compare_proc += 1
             break
         current_page_table = current_page.tables[len(current_page.tables) - 1]
         next_page = trp_doc.pages[page_compare_proc + 1]
+        if len(next_page.tables) == 0:
+            page_compare_proc += 1
+            break
         next_page_table = next_page.tables[0]
         result_1 = __validate_objects_between_tables(current_page, current_page_table, next_page, next_page_table,
                                                      header_footer_type)
