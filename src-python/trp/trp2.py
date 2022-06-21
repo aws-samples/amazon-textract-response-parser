@@ -587,7 +587,10 @@ class TDocument():
 
     def find_block_by_id(self, id: str) -> Optional[TBlock]:
         '''Find a block by its ID. Returns None if not found'''
-        return self.block_map().get(id, None)
+        idx = self.block_id_map().get(id, None)
+        if idx:
+            return self.blocks[idx]
+        return None
 
     def get_block_by_id(self, id: str) -> TBlock:
         for b in self.blocks:
