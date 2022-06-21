@@ -319,6 +319,33 @@ def test_ratio(caplog):
     assert (g1 == g2)
 
 
+def test_tbbox_union():
+    b1: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=0.5, top=0.5)
+    b2: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=1.5, top=0.5)
+    b_gt: t2.TBoundingBox = t2.TBoundingBox(width=2, height=1, left=0.5, top=0.5)
+    b_union: t2.TBoundingBox = b2.union(b1)
+    assert(b_union==b_gt)
+
+    b1: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=0.5, top=0.5)
+    b2: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=0.5, top=0.5)
+    b_gt: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=0.5, top=0.5)
+    b_union: t2.TBoundingBox = b2.union(b1)
+    assert(b_union==b_gt)
+
+    b1: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=0.5, top=0.5)
+    b2: t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.6, top=0.6)
+    b_gt: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=0.5, top=0.5)
+    b_union: t2.TBoundingBox = b2.union(b1)
+    assert(b_union==b_gt)
+
+    b1: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=0.5, top=0.5)
+    b2: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=2, top=4)
+    b_gt: t2.TBoundingBox = t2.TBoundingBox(width=2.5, height=4.5, left=0.5, top=0.5)
+    b_union: t2.TBoundingBox = b2.union(b1)
+    assert(b_union==b_gt)
+
+
+
 def test_get_blocks_for_relationship(caplog):
     caplog.set_level(logging.DEBUG)
 
@@ -343,6 +370,77 @@ def test_get_blocks_for_relationship(caplog):
             assert len(child_rel) == 1
         else:
             assert False
+
+
+def test_block_id_map():
+    p = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(p, "data/employment-application.json")) as f:
+        j = json.load(f)
+        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)
+        assert len(tdoc.block_id_map(t2.TextractBlockTypes.PAGE)) == 1
+        assert len(tdoc.block_id_map(t2.TextractBlockTypes.TABLE)) == 1
+        assert len(tdoc.block_id_map(t2.TextractBlockTypes.CELL)) == 20
+        assert len(tdoc.block_id_map(t2.TextractBlockTypes.LINE)) == 28
+        assert len(tdoc.block_id_map(t2.TextractBlockTypes.WORD)) == 63
+        assert len(tdoc.block_id_map(t2.TextractBlockTypes.KEY_VALUE_SET)) == 8
+        # test some random blocks in the main hashmap (all blocks included)
+        assert tdoc.block_id_map()['31ce6ec7-2d33-4d48-8968-922bdf8b6c46'] == 0 #the page
+        assert tdoc.block_id_map()['7a2a9b0e-582b-4852-98bb-8e067e0b4703'] == 103 #a cell
+        assert tdoc.block_id_map()['5ff46696-e06e-4577-ac3f-32a1ffde3290'] == 21 #a line
+        # test some random blocks in the dedicted haspmaps
+        assert tdoc.block_id_map(t2.TextractBlockTypes.PAGE)['31ce6ec7-2d33-4d48-8968-922bdf8b6c46'] == 0 # the page
+        assert tdoc.block_id_map(t2.TextractBlockTypes.CELL)['7a2a9b0e-582b-4852-98bb-8e067e0b4703'] == 103 #a cell
+        assert tdoc.block_id_map(t2.TextractBlockTypes.LINE)['5ff46696-e06e-4577-ac3f-32a1ffde3290'] == 21 #a line
+
+def test_block_map():
+    p = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(p, "data/employment-application.json")) as f:
+        j = json.load(f)
+        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)
+        assert len(tdoc.block_map(t2.TextractBlockTypes.PAGE)) == 1
+        assert len(tdoc.block_map(t2.TextractBlockTypes.TABLE)) == 1
+        assert len(tdoc.block_map(t2.TextractBlockTypes.CELL)) == 20
+        assert len(tdoc.block_map(t2.TextractBlockTypes.LINE)) == 28
+        assert len(tdoc.block_map(t2.TextractBlockTypes.WORD)) == 63
+        assert len(tdoc.block_map(t2.TextractBlockTypes.KEY_VALUE_SET)) == 8
+        # test some random blocks in the main hashmap (all blocks included)
+        assert tdoc.block_map()['31ce6ec7-2d33-4d48-8968-922bdf8b6c46'] == tdoc.blocks[0] #the page
+        assert tdoc.block_map()['7a2a9b0e-582b-4852-98bb-8e067e0b4703'] == tdoc.blocks[103] #a cell
+        assert tdoc.block_map()['5ff46696-e06e-4577-ac3f-32a1ffde3290'] == tdoc.blocks[21] #a line
+        # test some random blocks in the dedicted haspmaps
+        assert tdoc.block_map(t2.TextractBlockTypes.PAGE)['31ce6ec7-2d33-4d48-8968-922bdf8b6c46'] ==tdoc.blocks[0] # the page
+        assert tdoc.block_map(t2.TextractBlockTypes.CELL)['7a2a9b0e-582b-4852-98bb-8e067e0b4703'] == tdoc.blocks[103] #a cell
+        assert tdoc.block_map(t2.TextractBlockTypes.LINE)['5ff46696-e06e-4577-ac3f-32a1ffde3290'] ==tdoc.blocks[21] #a line
+
+
+def test_find_block_by_id():
+    p = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(p, "data/employment-application.json")) as f:
+        j = json.load(f)
+        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)
+        assert tdoc.find_block_by_id('7a2a9b0e-582b-4852-98bb-8e067e0b4703') == tdoc.blocks[103]
+        assert tdoc.find_block_by_id('caa21fc2-834c-463e-a668-bb94722f3fe3') == tdoc.blocks[41]
+        assert tdoc.find_block_by_id('foo-bar-baz') == None
+
+
+def test_get_block_by_id():
+    p = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(p, "data/employment-application.json")) as f:
+        j = json.load(f)
+        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)
+        assert tdoc.get_block_by_id('7a2a9b0e-582b-4852-98bb-8e067e0b4703') == tdoc.blocks[103]
+        assert tdoc.get_block_by_id('caa21fc2-834c-463e-a668-bb94722f3fe3') == tdoc.blocks[41]
+        with pytest.raises(ValueError):
+            tdoc.get_block_by_id('foo-bar-baz')
+
+
+def test_pages():
+    p = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(p, "data/gib_multi_page_tables.json")) as f:
+        j = json.load(f)
+        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)
+        pages_ids = [p.id for p in tdoc.pages]
+        assert pages_ids == ["e8610e55-7a61-4bd0-a9ff-583a4dc69459", "5f146db3-4d4a-4add-8da1-e6828f1ce877"]
 
 
 def test_add_ids_to_relationships(caplog):
@@ -432,17 +530,45 @@ def test_merge_tables():
     assert post_merge_tbl1_last_row == pre_merge_tbl1_last_row + pre_merge_tbl2_last_row    # type: ignore
 
 
+def test_add_block():
+    # add a block WITHOUT type
+    p = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(p, "data/gib.json")) as f:
+        j = json.load(f)
+        t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+        page = t_document.pages[0]
+        new_block_id = str(uuid4())
+        new_block = t2.TBlock(id=new_block_id)
+        t_document.add_block(new_block)
+        assert t_document.block_id_map()[new_block_id] == len(t_document.blocks)-1
+        # add a block WITH type
+        new_block_id = str(uuid4())
+        new_block = t2.TBlock(id=new_block_id, block_type="WORD")
+        t_document.add_block(new_block)
+        assert t_document.block_id_map()[new_block_id] == len(t_document.blocks)-1
+        assert t_document.block_id_map(t2.TextractBlockTypes.WORD)[new_block_id] == len(t_document.blocks)-1
+
+
+
 def test_delete_blocks():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
     j = json.load(f)
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)
-    tbl_id1 = 'fed02fb4-1996-4a15-98dc-29da193cc476'
-    tbl_id2 = '47c6097f-02d5-4432-8423-13c05fbfacbd'
+    tbl_id1 = 'fed02fb4-1996-4a15-98dc-29da193cc476'  #a table block
+    tbl_id2 = '47c6097f-02d5-4432-8423-13c05fbfacbd'  #a table block
     pre_delete_block_no = len(t_document.blocks)
     t_document.delete_blocks([tbl_id1, tbl_id2])
     post_delete_block_no = len(t_document.blocks)
     assert post_delete_block_no == pre_delete_block_no - 2
+    assert tbl_id1 not in t_document.block_map()
+    assert tbl_id1 not in t_document.block_id_map()
+    assert tbl_id2 not in t_document.block_map()
+    assert tbl_id2 not in t_document.block_id_map()
+    assert tbl_id1 not in t_document.block_map(t2.TextractBlockTypes.TABLE)
+    assert tbl_id1 not in t_document.block_id_map(t2.TextractBlockTypes.TABLE)
+    assert tbl_id2 not in t_document.block_map(t2.TextractBlockTypes.TABLE)
+    assert tbl_id2 not in t_document.block_id_map(t2.TextractBlockTypes.TABLE)
 
 
 def test_link_tables():
@@ -532,7 +658,6 @@ def test_table_with_headers_and_merged_cells(caplog):
 def test_bla(caplog):
     import trp as t
     import json
-    from tabulate import tabulate
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data", "tables_with_headers_and_merged_cells.json"))
     # f = open("data/employment-application.json")
