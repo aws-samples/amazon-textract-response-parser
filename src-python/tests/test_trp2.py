@@ -29,7 +29,7 @@ def test_serialization():
     testing that None values are removed when serializing
     """
     bb_1 = t2.TBoundingBox(0.4, 0.3, 0.1, top=None)    # type:ignore forcing some None/null values
-    bb_2 = t2.TBoundingBox(0.4, 0.3, 0.1, top=0.2)
+    bb_2 = t2.TBoundingBox(0.4, 0.3, 0.1, top=0.2)    # type: ignore
     p1 = t2.TPoint(x=0.1, y=0.1)
     p2 = t2.TPoint(x=0.3, y=None)    # type:ignore
     geo = t2.TGeometry(bounding_box=bb_1, polygon=[p1, p2])
@@ -242,10 +242,10 @@ def test_adjust_bounding_boxes_and_polygons_to_orientation():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__180_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     new_order = order_blocks_by_geo(t_document)
-    doc = t1.Document(t2.TDocumentSchema().dump(t_document))
+    assert t1.Document(t2.TDocumentSchema().dump(new_order))
     # for line in doc.pages[0].lines:
     #     print("Line: {}".format(line.text))
     # print("=========================== after rotation ========================")
@@ -326,8 +326,8 @@ def test_get_blocks_for_relationship(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/gib.json")) as f:
         j = json.load(f)
-        t_document: t2.TDocument = t2.TDocumentSchema().load(j)
-        page = t_document.pages[0]
+        t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+        # page = t_document.pages[0]
         block = t_document.get_block_by_id("458a9301-8a9d-4eb2-9469-70302c62622e")
         relationships = block.get_relationships_for_type()
         relationships_value = block.get_relationships_for_type(relationship_type="VALUE")
@@ -375,7 +375,7 @@ def test_key_value_set_key_name(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/gib.json")) as f:
         j = json.load(f)
-        t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+        t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
         page = t_document.pages[0]
         keys = list(t_document.keys(page=page))
         assert keys and len(keys) > 0
@@ -393,7 +393,7 @@ def test_get_relationships_for_type(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/gib.json")) as f:
         j = json.load(f)
-        t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+        t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
         page = t_document.pages[0]
         new_block = t2.TBlock(id=str(uuid4()))
         t_document.add_block(new_block)
@@ -414,7 +414,7 @@ def test_merge_tables():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
     tbl_id1 = 'fed02fb4-1996-4a15-98dc-29da193cc476'
     tbl_id2 = '47c6097f-02d5-4432-8423-13c05fbfacbd'
     pre_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)    # type: ignore
@@ -436,7 +436,7 @@ def test_delete_blocks():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
     tbl_id1 = 'fed02fb4-1996-4a15-98dc-29da193cc476'
     tbl_id2 = '47c6097f-02d5-4432-8423-13c05fbfacbd'
     pre_delete_block_no = len(t_document.blocks)
@@ -449,7 +449,7 @@ def test_link_tables():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
     tbl_id1 = 'fed02fb4-1996-4a15-98dc-29da193cc476'
     tbl_id2 = '47c6097f-02d5-4432-8423-13c05fbfacbd'
     t_document.link_tables([[tbl_id1, tbl_id2]])
@@ -461,7 +461,7 @@ def test_pipeline_merge_tables():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_tables_multi_page_sample.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
     tbl_id1 = '4894d2ba-0479-4196-9cbd-c0fea4d28762'
     tbl_id2 = 'b5e061ec-05be-48d5-83fc-6719fdd4397a'
     tbl_id3 = '8bbc3f4f-0354-4999-a001-4585631bb7fe'
@@ -481,7 +481,7 @@ def test_pipeline_merge_multiple_tables():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_tables_multi_page_sample.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
     tbl_id1 = '4894d2ba-0479-4196-9cbd-c0fea4d28762'
     tbl_id2 = 'b5e061ec-05be-48d5-83fc-6719fdd4397a'
     tbl_id3 = '8bbc3f4f-0354-4999-a001-4585631bb7fe'
@@ -502,21 +502,34 @@ def test_kv_ocr_confidence(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/employment-application.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
     t_document = add_kv_ocr_confidence(t_document)
 
     doc = t1.Document(t2.TDocumentSchema().dump(t_document))
     for page in doc.pages:
         k1 = page.form.getFieldByKey("Home Address:")
-        k1.key.custom['OCRConfidence'] == {'mean': 99.60698318481445}
-        k1.value.custom['OCRConfidence'] == {'mean': 99.8596928914388}
+        assert k1.key.custom['OCRConfidence'] == {'min': 95.0, 'mean': 99.26356930202908}
+        assert k1.value.custom['OCRConfidence'] == {'mean': 99.8596928914388, 'min': 99.74813079833984}
         k1 = page.form.getFieldByKey("Phone Number:")
-        k1.key.custom['OCRConfidence'] == {'mean': 99.55334854125977}
-        k1.value.custom['OCRConfidence'] == {'mean': 99.23233032226562}
+        assert k1.key.custom['OCRConfidence'] == {'mean': 97.33475685119629, 'min': 91.0}
+        assert k1.value.custom['OCRConfidence'] == {'mean': 99.23233032226562, 'min': 99.23233032226562}
         # for field in page.form.fields:
         #     print(
         #         f"{field.key.text} - {field.key.custom['OCRConfidence']}, {field.value.text} - {field.value.custom['OCRConfidence']}"
         #     )
+
+
+def test_get_answers_for_query(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "queries_sample.json"))
+    j = json.load(f)
+    t_doc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    page: t2.TBlock = t_doc.pages[0]
+    answers = list()
+    for query in t_doc.queries(page=page):
+        answers.append(t_doc.get_answers_for_query(block=query))
+    assert len(answers) == 9
 
 
 def test_table_with_headers_and_merged_cells(caplog):
@@ -524,7 +537,7 @@ def test_table_with_headers_and_merged_cells(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data", "tables_with_headers_and_merged_cells.json"))
     j = json.load(f)
-    t_doc: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_doc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     page: t2.TBlock = t_doc.pages[0]
     tables: t2.TBlock = t_doc.tables(page=page)[0]
 
