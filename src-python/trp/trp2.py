@@ -576,10 +576,9 @@ class TDocument():
             answers = [x for x in self.get_answers_for_query(block=query)]
             if answers:
                 for answer in answers:
-                    result_list.append([query.query.text, query.query.alias, answer.text])
+                    result_list.append([query.query.text, query.query.alias, answer.text, answer.confidence])
             else:
-                result_list.append([query.query.text, query.query.alias, ""])
-        return result_list
+                result_list.append([query.query.text, query.query.alias, "", 0])
 
     def get_key_by_name(self, key_name: str) -> List[TBlock]:
         result_blocks: List[TBlock] = list()
@@ -678,6 +677,7 @@ class TDocument():
 
 
 class THttpHeadersSchema(BaseSchema):
+
     class Meta:
         unknown = m.EXCLUDE
 
@@ -693,6 +693,7 @@ class THttpHeadersSchema(BaseSchema):
 
 
 class TResponseMetadataSchema(BaseSchema):
+
     class Meta:
         unknown = m.EXCLUDE
 
