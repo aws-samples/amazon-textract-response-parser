@@ -460,8 +460,11 @@ class Table(BaseBlock):
             merged_cell = MergedCell(blockMap[cid], blockMap, self._rows)
             self._merged_cells.append(merged_cell)
 
-    def get_header_field_names(self):
+    def get_header_field_names(self, header_proc_func=None):
         header_cells = self.header
+        if header_proc_func != None:
+            return header_proc_func(header_cells)
+
         header_names = []
         for header in header_cells:
             s = []

@@ -141,3 +141,34 @@ def test_table_with_header(caplog):
 
     rows = table.rows_without_header
     assert len(rows) == 7
+
+
+def test_table_with_header_get_field_names(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "response.json"))
+    j = json.load(f)
+    doc = Document(j)
+
+    page = doc.pages[0]
+    table = page.tables[2]
+
+    def process_headers(header_cells):
+        header_names = []
+        for header in header_cells:
+            s = []
+            for cell in header:
+                if cell._isChildOfMergedCell:
+                    s.append(cell.mergedText.strip())
+                else:
+                    s.append(cell.text.strip())
+            header_names.append(s)
+
+        t = header_names[0]
+        b = header_names[1]
+        header_names = [i + " / " + j for i, j in zip(t, b)]
+        return header_names
+
+
+    headers = table.get_header_field_names(process_headers)
+    assert len(headers) == 6
