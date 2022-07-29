@@ -254,6 +254,50 @@ for page in doc.pages:
 
 ```
 
+## Table Headers
+Through the Table class you can retrieve header column names by calling the get_header_field_names method. By default it returns an array containing the detected column names. If the table has more than one header, the output is returned in the form an array of arrays. You may alternatively pass a custom header processor function as argument to reformat the columns list(s) according to your own requirements. Please find a code sample below.
+
+```python
+
+    from textractcaller.t_call import call_textract, Textract_Features
+    from trp.trp2 import TDocument, TDocumentSchema
+    from trp.t_pipeline import order_blocks_by_geo
+    import trp
+    import json
+
+    j = call_textract(input_document="path_to_some_document (PDF, JPEG, PNG)", features=[Textract_Features.FORMS, Textract_Features.TABLES])
+    t_doc = TDocumentSchema().load(j)
+    ordered_doc = order_blocks_by_geo(t_doc)
+    trp_doc = trp.Document(TDocumentSchema().dump(ordered_doc))
+    
+    page = trp_doc.pages[0]
+    table = page.tables[2]
+
+    def process_headers(header_cells):
+        header_names = []
+        for header in header_cells:
+            s = []
+            for cell in header:
+                if cell._isChildOfMergedCell:
+                    s.append(cell.mergedText.strip())
+                else:
+                    s.append(cell.text.strip())
+            header_names.append(s)
+
+        t = header_names[0]
+        b = header_names[1]
+        header_names = [i + " / " + j for i, j in zip(t, b)]
+        return header_names
+
+
+    headers = table.get_header_field_names(process_headers)
+
+```
+
+
+
+
+
 ## Test
 
 - Clone the repo and run pytest
