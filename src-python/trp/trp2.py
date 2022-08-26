@@ -426,7 +426,8 @@ class TDocument():
         self.add_block(tblock, page=page_block)
         return tblock
 
-    def add_virtual_key_for_existing_key(self, key_name: str, existing_key: TBlock, page_block: TBlock):
+    def add_virtual_key_for_existing_key(self, key_name: str, existing_key: TBlock,
+                                         page_block: TBlock) -> Optional[TBlock]:
         if existing_key and existing_key.block_type == "KEY_VALUE_SET" and "KEY" in existing_key.entity_types:
             value_blocks: List[TBlock] = self.value_for_key(existing_key)
             return self.add_key_values(key_name=key_name, values=value_blocks, page_block=page_block)
@@ -434,7 +435,7 @@ class TDocument():
             logger.warning(
                 f"no existing_key or not block_type='KEY_VALUE_SET' or 'KEY' not in entity_type: {existing_key}")
 
-    def add_key_values(self, key_name: str, values: List[TBlock], page_block: TBlock):
+    def add_key_values(self, key_name: str, values: List[TBlock], page_block: TBlock) -> TBlock:
         if not key_name:
             raise ValueError("need values and key_name")
         if not values:
@@ -454,18 +455,18 @@ class TDocument():
 
         virtual_block = self.add_virtual_block(text=key_name, page_block=page_block)
         id = str(uuid4())
-        key_block = TBlock(
-            id=id,
-            block_type="KEY_VALUE_SET",
-            entity_types=["KEY"],
-            confidence=99,
-            geometry=TGeometry(bounding_box=TBoundingBox(width=0, height=0, left=0, top=0),
-                               polygon=[TPoint(x=0, y=0), TPoint(x=0, y=0)]),
-        )
+        key_block = TBlock(id=id,
+                           block_type="KEY_VALUE_SET",
+                           entity_types=["KEY"],
+                           confidence=99,
+                           geometry=TGeometry(bounding_box=TBoundingBox(width=0, height=0, left=0, top=0),
+                                              polygon=[TPoint(x=0, y=0), TPoint(x=0, y=0)]),
+                           page=page_block.page)
         key_block.add_ids_to_relationships(relationships_type="VALUE", ids=[value_block.id])
         key_block.add_ids_to_relationships(relationships_type="CHILD", ids=[virtual_block.id])
         logger.debug(f"add key with id: {id} and key_name: {key_name}")
         self.add_block(key_block, page=page_block)
+        return key_block
 
     def rotate(self, page: TBlock, degrees: float, origin: TPoint = TPoint(x=0.5, y=0.5)) -> None:
         # FIXME: add dimension. the relative scale messes up the new coordinates, have to use the actual image scale

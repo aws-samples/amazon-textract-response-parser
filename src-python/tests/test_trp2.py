@@ -572,3 +572,40 @@ def test_add_key_values_new_value_blocks(caplog):
     t_document.add_key_values(key_name="new_key", values=[test_block], page_block=t_document.pages[0])
     assert t_document.get_key_by_name(key_name="new_key")
     assert len(t_document.get_key_by_name(key_name="new_key")) == 1
+
+
+def test_add_virtual_key_for_existing_key_multi_page(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/multi-page-forms-samples-2-page.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    assert t_document
+
+    # page 1
+    key_page_1_t_block = t_document.find_block_by_id("450b87d0-8407-4e2c-8ca6-6f669f9acb67")
+    assert key_page_1_t_block
+    test_block_1 = t_document.add_virtual_key_for_existing_key(key_name="TEST_PAGE_1",
+                                                               existing_key=key_page_1_t_block,
+                                                               page_block=t_document.pages[0])
+    assert test_block_1
+    rels = t_document.pages[0].get_relationships_for_type()
+    assert rels
+    ids = rels.ids
+    assert ids
+    assert [id for id in ids if test_block_1.id == id]
+    assert test_block_1.page == 1
+
+    # page 2
+    key_page_1_t_block = t_document.find_block_by_id("f2749b18-d331-4097-bc52-95dfb3af959a")
+    assert key_page_1_t_block
+    test_block_1 = t_document.add_virtual_key_for_existing_key(key_name="TEST_PAGE_2",
+                                                               existing_key=key_page_1_t_block,
+                                                               page_block=t_document.pages[1])
+    assert test_block_1
+    rels = t_document.pages[1].get_relationships_for_type()
+    assert rels
+    ids = rels.ids
+    assert ids
+    assert [id for id in ids if test_block_1.id == id]
+    assert test_block_1.page == 2
