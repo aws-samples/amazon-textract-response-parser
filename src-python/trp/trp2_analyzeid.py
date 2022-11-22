@@ -6,7 +6,7 @@ from typing import List
 import marshmallow as m
 from marshmallow import post_load
 from trp.trp2 import (BaseSchema, TDocumentMetadata, TDocumentMetadataSchema, TWarnings, TWarningsSchema,
-                      TResponseMetadata, TResponseMetadataSchema)
+                      TResponseMetadata, TResponseMetadataSchema, TBlock, TBlockSchema)
 from dataclasses import dataclass, field
 
 
@@ -109,6 +109,7 @@ class TIdentityDocument():
     """
     document_index: int = 1
     identity_document_fields: List[TIdentityDocumentField] = field(default=None)    #type: ignore fs
+    blocks: List[TBlock] = field(default=None)    #type: ignore
 
 
 class TIdentityDocumentSchema(BaseSchema):
@@ -122,6 +123,7 @@ class TIdentityDocumentSchema(BaseSchema):
                                              data_key="IdentityDocumentFields",
                                              required=False,
                                              allow_none=True)
+    blocks = m.fields.List(m.fields.Nested(TBlockSchema), data_key="Blocks", required=False, allow_none=False)
 
     @post_load
     def make_tidentitydocumentfield(self, data, **kwargs):
