@@ -45,7 +45,7 @@ def test_tblock_order_blocks_by_geo():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     new_order = order_blocks_by_geo(t_document)
     doc = t1.Document(t2.TDocumentSchema().dump(new_order))
     assert "Value 1.1.1" == doc.pages[0].tables[0].rows[0].cells[0].text.strip()
@@ -57,7 +57,7 @@ def test_tblock_order_block_by_geo_multi_page():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = order_blocks_by_geo(t_document)
     doc = t1.Document(t2.TDocumentSchema().dump(t_document))
     assert "Page 1 - Value 1.1.1" == doc.pages[0].tables[0].rows[0].cells[0].text.strip()
@@ -68,7 +68,7 @@ def test_tblock():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     new_order = order_blocks_by_geo(t_document)
     doc = t1.Document(t2.TDocumentSchema().dump(new_order))
     assert "Value 1.1.1" == doc.pages[0].tables[0].rows[0].cells[0].text.strip()
@@ -80,7 +80,7 @@ def test_custom_tblock():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document.custom = {'testblock': {'here': 'is some fun stuff'}}
     assert 'testblock' in t2.TDocumentSchema().dumps(t_document)
 
@@ -92,66 +92,66 @@ def test_custom_page_orientation(json_response):
     assert 22 == len(lines)
     words = [word for line in lines for word in line.words]
     assert 53 == len(words)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(json_response)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(json_response)    #type: ignore
     t_document.custom = {'orientation': 180}
     new_t_doc_json = t2.TDocumentSchema().dump(t_document)
     assert "Custom" in new_t_doc_json
-    assert "orientation" in new_t_doc_json["Custom"]
-    assert new_t_doc_json["Custom"]["orientation"] == 180
+    assert "orientation" in new_t_doc_json["Custom"]    #type: ignore
+    assert new_t_doc_json["Custom"]["orientation"] == 180    #type: ignore
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert -1 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 2
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_10_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert 5 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 15
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__15_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert 10 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 20
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__25_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert 17 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 30
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__180_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert 170 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 190
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__270_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert -100 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < -80
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__90_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert 80 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 100
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__minus_10_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert -10 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 5
 
@@ -171,7 +171,7 @@ def test_next_token_response():
     f = open(os.path.join(p, "data/gib.json"))
     j = json.load(f)
     assert j['NextToken']
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert t_document.pages[0].custom
 
@@ -339,7 +339,8 @@ def test_get_blocks_for_relationship(caplog):
 
             child_rel: List[t2.TBlock] = list()
             for value_block in rel_value:
-                child_rel.extend(t_document.get_blocks_for_relationships(value_block.get_relationships_for_type()))
+                child_rel.extend(t_document.get_blocks_for_relationships(
+                    value_block.get_relationships_for_type()))    #type: ignore
             assert len(child_rel) == 1
         else:
             assert False
@@ -470,7 +471,7 @@ def test_pipeline_merge_tables():
     pre_merge_tbl2_cells_no = len(t_document.get_block_by_id(tbl_id2).relationships[0].ids)    # type: ignore
     pre_merge_tbl3_cells_no = len(t_document.get_block_by_id(tbl_id3).relationships[0].ids)    # type: ignore
     pre_merge_tbl4_cells_no = len(t_document.get_block_by_id(tbl_id4).relationships[0].ids)    # type: ignore
-    t_document = pipeline_merge_tables(t_document, MergeOptions.MERGE, None, HeaderFooterType.NONE)
+    t_document = pipeline_merge_tables(t_document, MergeOptions.MERGE, None, HeaderFooterType.NONE)    #type: ignore
     post_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)    # type: ignore
     post_merge_tbl2_cells_no = len(t_document.get_block_by_id(tbl_id3).relationships[0].ids)    # type: ignore
     assert post_merge_tbl1_cells_no == pre_merge_tbl1_cells_no + pre_merge_tbl2_cells_no
@@ -490,7 +491,7 @@ def test_pipeline_merge_multiple_tables():
     pre_merge_tbl2_cells_no = len(t_document.get_block_by_id(tbl_id2).relationships[0].ids)    # type: ignore
     pre_merge_tbl3_cells_no = len(t_document.get_block_by_id(tbl_id3).relationships[0].ids)    # type: ignore
     pre_merge_tbl4_cells_no = len(t_document.get_block_by_id(tbl_id4).relationships[0].ids)    # type: ignore
-    t_document = pipeline_merge_tables(t_document, MergeOptions.MERGE, None, HeaderFooterType.NONE)
+    t_document = pipeline_merge_tables(t_document, MergeOptions.MERGE, None, HeaderFooterType.NONE)    #type: ignore
     post_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)    # type: ignore
     post_merge_tbl2_cells_no = len(t_document.get_block_by_id(tbl_id3).relationships[0].ids)    # type: ignore
     assert post_merge_tbl1_cells_no == pre_merge_tbl1_cells_no + pre_merge_tbl2_cells_no
@@ -545,7 +546,6 @@ def test_table_with_headers_and_merged_cells(caplog):
 def test_bla(caplog):
     import trp as t
     import json
-    from tabulate import tabulate
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data", "tables_with_headers_and_merged_cells.json"))
     # f = open("data/employment-application.json")
@@ -566,7 +566,7 @@ def test_add_key_values_new_value_blocks(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/employment-application.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type:ignore
     test_block = t_document.add_virtual_block(text="test", page_block=t_document.pages[0], text_type="VIRTUAL")
     assert t_document.get_block_by_id(test_block.id)
     t_document.add_key_values(key_name="new_key", values=[test_block], page_block=t_document.pages[0])
@@ -579,7 +579,7 @@ def test_add_virtual_key_for_existing_key_multi_page(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/multi-page-forms-samples-2-page.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     assert t_document
 
     # page 1
@@ -609,3 +609,12 @@ def test_add_virtual_key_for_existing_key_multi_page(caplog):
     assert ids
     assert [id for id in ids if test_block_1.id == id]
     assert test_block_1.page == 2
+
+
+def test_paystub_with_signature(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "paystub_with_signature.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    assert t_document
