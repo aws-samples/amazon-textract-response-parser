@@ -1,6 +1,7 @@
 from __future__ import annotations
 from functools import lru_cache
-from typing import List, Set, Optional, Iterator
+import typing
+from typing import List, Set, Dict, Optional, Iterator
 from dataclasses import dataclass, field
 import marshmallow as m
 from marshmallow import post_load
@@ -12,6 +13,7 @@ import statistics
 from uuid import uuid4, UUID
 import math
 import statistics
+from collections import OrderedDict
 from dataclasses import dataclass, field
 import logging
 
@@ -46,6 +48,7 @@ class TextractBlockTypes(Enum):
     SELECTION_ELEMENT = auto()
     QUERY = auto()
     QUERY_RESULT = auto()
+    MERGED_CELL = auto()
 
 
 @dataclass
@@ -70,6 +73,13 @@ class TPoint():
     def ratio(self, doc_width, doc_height):
         self.x: float = self.x / doc_width
         self.y: float = self.y / doc_height
+
+    def to_list(self) -> List[float]:
+        '''
+        Convert the point to a list of floats, i.e only standard 
+        Python types. The list definition is [x_coor, y_coor].
+        '''
+        return [self.x, self.y]
 
     # TODO: add optimization for rotation of 90, 270, 180, -90, -180, -270 degrees
     def rotate(self,
@@ -131,6 +141,63 @@ class TBoundingBox():
         points.append(TPoint(x=self.left, y=self.top + self.height))
         points.append(TPoint(x=self.left + self.width, y=self.top + self.height))
         return points
+
+    @property
+    def bottom(self) -> float:
+        return self.top+self.height
+
+    @property
+    def right(self) -> float:
+        return self.left+self.width
+
+    @property
+    def centre(self) -> TPoint:
+        '''
+        Return the centre of mass of the bounding box.
+        '''
+        return TPoint(x=self.left+self.width/2.0, y=self.top+self.height/2.0)
+
+
+    def to_list(self) -> List[float]:
+        '''
+        Convert the bounding box definition to a list of floats, i.e only standard 
+        Python types. The bounding box definition is [width, height, left, top].
+        '''
+        #TODO: cannot we use some overloading on the dump method of marshmallow?
+        bbox_list: List[float] = [self.width, self.height, self.left, self.top]
+        return bbox_list
+
+    def union(self, bbox: TBoundingBox) -> TBoundingBox:
+        '''
+        Compute the union between two TBoundingBox objects. The union bounding box 
+        is the smallest bounding box which contains the N source bounding boxes. In  
+        case of this method, N equals 2 (self and bbox)
+
+        Usage
+        -----
+        union_bbox = self.union(bbox)
+
+        Arguments
+        ---------
+        bbox:
+            A TBoundingBox object
+        
+        Returns
+        -------
+        union_bbox
+            A TBoundingBox object representing the union between self and bbox
+        '''
+        new_top = min(self.top,bbox.top)
+        new_bottom = max(self.bottom,bbox.bottom)
+        new_left = min(self.left,bbox.left)
+        new_right = max(self.right,bbox.right)
+        new_bbox = TBoundingBox(
+            width=new_right-new_left,
+            height=new_bottom-new_top,
+            left=new_left,
+            top=new_top,
+        )
+        return new_bbox
 
     def rotate(self, origin: TPoint = TPoint(0, 0), degrees: float = 180) -> TBoundingBox:
         """
@@ -380,16 +447,67 @@ class TDocument():
     next_token: str = field(default=None)    #type: ignore
     id: UUID = field(default_factory=uuid4)
 
+    def __post_init__(self):  #this is a dataclass method
+        '''
+        Build several hashmaps (signature: Dict[str, int]) with 
+        the block ID as key and the block index in self.blocks as value. As Textract 
+        identifies blocks by their ID, the goal of this data structure is to access
+        blocks by their ID and type at O(1) time complexity.The new hashmaps are 
+        stored self._block_id_maps.
+
+        Notes
+        -----
+        * don't use this data structure directly (it might chang in the future) 
+          prefer the method self.block_map and self.block_id_map with the 'block_type' 
+          specifier.
+        * Method __post_init__ called by @dataclass after  __init__ call
+        '''
+        self._block_id_maps: Dict[str, typing.Dict[str, int]] = dict()
+        for blk_type in TextractBlockTypes:
+            # TODO: can we limit the python version and rely on the classic dict?
+            self._block_id_maps[blk_type.name] = dict()
+        self._block_id_maps['ALL'] = dict()
+        if self.blocks != None:
+            for blk_i,blk in enumerate(self.blocks):
+                self._block_id_maps[blk.block_type][blk.id] = blk_i
+                self._block_id_maps['ALL'][blk.id] = blk_i
+
     def __hash__(self):
         return int(self.id)
 
+    def block_id_map(self, block_type: Optional[TextractBlockTypes]=None) -> Dict[str, int]:
+        '''
+        Return a hashmap  with the block ID as key and the block index in self.blocks 
+        as value.
+        '''
+        if block_type:
+            return self._block_id_maps[block_type.name]
+        else:
+            return self._block_id_maps['ALL']
+
+    def block_map(self, block_type: Optional[TextractBlockTypes]=None) -> Dict[str, TBlock]:
+        '''
+        Return a hashmap  with the block ID as key and the block as value.
+        '''
+        if block_type:
+            return {k:self.blocks[v] for k,v in self._block_id_maps[block_type.name].items()}
+        else:
+            return {k:self.blocks[v] for k,v in self._block_id_maps['ALL'].items()}
+
     def add_block(self, block: TBlock, page: TBlock = None):
+        '''
+        Add a block to the document at a give page. If the page is None, the block is 
+        added to the first page
+        '''
         if not block.id:
             block.id = str(uuid4())
         if not self.blocks:
             self.blocks = list()
         if not self.find_block_by_id(block.id):
             self.blocks.append(block)
+            self._block_id_maps['ALL'][block.id] = len(self.blocks)-1
+            if block.block_type is not '':
+                self._block_id_maps[block.block_type][block.id] = len(self.blocks)-1
         if not page:
             page = self.pages[0]
         page.add_ids_to_relationships(ids=[block.id])
@@ -479,9 +597,10 @@ class TDocument():
         self.relationships_recursive.cache_clear()
 
     def find_block_by_id(self, id: str) -> Optional[TBlock]:
-        for b in self.blocks:
-            if b.id == id:
-                return b
+        '''Find a block by its ID. Returns None if not found'''
+        idx = self.block_id_map().get(id, None)
+        if idx:
+            return self.blocks[idx]
         return None
 
     def get_block_by_id(self, id: str) -> TBlock:
@@ -507,13 +626,9 @@ class TDocument():
 
     @property
     def pages(self) -> List[TBlock]:
-        page_list: List[TBlock] = list()
-        if self.blocks:
-            for b in self.blocks:
-                if b.block_type == TextractBlockTypes.PAGE.name:
-                    page_list.append(b)
-            return page_list
-        return page_list
+        page_blocks = self.block_map(TextractBlockTypes.PAGE).values()
+        page_blocks = sorted(page_blocks, key=lambda item: item.page)
+        return page_blocks
 
     @staticmethod
     def filter_blocks_by_type(block_list: List[TBlock],
@@ -626,6 +741,7 @@ class TDocument():
                 self.blocks.remove(block)
             else:
                 logger.warning(f"delete_blocks: did not get block for id: {b}")
+        self.__post_init__()
         self.relationships_recursive.cache_clear()
 
     def merge_tables(self, table_array_ids: List[List[str]]):
