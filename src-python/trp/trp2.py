@@ -57,16 +57,20 @@ class TextractEntityTypes(Enum):
     VALUE = auto()
 
 
-@dataclass(init=True, eq=True, repr=True)
+@dataclass(eq=True, repr=True)
 class TPoint():
     x: float
     y: float
 
-    def scale(self, doc_width=None, doc_height=None):
+    def __init__(self, x: float, y: float) -> None:
+        self.x = x
+        self.y = y
+
+    def scale(self, doc_width, doc_height):
         self.x: float = self.x * doc_width
         self.y: float = self.y * doc_height
 
-    def ratio(self, doc_width=None, doc_height=None):
+    def ratio(self, doc_width, doc_height):
         self.x: float = self.x / doc_width
         self.y: float = self.y / doc_height
 
@@ -104,20 +108,26 @@ class TPoint():
         return self
 
 
-@dataclass(eq=True, init=True, repr=True, order=True, unsafe_hash=True)
+@dataclass(eq=True, repr=True, order=True, unsafe_hash=True)
 class TBoundingBox():
     width: float
     height: float
     left: float
     top: float
 
-    def scale(self, doc_width=None, doc_height=None):
+    def __init__(self, height: float, width: float, left: float, top: float) -> None:
+        self.width = width
+        self.height = height
+        self.left = left
+        self.top = top
+
+    def scale(self, doc_width, doc_height):
         self.top: float = self.top * doc_height
         self.height: float = self.height * doc_height
         self.left: float = self.left * doc_width
         self.width: float = self.width * doc_width
 
-    def ratio(self, doc_width=None, doc_height=None):
+    def ratio(self, doc_width, doc_height):
         self.top: float = self.top / doc_height
         self.height: float = self.height / doc_height
         self.left: float = self.left / doc_width
@@ -249,7 +259,7 @@ class TGeometry():
         self.bounding_box.ratio(doc_width=doc_width, doc_height=doc_height)
         [x.ratio(doc_width=doc_width, doc_height=doc_height) for x in self.polygon]
 
-    def rotate(self, origin: TPoint = TPoint(0, 0), degrees: float = 180):
+    def rotate(self, origin: TPoint = TPoint(0, 0), degrees: float = 180.0):
         self.bounding_box.rotate(origin=origin, degrees=degrees)
         [p.rotate(origin_x=origin.x, origin_y=origin.y) for p in self.polygon]
 
@@ -351,7 +361,7 @@ class TBlock():
                 self.relationships = list()
             self.relationships.append(TRelationship(type=relationships_type, ids=ids))
 
-    def rotate(self, origin=TPoint(0.5, 0.5), degrees=180):
+    def rotate(self, origin=TPoint(0.5, 0.5), degrees: float = 180):
         self.geometry.rotate(origin=origin, degrees=degrees)
 
 
@@ -534,7 +544,8 @@ class TDocument():
         self.add_block(tblock, page=page_block)
         return tblock
 
-    def add_virtual_key_for_existing_key(self, key_name: str, existing_key: TBlock, page_block: TBlock):
+    def add_virtual_key_for_existing_key(self, key_name: str, existing_key: TBlock,
+                                         page_block: TBlock) -> Optional[TBlock]:
         if existing_key and existing_key.block_type == "KEY_VALUE_SET" and "KEY" in existing_key.entity_types:
             value_blocks: List[TBlock] = self.value_for_key(existing_key)
             return self.add_key_values(key_name=key_name, values=value_blocks, page_block=page_block)
@@ -542,7 +553,7 @@ class TDocument():
             logger.warning(
                 f"no existing_key or not block_type='KEY_VALUE_SET' or 'KEY' not in entity_type: {existing_key}")
 
-    def add_key_values(self, key_name: str, values: List[TBlock], page_block: TBlock):
+    def add_key_values(self, key_name: str, values: List[TBlock], page_block: TBlock) -> TBlock:
         if not key_name:
             raise ValueError("need values and key_name")
         if not values:
@@ -562,27 +573,27 @@ class TDocument():
 
         virtual_block = self.add_virtual_block(text=key_name, page_block=page_block)
         id = str(uuid4())
-        key_block = TBlock(
-            id=id,
-            block_type="KEY_VALUE_SET",
-            entity_types=["KEY"],
-            confidence=99,
-            geometry=TGeometry(bounding_box=TBoundingBox(width=0, height=0, left=0, top=0),
-                               polygon=[TPoint(x=0, y=0), TPoint(x=0, y=0)]),
-        )
+        key_block = TBlock(id=id,
+                           block_type="KEY_VALUE_SET",
+                           entity_types=["KEY"],
+                           confidence=99,
+                           geometry=TGeometry(bounding_box=TBoundingBox(width=0, height=0, left=0, top=0),
+                                              polygon=[TPoint(x=0, y=0), TPoint(x=0, y=0)]),
+                           page=page_block.page)
         key_block.add_ids_to_relationships(relationships_type="VALUE", ids=[value_block.id])
         key_block.add_ids_to_relationships(relationships_type="CHILD", ids=[virtual_block.id])
         logger.debug(f"add key with id: {id} and key_name: {key_name}")
         self.add_block(key_block, page=page_block)
+        return key_block
 
-    def rotate(self, page: TBlock = None, origin: TPoint = TPoint(x=0.5, y=0.5), degrees: float = None) -> None:
+    def rotate(self, page: TBlock, degrees: float, origin: TPoint = TPoint(x=0.5, y=0.5)) -> None:
         # FIXME: add dimension. the relative scale messes up the new coordinates, have to use the actual image scale
         """atm no way to get back from Block to list of other blocks, hence get_block_by_id is only available on document level and quite some processing has to be here"""
         if not page:
             raise ValueError("need a page to rotate")
         if not degrees:
             raise ValueError("need degrees to rotate")
-        [b.rotate(origin=origin, degrees=degrees) for b in self.relationships_recursive(block=page)]
+        [b.rotate(origin=origin, degrees=float(degrees)) for b in self.relationships_recursive(block=page)]
         self.relationships_recursive.cache_clear()
 
     def find_block_by_id(self, id: str) -> Optional[TBlock]:

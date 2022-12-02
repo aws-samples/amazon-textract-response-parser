@@ -29,7 +29,7 @@ def test_serialization():
     testing that None values are removed when serializing
     """
     bb_1 = t2.TBoundingBox(0.4, 0.3, 0.1, top=None)    # type:ignore forcing some None/null values
-    bb_2 = t2.TBoundingBox(0.4, 0.3, 0.1, top=0.2)
+    bb_2 = t2.TBoundingBox(0.4, 0.3, 0.1, top=0.2)    # type: ignore
     p1 = t2.TPoint(x=0.1, y=0.1)
     p2 = t2.TPoint(x=0.3, y=None)    # type:ignore
     geo = t2.TGeometry(bounding_box=bb_1, polygon=[p1, p2])
@@ -45,7 +45,7 @@ def test_tblock_order_blocks_by_geo():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     new_order = order_blocks_by_geo(t_document)
     doc = t1.Document(t2.TDocumentSchema().dump(new_order))
     assert "Value 1.1.1" == doc.pages[0].tables[0].rows[0].cells[0].text.strip()
@@ -57,7 +57,7 @@ def test_tblock_order_block_by_geo_multi_page():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = order_blocks_by_geo(t_document)
     doc = t1.Document(t2.TDocumentSchema().dump(t_document))
     assert "Page 1 - Value 1.1.1" == doc.pages[0].tables[0].rows[0].cells[0].text.strip()
@@ -68,7 +68,7 @@ def test_tblock():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     new_order = order_blocks_by_geo(t_document)
     doc = t1.Document(t2.TDocumentSchema().dump(new_order))
     assert "Value 1.1.1" == doc.pages[0].tables[0].rows[0].cells[0].text.strip()
@@ -80,7 +80,7 @@ def test_custom_tblock():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document.custom = {'testblock': {'here': 'is some fun stuff'}}
     assert 'testblock' in t2.TDocumentSchema().dumps(t_document)
 
@@ -92,66 +92,66 @@ def test_custom_page_orientation(json_response):
     assert 22 == len(lines)
     words = [word for line in lines for word in line.words]
     assert 53 == len(words)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(json_response)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(json_response)    #type: ignore
     t_document.custom = {'orientation': 180}
     new_t_doc_json = t2.TDocumentSchema().dump(t_document)
     assert "Custom" in new_t_doc_json
-    assert "orientation" in new_t_doc_json["Custom"]
-    assert new_t_doc_json["Custom"]["orientation"] == 180
+    assert "orientation" in new_t_doc_json["Custom"]    #type: ignore
+    assert new_t_doc_json["Custom"]["orientation"] == 180    #type: ignore
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert -1 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 2
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_10_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert 5 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 15
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__15_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert 10 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 20
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__25_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert 17 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 30
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__180_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert 170 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 190
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__270_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert -100 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < -80
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__90_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert 80 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 100
 
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__minus_10_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert -10 < t_document.pages[0].custom['PageOrientationBasedOnWords'] < 5
 
@@ -171,7 +171,7 @@ def test_next_token_response():
     f = open(os.path.join(p, "data/gib.json"))
     j = json.load(f)
     assert j['NextToken']
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     assert t_document.pages[0].custom
 
@@ -242,10 +242,10 @@ def test_adjust_bounding_boxes_and_polygons_to_orientation():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib__180_degrees.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     t_document = add_page_orientation(t_document)
     new_order = order_blocks_by_geo(t_document)
-    doc = t1.Document(t2.TDocumentSchema().dump(t_document))
+    assert t1.Document(t2.TDocumentSchema().dump(new_order))
     # for line in doc.pages[0].lines:
     #     print("Line: {}".format(line.text))
     # print("=========================== after rotation ========================")
@@ -324,26 +324,25 @@ def test_tbbox_union():
     b2: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=1.5, top=0.5)
     b_gt: t2.TBoundingBox = t2.TBoundingBox(width=2, height=1, left=0.5, top=0.5)
     b_union: t2.TBoundingBox = b2.union(b1)
-    assert(b_union==b_gt)
+    assert (b_union == b_gt)
 
     b1: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=0.5, top=0.5)
     b2: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=0.5, top=0.5)
     b_gt: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=0.5, top=0.5)
     b_union: t2.TBoundingBox = b2.union(b1)
-    assert(b_union==b_gt)
+    assert (b_union == b_gt)
 
     b1: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=0.5, top=0.5)
     b2: t2.TBoundingBox = t2.TBoundingBox(width=0.1, height=0.1, left=0.6, top=0.6)
     b_gt: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=0.5, top=0.5)
     b_union: t2.TBoundingBox = b2.union(b1)
-    assert(b_union==b_gt)
+    assert (b_union == b_gt)
 
     b1: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=0.5, top=0.5)
     b2: t2.TBoundingBox = t2.TBoundingBox(width=1, height=1, left=2, top=4)
     b_gt: t2.TBoundingBox = t2.TBoundingBox(width=2.5, height=4.5, left=0.5, top=0.5)
     b_union: t2.TBoundingBox = b2.union(b1)
-    assert(b_union==b_gt)
-
+    assert (b_union == b_gt)
 
 
 def test_get_blocks_for_relationship(caplog):
@@ -353,8 +352,8 @@ def test_get_blocks_for_relationship(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/gib.json")) as f:
         j = json.load(f)
-        t_document: t2.TDocument = t2.TDocumentSchema().load(j)
-        page = t_document.pages[0]
+        t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+        # page = t_document.pages[0]
         block = t_document.get_block_by_id("458a9301-8a9d-4eb2-9469-70302c62622e")
         relationships = block.get_relationships_for_type()
         relationships_value = block.get_relationships_for_type(relationship_type="VALUE")
@@ -366,7 +365,8 @@ def test_get_blocks_for_relationship(caplog):
 
             child_rel: List[t2.TBlock] = list()
             for value_block in rel_value:
-                child_rel.extend(t_document.get_blocks_for_relationships(value_block.get_relationships_for_type()))
+                child_rel.extend(t_document.get_blocks_for_relationships(
+                    value_block.get_relationships_for_type()))    #type: ignore
             assert len(child_rel) == 1
         else:
             assert False
@@ -384,13 +384,14 @@ def test_block_id_map():
         assert len(tdoc.block_id_map(t2.TextractBlockTypes.WORD)) == 63
         assert len(tdoc.block_id_map(t2.TextractBlockTypes.KEY_VALUE_SET)) == 8
         # test some random blocks in the main hashmap (all blocks included)
-        assert tdoc.block_id_map()['31ce6ec7-2d33-4d48-8968-922bdf8b6c46'] == 0 #the page
-        assert tdoc.block_id_map()['7a2a9b0e-582b-4852-98bb-8e067e0b4703'] == 103 #a cell
-        assert tdoc.block_id_map()['5ff46696-e06e-4577-ac3f-32a1ffde3290'] == 21 #a line
+        assert tdoc.block_id_map()['31ce6ec7-2d33-4d48-8968-922bdf8b6c46'] == 0    #the page
+        assert tdoc.block_id_map()['7a2a9b0e-582b-4852-98bb-8e067e0b4703'] == 103    #a cell
+        assert tdoc.block_id_map()['5ff46696-e06e-4577-ac3f-32a1ffde3290'] == 21    #a line
         # test some random blocks in the dedicted haspmaps
-        assert tdoc.block_id_map(t2.TextractBlockTypes.PAGE)['31ce6ec7-2d33-4d48-8968-922bdf8b6c46'] == 0 # the page
-        assert tdoc.block_id_map(t2.TextractBlockTypes.CELL)['7a2a9b0e-582b-4852-98bb-8e067e0b4703'] == 103 #a cell
-        assert tdoc.block_id_map(t2.TextractBlockTypes.LINE)['5ff46696-e06e-4577-ac3f-32a1ffde3290'] == 21 #a line
+        assert tdoc.block_id_map(t2.TextractBlockTypes.PAGE)['31ce6ec7-2d33-4d48-8968-922bdf8b6c46'] == 0    # the page
+        assert tdoc.block_id_map(t2.TextractBlockTypes.CELL)['7a2a9b0e-582b-4852-98bb-8e067e0b4703'] == 103    #a cell
+        assert tdoc.block_id_map(t2.TextractBlockTypes.LINE)['5ff46696-e06e-4577-ac3f-32a1ffde3290'] == 21    #a line
+
 
 def test_block_map():
     p = os.path.dirname(os.path.realpath(__file__))
@@ -404,13 +405,16 @@ def test_block_map():
         assert len(tdoc.block_map(t2.TextractBlockTypes.WORD)) == 63
         assert len(tdoc.block_map(t2.TextractBlockTypes.KEY_VALUE_SET)) == 8
         # test some random blocks in the main hashmap (all blocks included)
-        assert tdoc.block_map()['31ce6ec7-2d33-4d48-8968-922bdf8b6c46'] == tdoc.blocks[0] #the page
-        assert tdoc.block_map()['7a2a9b0e-582b-4852-98bb-8e067e0b4703'] == tdoc.blocks[103] #a cell
-        assert tdoc.block_map()['5ff46696-e06e-4577-ac3f-32a1ffde3290'] == tdoc.blocks[21] #a line
+        assert tdoc.block_map()['31ce6ec7-2d33-4d48-8968-922bdf8b6c46'] == tdoc.blocks[0]    #the page
+        assert tdoc.block_map()['7a2a9b0e-582b-4852-98bb-8e067e0b4703'] == tdoc.blocks[103]    #a cell
+        assert tdoc.block_map()['5ff46696-e06e-4577-ac3f-32a1ffde3290'] == tdoc.blocks[21]    #a line
         # test some random blocks in the dedicted haspmaps
-        assert tdoc.block_map(t2.TextractBlockTypes.PAGE)['31ce6ec7-2d33-4d48-8968-922bdf8b6c46'] ==tdoc.blocks[0] # the page
-        assert tdoc.block_map(t2.TextractBlockTypes.CELL)['7a2a9b0e-582b-4852-98bb-8e067e0b4703'] == tdoc.blocks[103] #a cell
-        assert tdoc.block_map(t2.TextractBlockTypes.LINE)['5ff46696-e06e-4577-ac3f-32a1ffde3290'] ==tdoc.blocks[21] #a line
+        assert tdoc.block_map(
+            t2.TextractBlockTypes.PAGE)['31ce6ec7-2d33-4d48-8968-922bdf8b6c46'] == tdoc.blocks[0]    # the page
+        assert tdoc.block_map(
+            t2.TextractBlockTypes.CELL)['7a2a9b0e-582b-4852-98bb-8e067e0b4703'] == tdoc.blocks[103]    #a cell
+        assert tdoc.block_map(
+            t2.TextractBlockTypes.LINE)['5ff46696-e06e-4577-ac3f-32a1ffde3290'] == tdoc.blocks[21]    #a line
 
 
 def test_find_block_by_id():
@@ -473,7 +477,7 @@ def test_key_value_set_key_name(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/gib.json")) as f:
         j = json.load(f)
-        t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+        t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
         page = t_document.pages[0]
         keys = list(t_document.keys(page=page))
         assert keys and len(keys) > 0
@@ -491,7 +495,7 @@ def test_get_relationships_for_type(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/gib.json")) as f:
         j = json.load(f)
-        t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+        t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
         page = t_document.pages[0]
         new_block = t2.TBlock(id=str(uuid4()))
         t_document.add_block(new_block)
@@ -512,7 +516,7 @@ def test_merge_tables():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
     tbl_id1 = 'fed02fb4-1996-4a15-98dc-29da193cc476'
     tbl_id2 = '47c6097f-02d5-4432-8423-13c05fbfacbd'
     pre_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)    # type: ignore
@@ -540,23 +544,22 @@ def test_add_block():
         new_block_id = str(uuid4())
         new_block = t2.TBlock(id=new_block_id)
         t_document.add_block(new_block)
-        assert t_document.block_id_map()[new_block_id] == len(t_document.blocks)-1
+        assert t_document.block_id_map()[new_block_id] == len(t_document.blocks) - 1
         # add a block WITH type
         new_block_id = str(uuid4())
         new_block = t2.TBlock(id=new_block_id, block_type="WORD")
         t_document.add_block(new_block)
-        assert t_document.block_id_map()[new_block_id] == len(t_document.blocks)-1
-        assert t_document.block_id_map(t2.TextractBlockTypes.WORD)[new_block_id] == len(t_document.blocks)-1
-
+        assert t_document.block_id_map()[new_block_id] == len(t_document.blocks) - 1
+        assert t_document.block_id_map(t2.TextractBlockTypes.WORD)[new_block_id] == len(t_document.blocks) - 1
 
 
 def test_delete_blocks():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
-    tbl_id1 = 'fed02fb4-1996-4a15-98dc-29da193cc476'  #a table block
-    tbl_id2 = '47c6097f-02d5-4432-8423-13c05fbfacbd'  #a table block
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
+    tbl_id1 = 'fed02fb4-1996-4a15-98dc-29da193cc476'
+    tbl_id2 = '47c6097f-02d5-4432-8423-13c05fbfacbd'
     pre_delete_block_no = len(t_document.blocks)
     t_document.delete_blocks([tbl_id1, tbl_id2])
     post_delete_block_no = len(t_document.blocks)
@@ -575,7 +578,7 @@ def test_link_tables():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_page_tables.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
     tbl_id1 = 'fed02fb4-1996-4a15-98dc-29da193cc476'
     tbl_id2 = '47c6097f-02d5-4432-8423-13c05fbfacbd'
     t_document.link_tables([[tbl_id1, tbl_id2]])
@@ -587,7 +590,7 @@ def test_pipeline_merge_tables():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_tables_multi_page_sample.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
     tbl_id1 = '4894d2ba-0479-4196-9cbd-c0fea4d28762'
     tbl_id2 = 'b5e061ec-05be-48d5-83fc-6719fdd4397a'
     tbl_id3 = '8bbc3f4f-0354-4999-a001-4585631bb7fe'
@@ -596,7 +599,7 @@ def test_pipeline_merge_tables():
     pre_merge_tbl2_cells_no = len(t_document.get_block_by_id(tbl_id2).relationships[0].ids)    # type: ignore
     pre_merge_tbl3_cells_no = len(t_document.get_block_by_id(tbl_id3).relationships[0].ids)    # type: ignore
     pre_merge_tbl4_cells_no = len(t_document.get_block_by_id(tbl_id4).relationships[0].ids)    # type: ignore
-    t_document = pipeline_merge_tables(t_document, MergeOptions.MERGE, None, HeaderFooterType.NONE)
+    t_document = pipeline_merge_tables(t_document, MergeOptions.MERGE, None, HeaderFooterType.NONE)    #type: ignore
     post_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)    # type: ignore
     post_merge_tbl2_cells_no = len(t_document.get_block_by_id(tbl_id3).relationships[0].ids)    # type: ignore
     assert post_merge_tbl1_cells_no == pre_merge_tbl1_cells_no + pre_merge_tbl2_cells_no
@@ -607,7 +610,7 @@ def test_pipeline_merge_multiple_tables():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib_multi_tables_multi_page_sample.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
     tbl_id1 = '4894d2ba-0479-4196-9cbd-c0fea4d28762'
     tbl_id2 = 'b5e061ec-05be-48d5-83fc-6719fdd4397a'
     tbl_id3 = '8bbc3f4f-0354-4999-a001-4585631bb7fe'
@@ -616,7 +619,7 @@ def test_pipeline_merge_multiple_tables():
     pre_merge_tbl2_cells_no = len(t_document.get_block_by_id(tbl_id2).relationships[0].ids)    # type: ignore
     pre_merge_tbl3_cells_no = len(t_document.get_block_by_id(tbl_id3).relationships[0].ids)    # type: ignore
     pre_merge_tbl4_cells_no = len(t_document.get_block_by_id(tbl_id4).relationships[0].ids)    # type: ignore
-    t_document = pipeline_merge_tables(t_document, MergeOptions.MERGE, None, HeaderFooterType.NONE)
+    t_document = pipeline_merge_tables(t_document, MergeOptions.MERGE, None, HeaderFooterType.NONE)    #type: ignore
     post_merge_tbl1_cells_no = len(t_document.get_block_by_id(tbl_id1).relationships[0].ids)    # type: ignore
     post_merge_tbl2_cells_no = len(t_document.get_block_by_id(tbl_id3).relationships[0].ids)    # type: ignore
     assert post_merge_tbl1_cells_no == pre_merge_tbl1_cells_no + pre_merge_tbl2_cells_no
@@ -628,21 +631,34 @@ def test_kv_ocr_confidence(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/employment-application.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
     t_document = add_kv_ocr_confidence(t_document)
 
     doc = t1.Document(t2.TDocumentSchema().dump(t_document))
     for page in doc.pages:
         k1 = page.form.getFieldByKey("Home Address:")
-        k1.key.custom['OCRConfidence'] == {'mean': 99.60698318481445}
-        k1.value.custom['OCRConfidence'] == {'mean': 99.8596928914388}
+        assert k1.key.custom['OCRConfidence'] == {'min': 95.0, 'mean': 99.26356930202908}
+        assert k1.value.custom['OCRConfidence'] == {'mean': 99.8596928914388, 'min': 99.74813079833984}
         k1 = page.form.getFieldByKey("Phone Number:")
-        k1.key.custom['OCRConfidence'] == {'mean': 99.55334854125977}
-        k1.value.custom['OCRConfidence'] == {'mean': 99.23233032226562}
+        assert k1.key.custom['OCRConfidence'] == {'mean': 97.33475685119629, 'min': 91.0}
+        assert k1.value.custom['OCRConfidence'] == {'mean': 99.23233032226562, 'min': 99.23233032226562}
         # for field in page.form.fields:
         #     print(
         #         f"{field.key.text} - {field.key.custom['OCRConfidence']}, {field.value.text} - {field.value.custom['OCRConfidence']}"
         #     )
+
+
+def test_get_answers_for_query(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "queries_sample.json"))
+    j = json.load(f)
+    t_doc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    page: t2.TBlock = t_doc.pages[0]
+    answers = list()
+    for query in t_doc.queries(page=page):
+        answers.append(t_doc.get_answers_for_query(block=query))
+    assert len(answers) == 9
 
 
 def test_table_with_headers_and_merged_cells(caplog):
@@ -650,7 +666,7 @@ def test_table_with_headers_and_merged_cells(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data", "tables_with_headers_and_merged_cells.json"))
     j = json.load(f)
-    t_doc: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_doc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     page: t2.TBlock = t_doc.pages[0]
     tables: t2.TBlock = t_doc.tables(page=page)[0]
 
@@ -678,9 +694,55 @@ def test_add_key_values_new_value_blocks(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/employment-application.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type:ignore
     test_block = t_document.add_virtual_block(text="test", page_block=t_document.pages[0], text_type="VIRTUAL")
     assert t_document.get_block_by_id(test_block.id)
     t_document.add_key_values(key_name="new_key", values=[test_block], page_block=t_document.pages[0])
     assert t_document.get_key_by_name(key_name="new_key")
     assert len(t_document.get_key_by_name(key_name="new_key")) == 1
+
+
+def test_add_virtual_key_for_existing_key_multi_page(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/multi-page-forms-samples-2-page.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    assert t_document
+
+    # page 1
+    key_page_1_t_block = t_document.find_block_by_id("450b87d0-8407-4e2c-8ca6-6f669f9acb67")
+    assert key_page_1_t_block
+    test_block_1 = t_document.add_virtual_key_for_existing_key(key_name="TEST_PAGE_1",
+                                                               existing_key=key_page_1_t_block,
+                                                               page_block=t_document.pages[0])
+    assert test_block_1
+    rels = t_document.pages[0].get_relationships_for_type()
+    assert rels
+    ids = rels.ids
+    assert ids
+    assert [id for id in ids if test_block_1.id == id]
+    assert test_block_1.page == 1
+
+    # page 2
+    key_page_1_t_block = t_document.find_block_by_id("f2749b18-d331-4097-bc52-95dfb3af959a")
+    assert key_page_1_t_block
+    test_block_1 = t_document.add_virtual_key_for_existing_key(key_name="TEST_PAGE_2",
+                                                               existing_key=key_page_1_t_block,
+                                                               page_block=t_document.pages[1])
+    assert test_block_1
+    rels = t_document.pages[1].get_relationships_for_type()
+    assert rels
+    ids = rels.ids
+    assert ids
+    assert [id for id in ids if test_block_1.id == id]
+    assert test_block_1.page == 2
+
+
+def test_paystub_with_signature(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "paystub_with_signature.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    assert t_document
