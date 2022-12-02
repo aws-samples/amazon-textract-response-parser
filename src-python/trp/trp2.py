@@ -144,19 +144,18 @@ class TBoundingBox():
 
     @property
     def bottom(self) -> float:
-        return self.top+self.height
+        return self.top + self.height
 
     @property
     def right(self) -> float:
-        return self.left+self.width
+        return self.left + self.width
 
     @property
     def centre(self) -> TPoint:
         '''
         Return the centre of mass of the bounding box.
         '''
-        return TPoint(x=self.left+self.width/2.0, y=self.top+self.height/2.0)
-
+        return TPoint(x=self.left + self.width / 2.0, y=self.top + self.height / 2.0)
 
     def to_list(self) -> List[float]:
         '''
@@ -187,13 +186,13 @@ class TBoundingBox():
         union_bbox
             A TBoundingBox object representing the union between self and bbox
         '''
-        new_top = min(self.top,bbox.top)
-        new_bottom = max(self.bottom,bbox.bottom)
-        new_left = min(self.left,bbox.left)
-        new_right = max(self.right,bbox.right)
+        new_top = min(self.top, bbox.top)
+        new_bottom = max(self.bottom, bbox.bottom)
+        new_left = min(self.left, bbox.left)
+        new_right = max(self.right, bbox.right)
         new_bbox = TBoundingBox(
-            width=new_right-new_left,
-            height=new_bottom-new_top,
+            width=new_right - new_left,
+            height=new_bottom - new_top,
             left=new_left,
             top=new_top,
         )
@@ -447,7 +446,7 @@ class TDocument():
     next_token: str = field(default=None)    #type: ignore
     id: UUID = field(default_factory=uuid4)
 
-    def __post_init__(self):  #this is a dataclass method
+    def __post_init__(self):    #this is a dataclass method
         '''
         Build several hashmaps (signature: Dict[str, int]) with 
         the block ID as key and the block index in self.blocks as value. As Textract 
@@ -468,14 +467,14 @@ class TDocument():
             self._block_id_maps[blk_type.name] = dict()
         self._block_id_maps['ALL'] = dict()
         if self.blocks != None:
-            for blk_i,blk in enumerate(self.blocks):
+            for blk_i, blk in enumerate(self.blocks):
                 self._block_id_maps[blk.block_type][blk.id] = blk_i
                 self._block_id_maps['ALL'][blk.id] = blk_i
 
     def __hash__(self):
         return int(self.id)
 
-    def block_id_map(self, block_type: Optional[TextractBlockTypes]=None) -> Dict[str, int]:
+    def block_id_map(self, block_type: Optional[TextractBlockTypes] = None) -> Dict[str, int]:
         '''
         Return a hashmap  with the block ID as key and the block index in self.blocks 
         as value.
@@ -485,14 +484,14 @@ class TDocument():
         else:
             return self._block_id_maps['ALL']
 
-    def block_map(self, block_type: Optional[TextractBlockTypes]=None) -> Dict[str, TBlock]:
+    def block_map(self, block_type: Optional[TextractBlockTypes] = None) -> Dict[str, TBlock]:
         '''
         Return a hashmap  with the block ID as key and the block as value.
         '''
         if block_type:
-            return {k:self.blocks[v] for k,v in self._block_id_maps[block_type.name].items()}
+            return {k: self.blocks[v] for k, v in self._block_id_maps[block_type.name].items()}
         else:
-            return {k:self.blocks[v] for k,v in self._block_id_maps['ALL'].items()}
+            return {k: self.blocks[v] for k, v in self._block_id_maps['ALL'].items()}
 
     def add_block(self, block: TBlock, page: TBlock = None):
         '''
@@ -505,9 +504,9 @@ class TDocument():
             self.blocks = list()
         if not self.find_block_by_id(block.id):
             self.blocks.append(block)
-            self._block_id_maps['ALL'][block.id] = len(self.blocks)-1
-            if block.block_type is not '':
-                self._block_id_maps[block.block_type][block.id] = len(self.blocks)-1
+            self._block_id_maps['ALL'][block.id] = len(self.blocks) - 1
+            if block.block_type != '':
+                self._block_id_maps[block.block_type][block.id] = len(self.blocks) - 1
         if not page:
             page = self.pages[0]
         page.add_ids_to_relationships(ids=[block.id])
@@ -795,6 +794,7 @@ class TDocument():
 
 
 class THttpHeadersSchema(BaseSchema):
+
     class Meta:
         unknown = m.EXCLUDE
 
@@ -810,6 +810,7 @@ class THttpHeadersSchema(BaseSchema):
 
 
 class TResponseMetadataSchema(BaseSchema):
+
     class Meta:
         unknown = m.EXCLUDE
 
