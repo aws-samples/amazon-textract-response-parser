@@ -141,3 +141,12 @@ def test_table_with_header(caplog):
 
     rows = table.rows_without_header
     assert len(rows) == 7
+
+
+def test_signature(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "paystub_with_signature.json"))
+    j = json.load(f)
+    doc = Document(j)
+    assert doc
