@@ -3,15 +3,15 @@ from typing import List
 from uuid import uuid4, UUID
 
 from trp.trp2 import TGeometry, TDocumentMetadata, TDocumentMetadataSchema, BaseSchema, TGeometrySchema, TWarnings, TWarningsSchema, TResponseMetadata, TResponseMetadataSchema
-from trp.trp2_expense import TAnalyzeExpenseDocument, TExpenseSchema
-from trp.trp2_analyzeid import TAnalyzeIdDocument, TIdentityDocumentSchema
+from trp.trp2_expense import TExpenseSchema, TExpense
+from trp.trp2_analyzeid import TIdentityDocument, TIdentityDocumentSchema
 import marshmallow as m
 
 
 @dataclass(eq=True, init=True, repr=True)
 class TLendingDetection():
     confidence: float
-    geometry: TGeometry = field(default=None)
+    geometry: TGeometry = field(default=None)    #type: ignore
     selection_status: str = field(default=None)    #type: ignore
     text: str = field(default=None)    #type: ignore
 
@@ -19,14 +19,14 @@ class TLendingDetection():
 @dataclass(eq=True, init=True, repr=True)
 class TSignatureDetection():
     confidence: float
-    geometry: TGeometry = field(default=None)
+    geometry: TGeometry = field(default=None)    #type: ignore
 
 
 @dataclass(eq=True, init=True, repr=True)
 class TLendingField():
     field_type: str
     value_detections: List[TLendingDetection]
-    key_detection: str = field(default="")
+    key_detection: TLendingDetection = field(default=None)    #type: ignore
 
 
 @dataclass(eq=True, init=True, repr=True)
@@ -37,9 +37,9 @@ class TLendingDocument():
 
 @dataclass(eq=True, init=True, repr=True)
 class TExtraction():
-    expense_document: TAnalyzeExpenseDocument = field(default=None)
-    identity_document: TAnalyzeIdDocument = field(default=None)
-    lending_document: TLendingDocument = field(default=None)
+    expense_document: TExpense = field(default=None)    #type: ignore
+    identity_document: TIdentityDocument = field(default=None)    #type: ignore
+    lending_document: TLendingDocument = field(default=None)    #type: ignore
 
 
 @dataclass(eq=True, init=True, repr=True)
