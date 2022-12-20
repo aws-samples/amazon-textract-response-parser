@@ -104,9 +104,9 @@ class TValueDetection():
     """
     Class for ValueDetection in AnalyzeExpense API Response
     """
-    text: str = None
-    geometry: TGeometry = None
-    confidence: float = None
+    text: str = field(default="")
+    geometry: TGeometry = field(default=None)    #type: ignore
+    confidence: float = 0
 
 
 class TValueDetectionSchema(BaseSchema):
