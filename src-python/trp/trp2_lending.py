@@ -18,21 +18,21 @@ class TLendingDetection():
 
 @dataclass(eq=True, init=True, repr=True)
 class TSignatureDetection():
-    confidence: float
+    confidence: float = field(default=None)    #type: ignore
     geometry: TGeometry = field(default=None)    #type: ignore
 
 
 @dataclass(eq=True, init=True, repr=True)
 class TLendingField():
-    field_type: str
-    value_detections: List[TLendingDetection]
+    field_type: str = field(default=None)    #type: ignore
+    value_detections: List[TLendingDetection] = field(default=None)    #type: ignore
     key_detection: TLendingDetection = field(default=None)    #type: ignore
 
 
 @dataclass(eq=True, init=True, repr=True)
 class TLendingDocument():
-    lending_fields: List[TLendingField]
-    signature_detections: List[TSignatureDetection]
+    lending_fields: List[TLendingField] = field(default=None)    #type: ignore
+    signature_detections: List[TSignatureDetection] = field(default=None)    #type: ignore
 
 
 @dataclass(eq=True, init=True, repr=True)
@@ -44,8 +44,8 @@ class TExtraction():
 
 @dataclass(eq=True, init=True, repr=True)
 class TPrediction():
-    confidence: float
-    value: str
+    confidence: float = field(default=None)    #type: ignore
+    value: str = field(default=None)    #type: ignore
 
 
 @dataclass(eq=True, init=True, repr=True)
@@ -56,16 +56,16 @@ class TPageClassification():
 
 @dataclass(eq=True, init=True, repr=True)
 class TLendingResult():
-    extractions: List[TExtraction]
-    page: int
-    page_classification: TPageClassification
+    extractions: List[TExtraction] = field(default=None)    #type: ignore
+    page: int = field(default=None)    #type: ignore
+    page_classification: TPageClassification = field(default=None)    #type: ignore
 
 
 @dataclass(eq=True, init=True, repr=True)
 class TFullLendingDocument():
     analyze_lending_model_version: str
-    lending_results: List[TLendingResult]
-    document_metadata: TDocumentMetadata
+    lending_results: List[TLendingResult] = field(default=None)    #type: ignore
+    document_metadata: TDocumentMetadata = field(default=None)    #type: ignore
     job_status: str = field(default=None)    #type: ignore
     status_message: str = field(default=None)    #type: ignore
     warnings: TWarnings = field(default=None)    #type: ignore
@@ -80,10 +80,10 @@ class TFullLendingDocument():
 
 
 class TLendingDetectionSchema(BaseSchema):
-    confidence = m.fields.Float(data_key="Confidence")
+    confidence = m.fields.Float(data_key="Confidence", required=False)
     geometry = m.fields.Nested(TGeometrySchema, data_key="Geometry", required=False)
-    selection_status = m.fields.String(data_key="SelectionStatus")
-    text = m.fields.String(data_key="Text")
+    selection_status = m.fields.String(data_key="SelectionStatus", required=False)
+    text = m.fields.String(data_key="Text", required=False)
 
     @m.post_load
     def make(self, data, **kwargs):
@@ -91,7 +91,7 @@ class TLendingDetectionSchema(BaseSchema):
 
 
 class TSignatureDetectionSchema(BaseSchema):
-    confidence = m.fields.Float(data_key="Confidence")
+    confidence = m.fields.Float(data_key="Confidence", required=False)
     geometry = m.fields.Nested(TGeometrySchema, data_key="Geometry", required=False)
 
     @m.post_load
@@ -162,7 +162,7 @@ class TLendingResultSchema(BaseSchema):
                                 required=False,
                                 allow_none=True)
     page = m.fields.Int(data_key="Page", required=False)
-    page_classification = m.fields.Nested(TPageClassificationSchema, data_key="PageClassification")
+    page_classification = m.fields.Nested(TPageClassificationSchema, data_key="PageClassification", required=False)
 
     @m.post_load
     def make(self, data, **kwargs):
