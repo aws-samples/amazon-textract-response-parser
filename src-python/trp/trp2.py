@@ -459,13 +459,15 @@ class TDocument():
         * Method __post_init__ called by @dataclass after  __init__ call
         '''
         self._block_id_maps: Dict[str, typing.Dict[str, int]] = dict()
-        for blk_type in TextractBlockTypes:
-            # TODO: can we limit the python version and rely on the classic dict?
-            self._block_id_maps[blk_type.name] = dict()
         self._block_id_maps['ALL'] = dict()
         if self.blocks != None:
             for blk_i, blk in enumerate(self.blocks):
-                self._block_id_maps[blk.block_type][blk.id] = blk_i
+                try:
+                    self._block_id_maps[blk.block_type][blk.id] = blk_i
+                except KeyError:
+                    self._block_id_maps[blk.block_type] = dict()
+                    self._block_id_maps[blk.block_type][blk.id] = blk_i
+
                 self._block_id_maps['ALL'][blk.id] = blk_i
 
     def __hash__(self):
@@ -490,7 +492,7 @@ class TDocument():
         else:
             return {k: self.blocks[v] for k, v in self._block_id_maps['ALL'].items()}
 
-    def add_block(self, block: TBlock, page: TBlock = None):
+    def add_block(self, block: TBlock, page: TBlock = None):    #type: ignore
         '''
         Add a block to the document at a give page. If the page is None, the block is 
         added to the first page
@@ -628,7 +630,7 @@ class TDocument():
 
     @staticmethod
     def filter_blocks_by_type(block_list: List[TBlock],
-                              textract_block_type: list[TextractBlockTypes] = None) -> List[TBlock]:
+                              textract_block_type: list[TextractBlockTypes] = None) -> List[TBlock]:    #type: ignore
         if textract_block_type:
             block_type_names = [x.name for x in textract_block_type]
             return [b for b in block_list if b.block_type in block_type_names]
@@ -643,7 +645,10 @@ class TDocument():
     def tables(self, page: TBlock) -> List[TBlock]:
         return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.TABLE)
 
-    def get_blocks_by_type(self, block_type_enum: TextractBlockTypes = None, page: TBlock = None) -> List[TBlock]:
+    def get_blocks_by_type(
+            self,
+            block_type_enum: TextractBlockTypes = None,    #type: ignore
+            page: TBlock = None) -> List[TBlock]:    #type: ignore
         table_list: List[TBlock] = list()
         if page and page.relationships:
             block_list = list(self.relationships_recursive(page))
@@ -662,10 +667,10 @@ class TDocument():
             else:
                 return list()
 
-    def forms(self, page: TBlock = None) -> List[TBlock]:
+    def forms(self, page: TBlock = None) -> List[TBlock]:    #type: ignore
         return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.KEY_VALUE_SET)
 
-    def keys(self, page: TBlock = None) -> List[TBlock]:
+    def keys(self, page: TBlock = None) -> List[TBlock]:    #type: ignore
         return [x for x in self.forms(page=page) if TextractEntityTypes.KEY.name in x.entity_types]
         # for key_entities in self.forms(page=page):
         #     if TextractEntityTypes.KEY.name in key_entities.entity_types:
@@ -704,7 +709,7 @@ class TDocument():
                     result_blocks.append(key)
         return result_blocks
 
-    def get_blocks_for_relationships(self, relationship: TRelationship = None) -> List[TBlock]:
+    def get_blocks_for_relationships(self, relationship: TRelationship = None) -> List[TBlock]:    #type: ignore
         all_blocks: List[TBlock] = list()
         if relationship and relationship.ids:
             for id in relationship.ids:
@@ -715,9 +720,11 @@ class TDocument():
         return_value_for_key: List[TBlock] = list()
         if TextractEntityTypes.KEY.name in key.entity_types:
             if key and key.relationships:
-                value_blocks = self.get_blocks_for_relationships(relationship=key.get_relationships_for_type("VALUE"))
+                value_blocks = self.get_blocks_for_relationships(
+                    relationship=key.get_relationships_for_type("VALUE"))    #type: ignore
                 for block in value_blocks:
-                    return_value_for_key.extend(self.get_blocks_for_relationships(block.get_relationships_for_type()))
+                    return_value_for_key.extend(self.get_blocks_for_relationships(
+                        block.get_relationships_for_type()))    #type: ignore
 
         return return_value_for_key
 

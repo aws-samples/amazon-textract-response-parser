@@ -746,3 +746,22 @@ def test_paystub_with_signature(caplog):
     j = json.load(f)
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     assert t_document
+
+
+def test_2023_q1_table_model(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "in-table-title.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    assert t_document
+
+    f = open(os.path.join(p, "data", "in-table-footer.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    assert t_document
+
+    f = open(os.path.join(p, "data", "all_features_with_floating_title_header.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    assert t_document
