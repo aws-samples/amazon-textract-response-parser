@@ -1,6 +1,5 @@
-from trp.t_pipeline import add_page_orientation, order_blocks_by_geo
 from typing import List
-from trp.t_pipeline import add_page_orientation, order_blocks_by_geo, pipeline_merge_tables, add_kv_ocr_confidence
+from trp.t_pipeline import add_page_orientation, order_blocks_by_geo, pipeline_merge_tables, add_kv_ocr_confidence, add_orientation_to_blocks
 from trp.t_tables import MergeOptions, HeaderFooterType
 import trp.trp2 as t2
 import trp as t1
@@ -765,3 +764,18 @@ def test_2023_q1_table_model(caplog):
     j = json.load(f)
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     assert t_document
+
+
+def test_180_degree_orientation_page_and_based_on_words(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "180-degree-roation.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    assert t_document
+    t_document = add_page_orientation(t_document)
+    # Check orientation based on words
+    assert 180 == t_document.pages[0].custom['PageOrientationBasedOnWords']
+    t_document = add_orientation_to_blocks(t_document)
+    # Check PAGE rotation
+    assert 179.94186486482977 == t_document.pages[0].custom['Orientation']

@@ -505,7 +505,11 @@ class TDocument():
             self.blocks.append(block)
             self._block_id_maps['ALL'][block.id] = len(self.blocks) - 1
             if block.block_type != '':
-                self._block_id_maps[block.block_type][block.id] = len(self.blocks) - 1
+                try:
+                    self._block_id_maps[block.block_type][block.id] = len(self.blocks) - 1
+                except KeyError:
+                    self._block_id_maps[block.block_type] = dict()
+                    self._block_id_maps[block.block_type][block.id] = len(self.blocks) - 1
         if not page:
             page = self.pages[0]
         page.add_ids_to_relationships(ids=[block.id])
