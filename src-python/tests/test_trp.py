@@ -150,3 +150,20 @@ def test_signature(caplog):
     j = json.load(f)
     doc = Document(j)
     assert doc
+
+
+def test_2023_q1_table_model(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "in-table-title.json"))
+    j = json.load(f)
+    doc = Document(j)
+    assert doc
+    f = open(os.path.join(p, "data", "in-table-footer.json"))
+    j = json.load(f)
+    doc = Document(j)
+    assert doc
+    f = open(os.path.join(p, "data", "all_features_with_floating_title_header.json"))
+    j = json.load(f)
+    doc = Document(j)
+    assert doc
