@@ -24,7 +24,7 @@ def test_relationship_recursive_with_lru_cache(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/patient_intake_form_sample.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     relationships = t_document.relationships_recursive(block=t_document.pages[0])
     assert relationships
     assert len(relationships) == 253
@@ -36,7 +36,7 @@ def test_selection_elements(caplog):
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/patient_intake_form_sample.json"))
     j = json.load(f)
-    t_document: t2.TDocument = t2.TDocumentSchema().load(j)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     selection_elements_tblocks = t_document.get_blocks_by_type(block_type_enum=t2.TextractBlockTypes.SELECTION_ELEMENT)
     assert selection_elements_tblocks
     assert len(selection_elements_tblocks) == 12

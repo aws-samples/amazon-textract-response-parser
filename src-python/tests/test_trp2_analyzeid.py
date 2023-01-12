@@ -18,6 +18,11 @@ def json_response_1():
 
 
 @pytest.fixture
+def json_response_3():
+    return return_json_for_file("data/test-trp2_analyzeid_sample1_with_OCR.json")
+
+
+@pytest.fixture
 def json_response_multi_page():
     return return_json_for_file("data/test-trp2-analyzeid_sample_multi_page.json")
 
@@ -29,7 +34,7 @@ def json_response_2():
 
 def test_analyzeid_serialization(caplog, json_response_1):
     caplog.set_level(logging.DEBUG)
-    exp_doc: texa.TAnalyzeIdDocument = texa.TAnalyzeIdDocumentSchema().load(json_response_1)
+    exp_doc: texa.TAnalyzeIdDocument = texa.TAnalyzeIdDocumentSchema().load(json_response_1)    #type: ignore
     assert 1 == len(exp_doc.identity_documents)
     identityDoc1 = exp_doc.identity_documents[0]
     assert 21 == len(identityDoc1.identity_document_fields)
@@ -39,14 +44,14 @@ def test_analyzeid_serialization(caplog, json_response_1):
 
 def test_analyzeid_serialization_empty(caplog, json_response_2):
     caplog.set_level(logging.DEBUG)
-    exp_doc: texa.TAnalyzeIdDocument = texa.TAnalyzeIdDocumentSchema().load(json_response_2)
+    exp_doc: texa.TAnalyzeIdDocument = texa.TAnalyzeIdDocumentSchema().load(json_response_2)    #type: ignore
     assert "1.0" == exp_doc.analyze_id_model_version
     assert 1 == exp_doc.document_metadata.pages
 
 
 def test_analyzeid_serialization_multi_page(caplog, json_response_multi_page):
     caplog.set_level(logging.DEBUG)
-    exp_doc: texa.TAnalyzeIdDocument = texa.TAnalyzeIdDocumentSchema().load(json_response_multi_page)
+    exp_doc: texa.TAnalyzeIdDocument = texa.TAnalyzeIdDocumentSchema().load(json_response_multi_page)    #type: ignore
     assert "1.0" == exp_doc.analyze_id_model_version
     assert 2 == exp_doc.document_metadata.pages
     identityDoc1 = exp_doc.identity_documents[0]
@@ -56,3 +61,13 @@ def test_analyzeid_serialization_multi_page(caplog, json_response_multi_page):
     result = exp_doc.get_values_as_list()
     assert result
     assert len(result) > 0
+
+
+def test_analyzeid_serialization_with_OCR(caplog, json_response_3):
+    caplog.set_level(logging.DEBUG)
+    exp_doc: texa.TAnalyzeIdDocument = texa.TAnalyzeIdDocumentSchema().load(json_response_3)    #type: ignore
+    assert 1 == len(exp_doc.identity_documents)
+    identityDoc1 = exp_doc.identity_documents[0]
+    assert 21 == len(identityDoc1.identity_document_fields)
+    assert "1.0" == exp_doc.analyze_id_model_version
+    assert 1 == exp_doc.document_metadata.pages

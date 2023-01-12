@@ -88,7 +88,7 @@ t_document = add_page_orientation(t_document)
 doc = t1.Document(t2.TDocumentSchema().dump(t_document))
 # page orientation can be read now for each page
 for page in doc.pages:
-    print(page.custom['Orientation'])
+    print(page.custom['PageOrientationBasedOnWords'])
 ```
 
 #### Using the pipeline on command line
