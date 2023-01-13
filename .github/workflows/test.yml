@@ -14,6 +14,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
     defaults:
       run:
         working-directory: ./src-python
@@ -21,18 +24,25 @@ jobs:
     steps:
       # Checks out the repository
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: ${{ matrix.python-version }}
 
       # Install package locally
       - name: Install package
         run: pip install -e .
+        with:
+          python-version: ${{ matrix.python-version }}
 
       # Install dev dependencies
       - name: Install dependencies
         run: pip install -r ./extras/dev.txt
+        with:
+          python-version: ${{ matrix.python-version }}
 
       # Run tests
       - name: Test
         run: pytest
+        with:
+          python-version: ${{ matrix.python-version }}
