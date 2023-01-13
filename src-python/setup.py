@@ -7,7 +7,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
-requirements = ['boto3', 'marshmallow==3.16.0']
+requirements = ['boto3', 'marshmallow==3.19.*', 'amazon-textract-textractor']
 
 if sys.argv[-1] == 'publish-test':
     os.system(f"cd {os.path.dirname(__file__)}")
@@ -28,7 +28,7 @@ if sys.argv[-1] == 'publish':
 
 setup(name='amazon-textract-response-parser',
       packages=['trp', 'a2i'],
-      version='0.1.39',
+      version='0.1.40',
       description='Easily parse JSON returned by Amazon Textract.',
       install_requires=requirements,
       scripts=['bin/amazon-textract-pipeline'],
