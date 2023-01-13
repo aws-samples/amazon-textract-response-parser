@@ -7,7 +7,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
-requirements = ['boto3', 'marshmallow==3.14.1']
+requirements = ['boto3', 'marshmallow==3.19.*', 'amazon-textract-textractor']
 
 if sys.argv[-1] == 'publish-test':
     os.system(f"cd {os.path.dirname(__file__)}")
@@ -25,6 +25,7 @@ if sys.argv[-1] == 'publish':
     os.system('twine check dist/*')
     os.system('twine upload --repository pypi dist/*')
     sys.exit()
+
 
 setup(
     name='amazon-textract-response-parser',
