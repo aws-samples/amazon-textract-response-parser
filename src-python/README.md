@@ -259,9 +259,14 @@ for page in doc.pages:
 - Clone the repo and run pytest
 
 ```bash
-python -m pip install pytest
 git clone https://github.com/aws-samples/amazon-textract-response-parser.git
 cd amazon-textract-response-parser
+python -m venv virtualenv
+virtualenv/bin/activate
+python -m pip install pytest
+python -m pip install setuptools
+python -m pip install tabulate
+python setup.py install
 pytest
 ```
 
