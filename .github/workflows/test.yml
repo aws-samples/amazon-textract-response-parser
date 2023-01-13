@@ -1,0 +1,40 @@
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the main branch and changes in folder src-python
+name: Test
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - src-python
+  pull_request_target:
+    types: [assigned, opened, synchronize, reopened]
+
+# Run the tests
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src-python
+
+    steps:
+      # Checks out the repository
+      - uses: actions/checkout@v3
+        with:
+          ref: 'master'
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 'pypy3.9'
+
+      # Install package locally
+      - name: Install package
+        run: pip install -e .
+
+      # Install dev dependencies
+      - name: Install dependencies
+        run: pip install -r ./extras/dev.txt
+
+      # Run tests
+      - name: Test
+        run: pytest
