@@ -263,10 +263,12 @@ git clone https://github.com/aws-samples/amazon-textract-response-parser.git
 cd amazon-textract-response-parser
 python -m venv virtualenv
 virtualenv/bin/activate
+
+python -m pip install pip --upgrade
 python -m pip install pytest
 python -m pip install setuptools
 python -m pip install tabulate
-python setup.py install
+python src-python\setup.py install
 pytest
 ```
 
