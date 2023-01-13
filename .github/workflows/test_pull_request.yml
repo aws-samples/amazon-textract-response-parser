@@ -9,6 +9,7 @@ on:
       - src-python
   pull_request_target:
     types: [assigned, opened, synchronize, reopened]
+  workflow_dispatch:
 
 # Run the tests
 jobs:
