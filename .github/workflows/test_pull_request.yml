@@ -9,6 +9,7 @@ on:
       - src-python
   pull_request_target:
     types: [assigned, opened, synchronize, reopened]
+  workflow_dispatch:
 
 # Run the tests
 jobs:
@@ -32,17 +33,11 @@ jobs:
       # Install package locally
       - name: Install package
         run: pip install -e .
-        with:
-          python-version: ${{ matrix.python-version }}
 
       # Install dev dependencies
       - name: Install dependencies
         run: pip install -r ./extras/dev.txt
-        with:
-          python-version: ${{ matrix.python-version }}
 
       # Run tests
       - name: Test
         run: pytest
-        with:
-          python-version: ${{ matrix.python-version }}
