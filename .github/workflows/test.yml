@@ -21,11 +21,9 @@ jobs:
     steps:
       # Checks out the repository
       - uses: actions/checkout@v3
-        with:
-          ref: 'master'
       - uses: actions/setup-python@v4
         with:
-          python-version: 'pypy3.9'
+          python-version: '3.9'
 
       # Install package locally
       - name: Install package
