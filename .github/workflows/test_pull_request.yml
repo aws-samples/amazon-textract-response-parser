@@ -2,13 +2,11 @@
 # events but only for the main branch and changes in folder src-python
 name: Test-Pull-Request
 on:
-  push:
-    branches:
-      - master
+  pull_request:
+    types: [assigned, opened, synchronize, reopened]
     paths:
       - src-python
-  pull_request_target:
-    types: [assigned, opened, synchronize, reopened]
+
   workflow_dispatch:
 
 # Run the tests
