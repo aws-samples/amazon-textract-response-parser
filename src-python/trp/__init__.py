@@ -109,7 +109,8 @@ class Geometry:
     def __init__(self, geometry):
         boundingBox = geometry["BoundingBox"]
         polygon = geometry["Polygon"]
-        bb = BoundingBox(boundingBox["Width"], boundingBox["Height"], boundingBox["Left"], boundingBox["Top"])
+        bb = BoundingBox(
+            boundingBox["Width"], boundingBox["Height"], boundingBox["Left"], boundingBox["Top"])
         pgs = []
         for pg in polygon:
             pgs.append(Polygon(pg["X"], pg["Y"]))
@@ -249,7 +250,8 @@ class Field(BaseBlock):
                             if ('Relationships' in vkvs):
                                 for vitem in vkvs['Relationships']:
                                     if (vitem["Type"] == "CHILD"):
-                                        self._value = FieldValue(vkvs, vitem['Ids'], blockMap)
+                                        self._value = FieldValue(
+                                            vkvs, vitem['Ids'], blockMap)
         else:
             logger.warning(f"no 'Relationships' in block: {block}")
 
@@ -391,12 +393,13 @@ class MergedCell(BaseCell):
                     for cid in rs['Ids']:
                         blockType = blockMap[cid]["BlockType"]
                         if (blockType == "CELL"):
-                            child_cell = next((x for x in cells if x.id == cid), None)
+                            child_cell = next(
+                                (x for x in cells if x.id == cid), None)
                             if child_cell != None:
                                 child_cell._isChildOfMergedCell = True
                                 child_cell._mergedCellParent = self
-                                if len(self._text) == 0 and len(child_cell.text) > 0:
-                                    self._text = child_cell.text.strip()
+                                if len(child_cell.text) > 0:
+                                    self._text += " " + child_cell.text.strip()
         if ('EntityTypes' in block and block['EntityTypes']):
             self._entityTypes = block['EntityTypes']
 
@@ -437,10 +440,12 @@ class Table(BaseBlock):
                     for cid in rs['Ids']:
                         cell = Cell(blockMap[cid], blockMap)
                         cells.append(cell)
-                    cells.sort(key=lambda cell: (cell.rowIndex, cell.columnIndex))
+                    cells.sort(key=lambda cell: (
+                        cell.rowIndex, cell.columnIndex))
                     for row_index in range(1, max([x.rowIndex for x in cells]) + 1):
                         new_row: Row = Row()
-                        new_row.cells = [x for x in cells if x.rowIndex == row_index]
+                        new_row.cells = [
+                            x for x in cells if x.rowIndex == row_index]
                         self._rows.append(new_row)
                 elif (rs['Type'] == 'MERGED_CELL'):
                     self._merged_cells_ids = rs['Ids']
@@ -562,11 +567,12 @@ class Page:
             for index, column in enumerate(columns):
                 bbox_left = item.geometry.boundingBox.left
                 bbox_right = item.geometry.boundingBox.left + item.geometry.boundingBox.width
-                bbox_centre = item.geometry.boundingBox.left + item.geometry.boundingBox.width / 2
+                bbox_centre = item.geometry.boundingBox.left + \
+                    item.geometry.boundingBox.width / 2
                 column_centre = column['left'] + column['right'] / 2
                 if (bbox_centre > column['left'] and bbox_centre < column['right']) or (column_centre > bbox_left
                                                                                         and column_centre < bbox_right):
-                    #Bbox appears inside the column
+                    # Bbox appears inside the column
                     lines.append([index, item.text])
                     column_found = True
                     break
@@ -663,7 +669,8 @@ class Document:
                     if documentPage:
                         documentPage.append(block)
                     else:
-                        logger.error("assumed documentPage not None, but was None")
+                        logger.error(
+                            "assumed documentPage not None, but was None")
         if (documentPage):
             documentPages.append({"Blocks": documentPage})
         return documentPages, blockMap
