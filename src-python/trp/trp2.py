@@ -52,6 +52,7 @@ class TextractBlockTypes(Enum):
 class TextractEntityTypes(Enum):
     KEY = auto()
     VALUE = auto()
+    COLUMN_HEADER = auto()
 
 
 @dataclass(eq=True, repr=True)
