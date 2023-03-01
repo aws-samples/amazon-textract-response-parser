@@ -699,3 +699,6 @@ class Document:
         if (self._blockMap and blockId in self._blockMap):
             block = self._blockMap[blockId]
         return block
+
+    def deleteBlockById(self, blockId):
+        self._blockMap.pop(blockId, None)
