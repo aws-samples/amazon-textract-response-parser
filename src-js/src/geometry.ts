@@ -129,8 +129,8 @@ export class Geometry<
   constructor(dict: ApiGeometry, parentObject: TParent | null) {
     super(dict);
     this._parentObject = parentObject;
-    this._boundingBox = new BoundingBox(dict.BoundingBox, this);
-    this._polygon = dict.Polygon.map((pnt) => new Point(pnt, this));
+    this._boundingBox = new BoundingBox(dict?.BoundingBox, this);
+    this._polygon = dict?.Polygon.map((pnt) => new Point(pnt, this));
   }
 
   get boundingBox(): BoundingBox<TParentBlock, TParent> {
