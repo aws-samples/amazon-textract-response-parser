@@ -96,40 +96,31 @@ def ExecuteTableValidations(t_doc: t2.TDocument, header_footer_type: HeaderFoote
     for current_page in trp_doc.pages:
 
         if (page_compare_proc >= len(trp_doc.pages) - 1):
-            # Reach last page
             break
         if len(current_page.tables) == 0:
-            # No tables in current page
             page_compare_proc += 1
-            continue
+            break
         current_page_table = current_page.tables[len(current_page.tables) - 1]
         next_page = trp_doc.pages[page_compare_proc + 1]
         if len(next_page.tables) == 0:
-            # No tables in next page
             page_compare_proc += 1
-            continue
+            break
         next_page_table = next_page.tables[0]
         result_1 = __validate_objects_between_tables(current_page, current_page_table, next_page, next_page_table,
                                                      header_footer_type)
         if (result_1):
-            result_2_1 = __compare_table_column_numbers(
-                current_page_table, next_page_table)
-            result_2_2 = __compare_table_headers(
-                current_page_table, next_page_table)
+            result_2_1 = __compare_table_column_numbers(current_page_table, next_page_table)
+            result_2_2 = __compare_table_headers(current_page_table, next_page_table)
             if (result_2_1 or result_2_2):
-                result3 = __compare_table_dimensions(
-                    current_page_table, next_page_table, accuracy_percentage)
+                result3 = __compare_table_dimensions(current_page_table, next_page_table, accuracy_percentage)
                 if (result3):
                     table_ids_to_merge[next_page_table.id] = current_page_table.id
                     if (table_ids_merge_list):
                         if (any(merge_pairs[1] == current_page_table.id for merge_pairs in table_ids_merge_list)):
-                            table_ids_merge_list[len(
-                                table_ids_merge_list) - 1].append(next_page_table.id)
+                            table_ids_merge_list[len(table_ids_merge_list) - 1].append(next_page_table.id)
                         else:
-                            table_ids_merge_list.append(
-                                [current_page_table.id, next_page_table.id])
+                            table_ids_merge_list.append([current_page_table.id, next_page_table.id])
                     else:
-                        table_ids_merge_list.append(
-                            [current_page_table.id, next_page_table.id])
+                        table_ids_merge_list.append([current_page_table.id, next_page_table.id])
         page_compare_proc += 1
     return table_ids_merge_list
