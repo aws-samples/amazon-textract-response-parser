@@ -2,6 +2,7 @@ from typing import List
 from trp.t_pipeline import add_page_orientation, order_blocks_by_geo, pipeline_merge_tables, add_kv_ocr_confidence, add_orientation_to_blocks
 from trp.t_tables import MergeOptions, HeaderFooterType
 import trp.trp2 as t2
+import time
 import trp as t1
 import json
 import os
@@ -9,6 +10,7 @@ import pytest
 from trp import Document
 from uuid import uuid4
 import logging
+import re
 
 current_folder = os.path.dirname(os.path.realpath(__file__))
 
@@ -375,7 +377,7 @@ def test_block_id_map():
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/employment-application.json")) as f:
         j = json.load(f)
-        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)
+        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
         assert len(tdoc.block_id_map(t2.TextractBlockTypes.PAGE)) == 1
         assert len(tdoc.block_id_map(t2.TextractBlockTypes.TABLE)) == 1
         assert len(tdoc.block_id_map(t2.TextractBlockTypes.CELL)) == 20
@@ -396,7 +398,7 @@ def test_block_map():
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/employment-application.json")) as f:
         j = json.load(f)
-        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)
+        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
         assert len(tdoc.block_map(t2.TextractBlockTypes.PAGE)) == 1
         assert len(tdoc.block_map(t2.TextractBlockTypes.TABLE)) == 1
         assert len(tdoc.block_map(t2.TextractBlockTypes.CELL)) == 20
@@ -420,7 +422,7 @@ def test_find_block_by_id():
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/employment-application.json")) as f:
         j = json.load(f)
-        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)
+        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
         assert tdoc.find_block_by_id('7a2a9b0e-582b-4852-98bb-8e067e0b4703') == tdoc.blocks[103]
         assert tdoc.find_block_by_id('caa21fc2-834c-463e-a668-bb94722f3fe3') == tdoc.blocks[41]
         assert tdoc.find_block_by_id('foo-bar-baz') == None
@@ -430,7 +432,7 @@ def test_get_block_by_id():
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/employment-application.json")) as f:
         j = json.load(f)
-        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)
+        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
         assert tdoc.get_block_by_id('7a2a9b0e-582b-4852-98bb-8e067e0b4703') == tdoc.blocks[103]
         assert tdoc.get_block_by_id('caa21fc2-834c-463e-a668-bb94722f3fe3') == tdoc.blocks[41]
         with pytest.raises(ValueError):
@@ -441,7 +443,7 @@ def test_pages():
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/gib_multi_page_tables.json")) as f:
         j = json.load(f)
-        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)
+        tdoc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
         pages_ids = [p.id for p in tdoc.pages]
         assert pages_ids == ["e8610e55-7a61-4bd0-a9ff-583a4dc69459", "5f146db3-4d4a-4add-8da1-e6828f1ce877"]
 
@@ -538,8 +540,7 @@ def test_add_block():
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/gib.json")) as f:
         j = json.load(f)
-        t_document: t2.TDocument = t2.TDocumentSchema().load(j)
-        page = t_document.pages[0]
+        t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
         new_block_id = str(uuid4())
         new_block = t2.TBlock(id=new_block_id)
         t_document.add_block(new_block)
@@ -779,3 +780,79 @@ def test_180_degree_orientation_page_and_based_on_words(caplog):
     t_document = add_orientation_to_blocks(t_document)
     # Check PAGE rotation
     assert 179.94186486482977 == t_document.pages[0].custom['Orientation']
+
+
+def test_large_json(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "table-performance-pretty.json"))
+    j = json.load(f)
+    t_doc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    assert t_doc
+
+
+def test_process_tables_timing(caplog):
+    fields = list()
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "table-performance-pretty.json"))
+    j = json.load(f)
+    t_doc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    assert t_doc
+    ordered_doc = order_blocks_by_geo(t_doc)
+    trp_doc = Document(t2.TDocumentSchema().dump(ordered_doc))
+    page_num = 0
+    table_index = 0
+    for page in trp_doc.pages:
+        page_num += 1
+        for table in page.tables:
+            try:
+                table_data = []
+                headers = table.get_header_field_names()    # New Table method to retrieve header column names
+                if len(headers) > 0:    # Let's retain the only table with headers
+                    merged_header = headers[0]
+                    if len(headers) > 1:
+                        for header in headers:
+                            merged_header = [x if x == y else x + " " + y for x, y in zip(merged_header, header)]
+                    merged_header = [re.sub(r'[^\w]+', '', x) for x in merged_header]
+                    final_header = [[{
+                        "displayName": " " if not x else x,
+                        "key": " " if not ("".join(x.title().split())) else "".join(x.title().split())
+                    } for x in merged_header]]
+                    for _, row in enumerate(
+                            table.rows_without_header):    # New Table attribute returning rows without headers
+                        table_row = {}
+                        for c, cell in enumerate(row.cells):
+                            table_row[final_header[0][c].get("key")] = {
+                                "name": final_header[0][c].get("key"),
+                            # normal buter fieldformat
+                                "value": [cell.mergedText],
+                                "confidence": cell.confidence,
+                                "page": page_num,
+                                "coordinates": {
+                                    "height": cell.geometry.boundingBox.height,
+                                    "left": cell.geometry.boundingBox.left,
+                                    "top": cell.geometry.boundingBox.top,
+                                    "width": cell.geometry.boundingBox.width
+                                } if cell.geometry else None
+                            }    # New Cell attribute returning merged cells common va
+                        table_data.append(table_row)
+                    if len(table_data) > 0:
+                        table_index += 1
+                        fields.append({
+                            "key": "table_" + str(table_index),
+                            "value": json.dumps({
+                                "headers": final_header,
+                                "rows": table_data
+                            }),
+                            "confidence": table.confidence,
+                            "page": page_num,
+                            "coordinates": {
+                                "height": table.geometry.boundingBox.height,
+                                "left": table.geometry.boundingBox.left,
+                                "top": table.geometry.boundingBox.top,
+                                "width": table.geometry.boundingBox.width
+                            } if table.geometry else None
+                        })
+            except:
+                logging.error("Error parsing tabular data")

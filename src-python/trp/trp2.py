@@ -606,10 +606,11 @@ class TDocument():
         return None
 
     def get_block_by_id(self, id: str) -> TBlock:
-        for b in self.blocks:
-            if b.id == id:
-                return b
-        raise ValueError(f"no block for id: {id}")
+        block = self.find_block_by_id(id=id)
+        if block:
+            return block
+        else:
+            raise ValueError(f"no block for id: {id}")
 
     def __relationships_recursive(self, block: TBlock) -> Iterator[TBlock]:
         import itertools
