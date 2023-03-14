@@ -22,6 +22,7 @@ def order_blocks_by_geo(t_document: t2.TDocument) -> t2.TDocument:
                              if not b.text_type == "PAGE" and b.geometry and b.geometry.bounding_box else 1)
         new_order.extend(page_blocks)
     t_document.blocks = new_order
+    t_document.__post_init__()
     return t_document
 
 
