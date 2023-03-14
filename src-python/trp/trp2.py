@@ -432,6 +432,7 @@ class TResponseMetadata():
 @dataclass(eq=True, init=True, repr=True)
 class TDocument():
     document_metadata: TDocumentMetadata = field(default=None)    #type: ignore
+    # if blocks are changed, call __post_init__() to update the index
     blocks: List[TBlock] = field(default=None)    #type: ignore
     analyze_document_model_version: str = field(default=None)    #type: ignore
     detect_document_text_model_version: str = field(default=None)    #type: ignore
@@ -513,6 +514,7 @@ class TDocument():
         if not page:
             page = self.pages[0]
         page.add_ids_to_relationships(ids=[block.id])
+        self.__post_init__()
         self.relationships_recursive.cache_clear()
 
     @staticmethod
@@ -606,10 +608,11 @@ class TDocument():
         return None
 
     def get_block_by_id(self, id: str) -> TBlock:
-        for b in self.blocks:
-            if b.id == id:
-                return b
-        raise ValueError(f"no block for id: {id}")
+        block = self.find_block_by_id(id=id)
+        if block:
+            return block
+        else:
+            raise ValueError(f"no block for id: {id}")
 
     def __relationships_recursive(self, block: TBlock) -> Iterator[TBlock]:
         import itertools
@@ -742,12 +745,11 @@ class TDocument():
         return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.LINE)
 
     def delete_blocks(self, block_id: List[str]):
-        for b in block_id:
-            block = self.get_block_by_id(b)
-            if block and self.blocks:
-                self.blocks.remove(block)
-            else:
-                logger.warning(f"delete_blocks: did not get block for id: {b}")
+        # delete from high index number to low index number to avoid deleting the wrong index after removing a lower valued one
+        indexes = [self.block_id_map()[id] for id in block_id]
+        indexes.sort(reverse=True)
+        for index in indexes:
+            del self.blocks[index]
         self.__post_init__()
         self.relationships_recursive.cache_clear()
 
