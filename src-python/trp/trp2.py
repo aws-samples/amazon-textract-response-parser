@@ -46,6 +46,7 @@ class TextractBlockTypes(Enum):
     QUERY = auto()
     QUERY_RESULT = auto()
     MERGED_CELL = auto()
+    SIGNATURE = auto()
 
 
 @dataclass
@@ -679,9 +680,9 @@ class TDocument():
 
     def keys(self, page: TBlock = None) -> List[TBlock]:    #type: ignore
         return [x for x in self.forms(page=page) if TextractEntityTypes.KEY.name in x.entity_types]
-        # for key_entities in self.forms(page=page):
-        #     if TextractEntityTypes.KEY.name in key_entities.entity_types:
-        #         yield key_entities
+
+    def signatures(self, page: TBlock) -> List[TBlock]:
+        return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.SIGNATURE)
 
     def queries(self, page: TBlock) -> List[TBlock]:
         return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.QUERY)
