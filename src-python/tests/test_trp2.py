@@ -856,3 +856,13 @@ def test_process_tables_timing(caplog):
                         })
             except:
                 logging.error("Error parsing tabular data")
+
+
+def test_tdoc_signature(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/request_for_verification_of_employment.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
+    page = t_document.pages[0]
+    assert len(t_document.signatures(page=page)) == 3
