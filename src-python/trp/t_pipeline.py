@@ -25,6 +25,57 @@ def order_blocks_by_geo(t_document: t2.TDocument) -> t2.TDocument:
     t_document.__post_init__()
     return t_document
 
+def order_blocks_by_geo_x_y(t_document: t2.TDocument) -> t2.TDocument:
+    """
+    Takes in a Textract JSON response and outputs a Textract JSON response schema which has the elements sorted by geometry x (left coordinate) and y-axis (top coordinate)
+    """
+    new_order: List[t2.TBlock] = list()
+    for page in t_document.pages:
+        new_order.append(page)
+        r = t_document.relationships_recursive(page)
+        rows = list()
+        page_relationships = list(r) if r else list()
+        # Sort all blocks by y-axis
+        page_blocks_top = sorted(page_relationships,
+                             key=lambda b: round(b.geometry.bounding_box.top, 3)
+                             if not b.block_type == "PAGE" and b.geometry and b.geometry.bounding_box else 1)
+        for b in page_blocks_top:
+            # Check to see if current block is in existing virtual row
+            row_found = False
+            bbox_top = b.geometry.bounding_box.top
+            bbox_bottom = b.geometry.bounding_box.top + b.geometry.bounding_box.height
+            bbox_centre = b.geometry.bounding_box.top + b.geometry.bounding_box.height/2
+            for row_list in rows:
+                row = row_list[1]
+                if row.block_type != b.block_type:
+                    continue
+                if row.entity_types is not None and row.entity_types != b.entity_types:
+                    continue
+                row_top = row.geometry.bounding_box.top
+                row_bottom = row.geometry.bounding_box.top + row.geometry.bounding_box.height
+                row_centre = row.geometry.bounding_box.top + row.geometry.bounding_box.height/2
+                if((bbox_centre > row_top and bbox_centre < row_bottom) or (row_centre > bbox_top and row_centre < bbox_bottom)):
+                    row_list.append(b)
+                    row_found = True
+                    break
+            # Create a new virtual row if block was not placed in existing virtual rows
+            if(row_found is False):
+                rows.append([bbox_top, b])
+        # sort rows by y-axis
+        rows_ordered_top = sorted(rows,
+                     key=lambda b: float(b[0]))
+        # Order each row by x-axis and flatten
+        page_blocks_ordered = list()
+        for row_list in rows_ordered_top:
+            row_list.pop(0)
+            row_list_left = sorted(row_list,
+                                 key=lambda b: b.geometry.bounding_box.left
+                                 if not b.block_type == "PAGE" and b.geometry and b.geometry.bounding_box else 1)
+            page_blocks_ordered.extend(row_list_left)
+        new_order.extend(page_blocks_ordered)
+    t_document.blocks = new_order
+    t_document.__post_init__()
+    return t_document
 
 def add_kv_ocr_confidence(t_document: t2.TDocument) -> t2.TDocument:
     """
