@@ -1,5 +1,5 @@
 from typing import List
-from trp.t_pipeline import add_page_orientation, order_blocks_by_geo, pipeline_merge_tables, add_kv_ocr_confidence, add_orientation_to_blocks
+from trp.t_pipeline import add_page_orientation, order_blocks_by_geo, order_blocks_by_geo_x_y, pipeline_merge_tables, add_kv_ocr_confidence, add_orientation_to_blocks
 from trp.t_tables import MergeOptions, HeaderFooterType
 import trp.trp2 as t2
 import time
@@ -64,6 +64,17 @@ def test_tblock_order_block_by_geo_multi_page():
     assert "Page 1 - Value 1.1.1" == doc.pages[0].tables[0].rows[0].cells[0].text.strip()
     assert "Page 1 - Value 2.1.1" == doc.pages[0].tables[1].rows[0].cells[0].text.strip()
 
+
+def test_tblock_order_blocks_by_geo_x_y():
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/gib.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    new_order = order_blocks_by_geo_x_y(t_document)
+    doc = t1.Document(t2.TDocumentSchema().dump(new_order))
+    assert "Value 1.1.1" == doc.pages[0].tables[0].rows[0].cells[0].text.strip()
+    assert "Value 2.1.1" == doc.pages[0].tables[1].rows[0].cells[0].text.strip()
+    assert "Value 3.1.1" == doc.pages[0].tables[2].rows[0].cells[0].text.strip()
 
 def test_tblock():
     p = os.path.dirname(os.path.realpath(__file__))
