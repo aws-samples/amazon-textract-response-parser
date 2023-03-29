@@ -76,6 +76,7 @@ def test_tblock_order_blocks_by_geo_x_y():
     assert "Value 2.1.1" == doc.pages[0].tables[1].rows[0].cells[0].text.strip()
     assert "Value 3.1.1" == doc.pages[0].tables[2].rows[0].cells[0].text.strip()
 
+
 def test_tblock():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib.json"))
@@ -773,6 +774,11 @@ def test_2023_q1_table_model(caplog):
     assert t_document
 
     f = open(os.path.join(p, "data", "all_features_with_floating_title_header.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    assert t_document
+
+    f = open(os.path.join(p, "data", "2023-Q2-table-model-sample.json"))
     j = json.load(f)
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
     assert t_document
