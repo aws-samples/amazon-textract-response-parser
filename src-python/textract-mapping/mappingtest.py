@@ -3,13 +3,12 @@ from mapping import Document
 
 
 def processDocument(doc):
-    for page in doc.pages:
+    for page in doc['pages']:
         print("PAGE\n====================")
         print("Form (key/values)\n====================")
         for field in page['form'].fields:
             k = ""
             v = ""
-            print("field --- ", field, "\n")
             if field['key']:
                 k = field['key']['text']
             if field['value']:
@@ -19,20 +18,17 @@ def processDocument(doc):
 
         # Get field by key
         key = "Home Address:"
-        # print("\nGet field by page ({}):\n====================".format(field))
         print("\nGet field by key ({}):\n====================".format(key))
         f = page['form'].getFieldByKey(key)
-        # f = page.form.getMapDetails(key)
         if f:
             print("Field: Key: {}, Value: {}".format(f['key']['text'], f['value']['text']))
-        #     print("Map details \n==================== END".format(f))
 
         # Search field by key
         key = "Home Address:"
         print("\nSearch field by key ({}):\n====================".format(key))
         fields = page['form'].searchFieldsByKey(key)
         for field in fields:
-            print("Field: Key: {}, Value: {}".format(field['key'], field['value']))
+            print("Field:Value: {}, \n ----- \n Key: {} ".format(field['value'], field['key']['content']))
 
 
 def run():
