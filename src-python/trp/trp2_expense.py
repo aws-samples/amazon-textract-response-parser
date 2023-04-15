@@ -174,6 +174,9 @@ class TSummaryFieldSchema(BaseSchema):
     """
     Class for SummaryField Schema
     """
+    class Meta:
+        unknown = m.EXCLUDE
+
     ftype = m.fields.Nested(TFieldTypeSchema, data_key="Type", required=False, allow_none=False)
     labeldetection = m.fields.Nested(TLabelDetectionSchema, data_key="LabelDetection", required=False, allow_none=False)
     valuedetection = m.fields.Nested(TValueDetectionSchema, data_key="ValueDetection", required=False, allow_none=False)
@@ -275,6 +278,8 @@ class TExpenseSchema(BaseSchema):
     """
     Class for ExpenseDocument Schema
     """
+    class Meta:
+        unknown = m.EXCLUDE
 
     expense_idx = m.fields.Int(data_key="ExpenseIndex", required=False, allow_none=False)
 
@@ -413,6 +418,9 @@ class TAnalyzeExpenseDocumentSchema(BaseSchema):
     """
     Class for AnalyzeExpenseDocument Schema
     """
+    class Meta:
+        unknown = m.EXCLUDE
+
     document_metadata = m.fields.Nested(TDocumentMetadataSchema,
                                         data_key="DocumentMetadata",
                                         required=False,
