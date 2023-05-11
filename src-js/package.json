@@ -1,8 +1,12 @@
 {
   "name": "amazon-textract-response-parser",
-  "version": "0.2.0",
+  "version": "0.2.1-alpha.1",
   "description": "Parse API responses from Amazon Textract with higher-level helpers",
-  "keywords": ["aws", "amazon-textract", "textract"],
+  "keywords": [
+    "aws",
+    "amazon-textract",
+    "textract"
+  ],
   "browser": "dist/browser/trp.min.js",
   "main": "dist/cjs/index.js",
   "module": "dist/es/index.js",

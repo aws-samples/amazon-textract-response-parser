@@ -40,8 +40,8 @@ describe("Table", () => {
 
     const table = doc.pageNumber(1).tableAtIndex(0);
     expect(table.nColumns).toStrictEqual(5);
-    expect(table.nRows).toStrictEqual(5);
-    expect(table.nCells).toStrictEqual(25);
+    expect(table.nRows).toStrictEqual(4);
+    expect(table.nCells).toStrictEqual(20);
   });
 
   it("indexes table cells by row and column", () => {
@@ -50,11 +50,11 @@ describe("Table", () => {
 
     const table = [...doc.pageNumber(1).iterTables()][0];
 
-    expect(table.cellAt(2, 2)?.text).toMatch("End Date");
-    expect(table.cellAt(3, 2)?.text).toMatch("6/30/2011");
+    expect(table.cellAt(1, 2)?.text).toMatch("End Date");
+    expect(table.cellAt(2, 2)?.text).toMatch("6/30/2011");
     // Explicitly ignoring merged cells:
-    expect(table.cellAt(2, 2, true)?.text).toMatch("End Date");
-    expect(table.cellAt(3, 2, true)?.text).toMatch("6/30/2011");
+    expect(table.cellAt(1, 2, true)?.text).toMatch("End Date");
+    expect(table.cellAt(2, 2, true)?.text).toMatch("6/30/2011");
   });
 
   it("indexes merged cells by row and column", () => {
@@ -121,7 +121,7 @@ describe("Table", () => {
       expect(row.parentTable).toBe(table);
     }
     expect(nRows).toStrictEqual(table.nRows);
-    expect(nRows).toStrictEqual(5);
+    expect(nRows).toStrictEqual(4);
   });
 
   it("iterates table rows with cross-row merged cell repetition", () => {

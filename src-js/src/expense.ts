@@ -16,13 +16,13 @@ import { ApiObjectWrapper, DocumentMetadata, getIterable } from "./base";
 import { Geometry } from "./geometry";
 
 export class ExpenseComponentDetection extends ApiObjectWrapper<ApiExpenseComponentDetection> {
-  _geometry: Geometry<ApiExpenseComponentDetection, ExpenseComponentDetection>;
+  _geometry?: Geometry<ApiExpenseComponentDetection, ExpenseComponentDetection>;
   _parentField: ExpenseField;
 
   constructor(dict: ApiExpenseComponentDetection, parentField: ExpenseField) {
     super(dict);
     this._parentField = parentField;
-    this._geometry = new Geometry(dict.Geometry, this);
+    this._geometry = dict.Geometry ? new Geometry(dict.Geometry, this) : undefined;
   }
 
   get confidence(): number {
@@ -31,7 +31,10 @@ export class ExpenseComponentDetection extends ApiObjectWrapper<ApiExpenseCompon
   set confidence(newVal: number) {
     this._dict.Confidence = newVal;
   }
-  get geometry(): Geometry<ApiExpenseComponentDetection, ExpenseComponentDetection> {
+  /**
+   * geometry may be undefined when no `text` is detected.
+   */
+  get geometry(): undefined | Geometry<ApiExpenseComponentDetection, ExpenseComponentDetection> {
     return this._geometry;
   }
   get parentField(): ExpenseField {

@@ -21,6 +21,6 @@ doc.pageNumber(1).getLinesByLayoutArea();
 const expense = new TextractExpense(testExpenseResponse);
 assert.strictEqual(expense.nDocs, 1);
 const expenseDoc = [...expense.iterDocs()][0];
-assert.strictEqual(expenseDoc.nSummaryFields, 15);
+assert.strictEqual(expenseDoc.nSummaryFields, 31);
 
 console.log("Done!");

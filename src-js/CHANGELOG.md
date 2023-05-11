@@ -1,5 +1,9 @@
 # Changelog
 
+## In development (targeting 0.2.1)
+### Changed
+- `.geometry` on Expense result fields is now optional, as the underlying field may not be returned by Amazon Textract in some cases. Typings updated to reflect the fix. ([Issue #102](https://github.com/aws-samples/amazon-textract-response-parser/issues/102))
+
 ## 0.2.0 (2022-04-28)
 ### Added
 - Initial support for Amazon Textract [identity document APIs](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-identity.html).

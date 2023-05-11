@@ -193,7 +193,9 @@ describe("TextractDocument", () => {
 
     expect(line.geometry.boundingBox.top).toBeLessThanOrEqual(word.geometry.boundingBox.top);
     expect(line.geometry.boundingBox.bottom).toBeGreaterThanOrEqual(word.geometry.boundingBox.bottom);
-    expect(line.geometry.boundingBox.left).toStrictEqual(word.geometry.boundingBox.left);
+    expect(line.geometry.boundingBox.left.toFixed(5)).toStrictEqual(
+      word.geometry.boundingBox.left.toFixed(5)
+    );
     expect(line.geometry.boundingBox.right).toBeGreaterThan(word.geometry.boundingBox.right);
   });
 

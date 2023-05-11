@@ -1,0 +1,24 @@
+{
+  "DocumentMetadata": {
+    "Pages": 1
+  },
+  "ExpenseDocuments": [
+    {
+      "ExpenseIndex": 1,
+      "LineItemGroups": [],
+      "SummaryFields": [
+        {
+          "PageNumber": 1,
+          "Type": {
+            "Confidence": 99.3079605102539,
+            "Text": "CITY"
+          },
+          "ValueDetection": {
+            "Confidence": 99.95603942871094,
+            "Text": ""
+          }
+        }
+      ]
+    }
+  ]
+}

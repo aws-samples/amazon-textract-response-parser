@@ -9,7 +9,10 @@ import { ApiGeometry } from "./geometry";
 
 export interface ApiExpenseComponentDetection {
   Confidence: number;
-  Geometry: ApiGeometry;
+  /**
+   * Geometry may be absent if 'Text' is "".
+   */
+  Geometry?: ApiGeometry;
   Text: string;
 }
 
