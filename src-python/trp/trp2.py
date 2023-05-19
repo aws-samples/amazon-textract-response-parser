@@ -743,7 +743,12 @@ class TDocument():
         return return_value
 
     def lines(self, page: TBlock) -> List[TBlock]:
-        return self.get_blocks_by_type(page=page, block_type_enum=TextractBlockTypes.LINE)
+        relationships = page.get_relationships_for_type()
+        if relationships:
+            blocks = self.get_blocks_for_relationships(relationships)
+            blocks = [x for x in blocks if x.block_type == 'LINE']
+            return blocks
+        return list()
 
     def delete_blocks(self, block_id: List[str]):
         # delete from high index number to low index number to avoid deleting the wrong index after removing a lower valued one
@@ -836,6 +841,10 @@ class TResponseMetadataSchema(BaseSchema):
 
 
 class TDocumentSchema(BaseSchema):
+
+    class Meta:
+        unknown = m.EXCLUDE
+
     document_metadata = m.fields.Nested(TDocumentMetadataSchema,
                                         data_key="DocumentMetadata",
                                         required=False,
