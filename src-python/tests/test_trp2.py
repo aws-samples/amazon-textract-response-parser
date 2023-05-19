@@ -883,3 +883,14 @@ def test_tdoc_signature(caplog):
     t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
     page = t_document.pages[0]
     assert len(t_document.signatures(page=page)) == 3
+
+
+def test_lines_in_order(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/little_women_page_1.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
+    page = t_document.pages[0]
+    assert "The Project Gutenberg EBook of Little Women, by Louisa M. Alcott" == t_document.lines(page=page)[0].text
+    assert "This eBook is for the use of anyone anywhere at no cost and with" == t_document.lines(page=page)[1].text
