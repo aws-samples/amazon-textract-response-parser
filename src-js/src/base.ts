@@ -77,9 +77,25 @@ export function getIterable<T>(collectionFetcher: () => T[]): Iterable<T> {
 }
 
 /**
- * Get the most common value in an Iterable of numbers
+ * Statistical methods for aggregating multiple scores/numbers into one representative value
+ *
+ * Different use-cases may wish to use different aggregations: For example summarizing OCR
+ * confidence for a whole page or region based on the individual words/lines.
  */
-export function modalAvg(arr: Iterable<number>): number | null {
+export const enum AggregationMethod {
+  GeometricMean = "GEOMEAN",
+  Max = "MAX",
+  Mean = "MEAN",
+  Min = "MIN",
+  Mode = "MODE",
+}
+
+/**
+ * Get the most common value in an Iterable of numbers
+ *
+ * @returns The most common value, or NaN if `arr` was empty.
+ */
+export function modalAvg(arr: Iterable<number>): number {
   const freqs: { [key: number]: { value: number; freq: number } } = {};
   for (const item of arr) {
     if (freqs[item]) {
@@ -90,7 +106,7 @@ export function modalAvg(arr: Iterable<number>): number | null {
   }
 
   let maxFreq = 0;
-  let mode: number | null = null;
+  let mode: number = NaN;
   for (const item in freqs) {
     if (freqs[item].freq > maxFreq) {
       maxFreq = freqs[item].freq;
@@ -98,6 +114,31 @@ export function modalAvg(arr: Iterable<number>): number | null {
     }
   }
   return mode;
+}
+
+/**
+ * Summarize an Iterable of numbers using a statistic of your choice
+ *
+ * If `arr` is empty, this function will return `NaN` for most aggregations except: Max returns
+ * `-Infinity`; Min returns `+Infinity`.
+ */
+export function aggregate(arr: Iterable<number>, aggMethod: AggregationMethod): number {
+  if (aggMethod === AggregationMethod.GeometricMean) {
+    const actualArr = Array.isArray(arr) ? arr : Array.from(arr);
+    // Performing arithmetic mean in logspace better numerically conditioned than just multiplying:
+    return Math.exp(actualArr.reduce((acc, next) => acc + Math.log(next), 0) / actualArr.length);
+  } else if (aggMethod === AggregationMethod.Max) {
+    return Math.max(...arr);
+  } else if (aggMethod === AggregationMethod.Mean) {
+    const actualArr = Array.isArray(arr) ? arr : Array.from(arr);
+    return actualArr.reduce((acc, next) => acc + next, 0) / actualArr.length;
+  } else if (aggMethod === AggregationMethod.Min) {
+    return Math.min(...arr);
+  } else if (aggMethod === AggregationMethod.Mode) {
+    return modalAvg(arr);
+  } else {
+    throw new Error(`Unsupported aggMethod '${aggMethod}' not in allowed AggregationMethod enum`);
+  }
 }
 
 /**

@@ -4,7 +4,14 @@
 
 // Local Dependencies:
 import { ApiBlockType, ApiKeyValueSetBlock, ApiRelationshipType } from "./api-models/document";
-import { ApiBlockWrapper, getIterable, IDocBlocks, WithParentDocBlocks } from "./base";
+import {
+  aggregate,
+  AggregationMethod,
+  ApiBlockWrapper,
+  getIterable,
+  IDocBlocks,
+  WithParentDocBlocks,
+} from "./base";
 import { SelectionElement, Word, WithWords } from "./content";
 import { Geometry } from "./geometry";
 
@@ -49,19 +56,40 @@ export class FieldKeyGeneric<TPage extends WithParentDocBlocks> extends WithWord
       });
   }
 
-  get confidence(): number {
-    return this._dict.Confidence;
-  }
   get geometry(): Geometry<ApiKeyValueSetBlock, FieldKeyGeneric<TPage>> {
     return this._geometry;
   }
   get parentField(): FieldGeneric<TPage> {
     return this._parentField;
   }
+
+  /**
+   * Confidence score of the structural key/value pair detection
+   *
+   * This score reflects the confidence of the model detecting the key-value relation. For the text
+   * OCR confidence, see the `.getOcrConfidence()` method instead.
+   */
+  get structureConfidence(): number {
+    return this._dict.Confidence;
+  }
   get text(): string {
     return this._words.map((w) => w.text).join(" ");
   }
 
+  /**
+   * Aggregate OCR confidence score of the text in this field key
+   *
+   * This score reflects the aggregated OCR confidence of the text detected in the field key. For
+   * the model's confidence on the key/value relation itself, see `.structureConfidence`.
+   *
+   * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   */
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+    return aggregate(
+      this._words.map((w) => w.confidence),
+      aggMethod
+    );
+  }
   str(): string {
     return this.text;
   }
@@ -111,7 +139,13 @@ export class FieldValueGeneric<
       });
   }
 
-  get confidence(): number {
+  /**
+   * Confidence score of the structural key/value pair detection
+   *
+   * This score reflects the confidence of the model detecting the key-value relation. For the text
+   * OCR confidence, see the `.getOcrConfidence()` method instead.
+   */
+  get structureConfidence(): number {
     return this._dict.Confidence;
   }
   get geometry(): Geometry<ApiKeyValueSetBlock, FieldValueGeneric<TPage>> {
@@ -124,6 +158,20 @@ export class FieldValueGeneric<
     return this._content.map((c) => ("selectionStatus" in c ? c.selectionStatus : c.text)).join(" ");
   }
 
+  /**
+   * Aggregate OCR confidence score of the text in this field value
+   *
+   * This score reflects the aggregated OCR confidence of the text detected in the field value. For
+   * the model's confidence on the key/value relation itself, see `.structureConfidence`.
+   *
+   * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   */
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+    return aggregate(
+      this._content.map((c) => c.confidence),
+      aggMethod
+    );
+  }
   listContent(): Array<SelectionElement | Word> {
     return this._content.slice();
   }
@@ -176,15 +224,18 @@ export class FieldGeneric<TPage extends WithParentDocBlocks> {
   }
 
   /**
-   * Return average confidence over whichever of {key, value} are present.
+   * Return average key-value detection confidence over whichever of {key, value} are present.
+   *
+   * Note this score describes the model's confidence in the validity of the key-value pair, not
+   * the underlying OCR confidence of the text. (For that, see `.getOcrConfidence()` instead)
    */
-  get confidence(): number {
+  get structureConfidence(): number {
     const scores = [];
     if (this._key) {
-      scores.push(this._key.confidence || 0);
+      scores.push(this._key.structureConfidence || 0);
     }
     if (this._value) {
-      scores.push(this._value.confidence || 0);
+      scores.push(this._value.structureConfidence || 0);
     }
     if (scores.length) {
       return scores.reduce((acc, next) => acc + next, 0) / scores.length;
@@ -205,6 +256,22 @@ export class FieldGeneric<TPage extends WithParentDocBlocks> {
     return this._value;
   }
 
+  /**
+   * Aggregate OCR confidence score of the text in this field key and value (whichever are present)
+   *
+   * This score reflects the aggregated OCR confidence of all the text content detected in the
+   * field key and/or value (whichever of the two are present). For the model's confidence on the
+   * key/value relation itself, see `.structureConfidence`.
+   *
+   * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   */
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+    const keyValContent = (this._value ? this._value._content : []).concat(this._key._words);
+    return aggregate(
+      keyValContent.map((c) => c.confidence),
+      aggMethod
+    );
+  }
   str(): string {
     return `\nField\n==========\nKey: ${this._key ? this._key.str() : ""}\nValue: ${
       this._value ? this._value.str() : ""
@@ -233,7 +300,7 @@ export class FormGeneric<TPage extends WithParentDocBlocks> {
       const fieldKeyText = f.key.text || "";
       if (fieldKeyText) {
         if (fieldKeyText in this._fieldsMap) {
-          if (f.confidence > this._fieldsMap[fieldKeyText].confidence) {
+          if (f.structureConfidence > this._fieldsMap[fieldKeyText].structureConfidence) {
             this._fieldsMap[fieldKeyText] = f;
           }
         } else {

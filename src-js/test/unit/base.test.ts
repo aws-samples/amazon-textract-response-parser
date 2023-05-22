@@ -1,4 +1,7 @@
-import { modalAvg } from "../../src/base";
+import { AggregationMethod, aggregate, modalAvg } from "../../src/base";
+
+// Precision limit for testing summary statistics
+const EPSILON = 1e-15;
 
 describe("modalAvg", () => {
   it("calculates the modal average of an array of numbers", () => {
@@ -6,13 +9,62 @@ describe("modalAvg", () => {
     expect(modalAvg([0.9, 0.7, 0.8, 0.7, 0.6, 0.7, 0.6, 0.9])).toStrictEqual(0.7);
   });
 
-  it("returns null for empty lists", () => {
-    expect(modalAvg([])).toBeNull();
+  it("returns NaN for empty lists", () => {
+    expect(modalAvg([])).toBeNaN();
   });
 
   it("breaks ties by choosing one candidate", () => {
     const avg = modalAvg([4, 5, 4, 5, 4, 5, 1, 1]) as number;
     expect(avg).not.toBeNull();
     expect([4, 5].indexOf(avg)).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("aggregate", () => {
+  it("returns expected values for empty inputs", () => {
+    expect(aggregate([], AggregationMethod.GeometricMean)).toBeNaN();
+    expect(aggregate([], AggregationMethod.Max)).toStrictEqual(-Infinity);
+    expect(aggregate([], AggregationMethod.Mean)).toBeNaN();
+    expect(aggregate([], AggregationMethod.Min)).toStrictEqual(Infinity);
+    expect(aggregate([], AggregationMethod.Mode)).toBeNaN();
+  });
+
+  it("supports geometric mean value aggregation of positive numbers", () => {
+    expect(aggregate([1, 1, 8], AggregationMethod.GeometricMean)).toStrictEqual(2);
+    expect(
+      Math.abs((aggregate([4, 1, 1/32], AggregationMethod.GeometricMean) as number) - 0.5)
+    ).toBeLessThan(EPSILON);
+  });
+
+  it("supports max value aggregation", () => {
+    expect(aggregate([1, 0, 2, 10, 5, 8, 7], AggregationMethod.Max)).toStrictEqual(10);
+    expect(aggregate([-1000, 24, 24.0001], AggregationMethod.Max)).toStrictEqual(24.0001);
+    expect(aggregate([-1, -10, -4], AggregationMethod.Max)).toStrictEqual(-1);
+  });
+
+  it("supports mean value aggregation", () => {
+    expect(aggregate([-5, -1, 0, 1, 5], AggregationMethod.Mean)).toStrictEqual(0);
+    expect(
+      Math.abs((aggregate([3.6, 6.3, 2.4], AggregationMethod.Mean) as number) - 4.1)
+    ).toBeLessThan(EPSILON);
+    expect(
+      Math.abs((aggregate([-3.6, -6.3, -2.4], AggregationMethod.Mean) as number) + 4.1)
+    ).toBeLessThan(EPSILON);
+  });
+
+  it("supports min value aggregation", () => {
+    expect(aggregate([1, 0, 2, 10, 5, 8, 7], AggregationMethod.Min)).toStrictEqual(0);
+    expect(aggregate([1000, -24, -24.0001], AggregationMethod.Min)).toStrictEqual(-24.0001);
+    expect(aggregate([-1, -10, -4], AggregationMethod.Min)).toStrictEqual(-10);
+  });
+
+  it("supports modal average aggregation", () => {
+    expect(aggregate([2, 4, 4, 5, 7, 100, 100.001], AggregationMethod.Mode)).toStrictEqual(4);
+    expect(aggregate([-30, -2.3, -2.3, 0, 1], AggregationMethod.Mode)).toStrictEqual(-2.3);
+    expect(aggregate([0, 1, 1, 1, 2, 2, 2, 2], AggregationMethod.Mode)).toStrictEqual(2);
+  });
+
+  it("throws an error for unsupported aggregation types", () => {
+    expect(() => aggregate([1, 2, 3], "foobar" as AggregationMethod)).toThrow("Unsupported aggMethod");
   });
 });

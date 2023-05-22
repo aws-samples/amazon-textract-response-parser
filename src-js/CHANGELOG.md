@@ -1,5 +1,12 @@
 # Changelog
 
+## In development (targeting 0.3.0 release)
+### Added
+- Average OCR (text recognition) confidence is now available on form fields (and their keys and values) via `getOcrConfidence()`, with configurable aggregation method (including minimum, mean, etc.).
+### Changed
+- **BREAKING:** `.confidence` property on form fields (and their keys and values) is renamed to `.structureConfidence`, to more clearly signal the different meaning of the `structureConfidence` property from the new `.getOcrConfidence()` on these objects.
+- `base.modalAvg()` (and therefore `Page.getModalWordOrientationDegrees()`) now returns `NaN` instead of `null` when given an empty list (e.g. a page with no WORDs), for better consistency with other averaging methods.
+
 ## 0.2.2 (2023-06-19)
 ### Fixed
 - Removed `browser` field from package.json because front end bundlers like webpack use it, and the (IIFE `dist/browser`) build it pointed to was not appropriate for these build systems. Added `jsdelivr` field in its place to help ensure direct-to-browser CDN imports continue to consume the IIFE build by default. ([Issue #139](https://github.com/aws-samples/amazon-textract-response-parser/issues/139))
