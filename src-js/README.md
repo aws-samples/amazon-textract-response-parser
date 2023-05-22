@@ -166,6 +166,16 @@ for (const row of table.iterRows(true)) {}
 const firstColCellFragments = table.cellsAt(null, 1, true);
 ```
 
+Use `Table.tableType` and `Cell.hasEntityTypes()` to explore the more advanced [entity types](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html) extracted by Amazon Textract: For example column headers, titles, footers, and summaries:
+
+```typescript
+import { ApiTableCellEntityType, ApiTableEntityType } from "amazon-textract-response-parser/api-models";
+
+const isSemiStruct = table.tableType === ApiTableEntityType.SemiStructuredTable;
+const colHeaders = table.rowAt(1).listCells()
+  .filter((c) => c.hasEntityTypes(ApiTableCellEntityType.ColumnHeader));
+```
+
 
 ## Other generic document analyses
 

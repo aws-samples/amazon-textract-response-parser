@@ -10,6 +10,8 @@ import {
   ApiRelationshipType,
   ApiSelectionElementBlock,
   ApiTableBlock,
+  ApiTableCellEntityType,
+  ApiTableEntityType,
   ApiWordBlock,
 } from "./api-models/document";
 import { ApiBlockWrapper, getIterable, WithParentDocBlocks } from "./base";
@@ -58,6 +60,26 @@ export abstract class CellBaseGeneric<
   }
   get rowSpan(): number {
     return this._dict.RowSpan || 1;
+  }
+
+  /**
+   * Check if this cell is tagged with any of the given EntityType(s) e.g. COLUMN_HEADER, etc.
+   *
+   * For more information on table cell entity types returnable by Amazon Textract, see:
+   * https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+   *
+   * @param entityType The type to check for, or an array of multiple types to allow.
+   * @returns true if the EntityType is set, null if block EntityTypes is undefined, false otherwise.
+   */
+  hasEntityTypes(entityType: ApiTableCellEntityType | ApiTableCellEntityType[]): boolean | null {
+    if (!this._dict.EntityTypes) return null;
+    if (Array.isArray(entityType)) {
+      return entityType.some(
+        // (Safe type cast because the block above has already returned null if Entitytypes not set)
+        (eType) => (this._dict.EntityTypes as ApiTableCellEntityType[]).indexOf(eType) >= 0
+      );
+    }
+    return this._dict.EntityTypes.indexOf(entityType) >= 0;
   }
 
   abstract get text(): string;
@@ -448,6 +470,32 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
   }
   get parentPage(): TPage {
     return this._parentPage;
+  }
+
+  /**
+   * Get the overall type (EntityType) of this table
+   *
+   * In the underlying Amazon Textract API, table EntityTypes is a list. In practice though, it will either
+   * contain `STRUCTURED_TABLE`, or `SEMI_STRUCTURED_TABLE`, or neither.
+   *
+   * This dynamic property simplifies checking whether a table is structured, semi-structured, or untagged.
+   *
+   * @throws Error if the table block is tagged with multiple conflicting EntityTypes.
+   */
+  get tableType(): ApiTableEntityType | null {
+    if (!this._dict.EntityTypes) return null;
+
+    const isStructured = this._dict.EntityTypes.indexOf(ApiTableEntityType.StructuredTable) >= 0;
+    const isSemiStructured = this._dict.EntityTypes.indexOf(ApiTableEntityType.SemiStructuredTable) >= 0;
+    const nMatches = +isStructured + +isSemiStructured;
+    if (nMatches === 0) return null;
+    if (nMatches > 1) {
+      throw new Error(
+        `TABLE block ${this._dict.Id} EntityTypes contained multiple conflicting table types: "${this._dict.EntityTypes}"`
+      );
+    }
+    if (isStructured) return ApiTableEntityType.StructuredTable;
+    return ApiTableEntityType.SemiStructuredTable;
   }
 
   str(): string {

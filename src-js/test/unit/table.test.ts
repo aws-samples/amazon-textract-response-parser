@@ -1,4 +1,13 @@
-import { ApiBlockType, ApiResponsePage } from "../../src/api-models";
+import {
+  ApiAnalyzeDocumentResponse,
+  ApiBlockType,
+  ApiCellBlock,
+  ApiRelationshipType,
+  ApiResponsePage,
+  ApiTableBlock,
+  ApiTableCellEntityType,
+  ApiTableEntityType,
+} from "../../src/api-models";
 import { TextractDocument, Word } from "../../src/document";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -25,6 +34,115 @@ describe("Table", () => {
     expect(table.confidence).toBeGreaterThan(1); // (<1% very unlikely)
     expect(table.confidence).toBeLessThanOrEqual(100);
     expect(table.geometry.parentObject).toBe(table);
+  });
+
+  it("gracefully handles tables with missing referenced cell blocks", () => {
+    // Create a clone to avoid messing up the shared imported object:
+    const responseCopy: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testTableMergedCellsJson));
+    // Prepend a non-existent block ID to every table's list of cells and list of merged_cells:
+    const tableBlocks = responseCopy.Blocks.filter((b) => (b.BlockType === "TABLE")) as ApiTableBlock[];
+    let nFakeCells = 0;
+    let nFakeMergedCells = 0;
+    tableBlocks.forEach((block) => {
+      block.Relationships.forEach((rel) => {
+        if (rel.Type === ApiRelationshipType.Child) {
+          rel.Ids.unshift(`DOESNOTEXIST-${++nFakeCells}`);
+        } else if (rel.Type === ApiRelationshipType.MergedCell) {
+          rel.Ids.unshift(`DOESNOTEXIST-${++nFakeMergedCells}`);
+        }
+      });
+    });
+    if (nFakeCells === 0) {
+      throw new Error("Test input doc had no table cell relationships to modify");
+    }
+    if (nFakeMergedCells === 0) {
+      throw new Error("Test input doc had no table merged_cell relationships to modify");
+    }
+
+    const consoleWarnMock = jest.spyOn(console, "warn").mockImplementation();
+    let doc = new TextractDocument(responseCopy);
+    // Should have warned once per inserted dummy block ID:
+    expect(consoleWarnMock).toHaveBeenCalledTimes(nFakeCells + nFakeMergedCells);
+    consoleWarnMock.mockRestore();
+
+    // doc tables should still be functional:
+    expect(
+      () => {
+        for (const page of doc.iterPages()) {
+          for (const table of page.iterTables()) {
+            table.cellAt(1, 1);
+          }
+        }
+      }
+    ).not.toThrow();
+  });
+
+  it("gracefully handles table cells with missing referenced content blocks", () => {
+    // Create a clone to avoid messing up the shared imported object:
+    const responseCopy: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testTableMergedCellsJson));
+    // Prepend a non-existent block ID to every table cell's list of content blocks:
+    const cellBlocks = responseCopy.Blocks.filter((b) => (b.BlockType === "CELL")) as ApiCellBlock[];
+    let nFakeBlocks = 0;
+    cellBlocks.forEach((block) => {
+      if (!block.Relationships) return;
+      block.Relationships.filter((rel) => (rel.Type === ApiRelationshipType.Child)).forEach((rel) => {
+        rel.Ids.unshift(`DOESNOTEXIST-${++nFakeBlocks}`);
+      });
+    });
+    if (nFakeBlocks === 0) {
+      throw new Error("Test input doc had no table cell child relationships to modify");
+    }
+
+    const consoleWarnMock = jest.spyOn(console, "warn").mockImplementation();
+    let doc = new TextractDocument(responseCopy);
+    // Should have warned once per inserted dummy block ID:
+    expect(consoleWarnMock).toHaveBeenCalledTimes(nFakeBlocks);
+    consoleWarnMock.mockRestore();
+
+    // doc tables should still be functional:
+    expect(
+      () => {
+        for (const page of doc.iterPages()) {
+          for (const table of page.iterTables()) {
+            for (const row of table.iterRows()) {
+              for (const cell of row.iterCells()) {
+                cell.text;
+              }
+            }
+          }
+        }
+      }
+    ).not.toThrow();
+  });
+
+  it("differentiates structured from semi-structured tables", () => {
+    // Create a clone to avoid messing up the shared imported object:
+    const responseCopy: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testResponseJson));
+  
+    // Check correct behaviour on the response object as-is:
+    let doc = new TextractDocument(responseCopy);
+    let table = doc.pageNumber(1).tableAtIndex(0);
+    expect(table.tableType).toStrictEqual(ApiTableEntityType.StructuredTable);
+  
+    // Find and manipulate the TABLE block, and check the parser responds correctly:
+    const tableBlocks = responseCopy.Blocks.filter((block) => block.BlockType === ApiBlockType.Table);
+    expect(tableBlocks.length).toStrictEqual(1);
+    const tableBlock = tableBlocks[0] as ApiTableBlock;
+  
+    tableBlock.EntityTypes = ["SEMI_STRUCTURED_TABLE" as ApiTableEntityType];
+    expect((new TextractDocument(responseCopy)).pageNumber(1).tableAtIndex(0).tableType).toStrictEqual(
+      ApiTableEntityType.SemiStructuredTable
+    );
+
+    tableBlock.EntityTypes = [
+      "STRUCTURED_TABLE" as ApiTableEntityType,
+      "SEMI_STRUCTURED_TABLE" as ApiTableEntityType,
+    ];
+    expect(() => ((new TextractDocument(responseCopy)).pageNumber(1).tableAtIndex(0).tableType))
+      .toThrow("multiple conflicting table types");
+  
+    delete tableBlock.EntityTypes;
+    expect((new TextractDocument(responseCopy)).pageNumber(1).tableAtIndex(0).tableType).toBeNull();
   });
 
   it("throws errors on out-of-bounds tables", () => {
@@ -196,6 +314,33 @@ describe("Table", () => {
     const firstCell = table.cellAt(1, 1);
     expect(firstCell?.parentTable.dict).toBe(table.dict);
     expect(firstCell?.parentTable.parentPage.dict).toBe(page.dict);
+  });
+
+  it("queries table cell EntityTypes", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const page = doc.pageNumber(1);
+    const table = page.tableAtIndex(0);
+    expect(
+      table.rowAt(1).listCells().filter((c) => c.hasEntityTypes(ApiTableCellEntityType.ColumnHeader)).length
+    ).toStrictEqual(5);
+    
+    // Query one type at a time:
+    for (const row of table.iterRows()) {
+      for (const cell of row.iterCells()) {
+        if (cell.rowIndex === 1) {
+          expect(cell.hasEntityTypes(ApiTableCellEntityType.ColumnHeader)).toStrictEqual(true);
+        } else {
+          expect(cell.hasEntityTypes(ApiTableCellEntityType.ColumnHeader)).toBeFalsy();
+        }
+      }
+    }
+
+    // Query multiple types at once:
+    const firstCell = table.cellAt(1, 1);
+    expect(firstCell?.hasEntityTypes([ApiTableCellEntityType.ColumnHeader, ApiTableCellEntityType.Footer]))
+      .toStrictEqual(true);
+    expect(firstCell?.hasEntityTypes([ApiTableCellEntityType.Summary, ApiTableCellEntityType.Footer]))
+      .toStrictEqual(false);
   });
 
   it("stringifies tables to contain each row's representation", () => {

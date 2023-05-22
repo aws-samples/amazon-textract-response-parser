@@ -3,8 +3,11 @@
 ## In development (targeting 0.3.0 release)
 ### Added
 - Average OCR (text recognition) confidence is now available on form fields (and their keys and values) via `getOcrConfidence()`, with configurable aggregation method (including minimum, mean, etc.).
+- `EntityTypes` for tables and table cells/merged-cells are now accessible through `Table.tableType` property and `Cell.hasEntityTypes()` function - and also added to the underlying API data types.
 ### Changed
 - **BREAKING:** `.confidence` property on form fields (and their keys and values) is renamed to `.structureConfidence`, to more clearly signal the different meaning of the `structureConfidence` property from the new `.getOcrConfidence()` on these objects.
+- Corrected wrongly typed `ApiCellBlock.Relationships` from an array of `ApiChildRelationship` to an optional array of same: This field may be omitted altogether when a cell is detected but has no content.
+- Corrected wrongly typed `ApiKeyValueSetBlock.EntityTypes` data model from `ApiKeyValueEntityType` to an array of same.
 - `base.modalAvg()` (and therefore `Page.getModalWordOrientationDegrees()`) now returns `NaN` instead of `null` when given an empty list (e.g. a page with no WORDs), for better consistency with other averaging methods.
 
 ## 0.2.2 (2023-06-19)

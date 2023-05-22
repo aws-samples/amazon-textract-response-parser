@@ -83,18 +83,32 @@ export const enum ApiKeyValueEntityType {
 export interface ApiKeyValueSetBlock {
   BlockType: ApiBlockType.KeyValueSet;
   Confidence: number;
-  EntityTypes: ApiKeyValueEntityType;
+  EntityTypes: ApiKeyValueEntityType[];
   Geometry: ApiGeometry;
   readonly Id: string;
   Relationships: ApiRelationship[];
 }
 
+export const enum ApiTableEntityType {
+  StructuredTable = "STRUCTURED_TABLE",
+  SemiStructuredTable = "SEMI_STRUCTURED_TABLE",
+}
+
 export interface ApiTableBlock {
   BlockType: ApiBlockType.Table;
   Confidence: number;
+  EntityTypes?: ApiTableEntityType[];
   Geometry: ApiGeometry;
   readonly Id: string;
   Relationships: Array<ApiChildRelationship | ApiMergedCellRelationship>;
+}
+
+export const enum ApiTableCellEntityType {
+  Title = "TABLE_TITLE",
+  Footer = "FOOTER",
+  SectionTitle = "SECTION_TITLE",
+  ColumnHeader = "COLUMN_HEADER",
+  Summary = "TABLE_SUMMARY",
 }
 
 export interface ApiCellBlock {
@@ -102,9 +116,10 @@ export interface ApiCellBlock {
   ColumnIndex: number;
   ColumnSpan: 1;
   Confidence: number;
+  EntityTypes?: ApiTableCellEntityType[];
   Geometry: ApiGeometry;
   readonly Id: string;
-  Relationships: ApiChildRelationship[];
+  Relationships?: ApiChildRelationship[];
   RowIndex: 1;
   RowSpan: number;
 }
@@ -114,6 +129,7 @@ export interface ApiMergedCellBlock {
   ColumnIndex: number;
   ColumnSpan: number;
   Confidence: number;
+  EntityTypes?: ApiTableCellEntityType[];
   Geometry: ApiGeometry;
   readonly Id: string;
   Relationships: ApiChildRelationship[];

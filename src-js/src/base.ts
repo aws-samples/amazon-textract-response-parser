@@ -106,7 +106,7 @@ export function modalAvg(arr: Iterable<number>): number {
   }
 
   let maxFreq = 0;
-  let mode: number = NaN;
+  let mode = NaN;
   for (const item in freqs) {
     if (freqs[item].freq > maxFreq) {
       maxFreq = freqs[item].freq;
