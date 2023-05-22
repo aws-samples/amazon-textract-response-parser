@@ -6,8 +6,8 @@ import { strict as assert } from "assert";
 
 // Local Dependencies:
 import { TextractDocument, TextractExpense } from "../..";
-import testResponse from "../data/test-response.json";
-import testExpenseResponse from "../data/invoice-expense-response.json";
+import testResponse from "../data/test-response.json" assert { type: "json" };
+import testExpenseResponse from "../data/invoice-expense-response.json" assert { type: "json" };
 
 console.log("Checking built assets can be used with NodeJS via 'import'...");
 
@@ -21,6 +21,6 @@ doc.pageNumber(1).getLinesByLayoutArea();
 const expense = new TextractExpense(testExpenseResponse);
 assert.strictEqual(expense.nDocs, 1);
 const expenseDoc = [...expense.iterDocs()][0];
-assert.strictEqual(expenseDoc.nSummaryFields, 15);
+assert.strictEqual(expenseDoc.nSummaryFields, 31);
 
 console.log("Done!");

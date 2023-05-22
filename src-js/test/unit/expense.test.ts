@@ -5,6 +5,9 @@ import { TextractExpense } from "../../src/expense";
 const testFailedJson = {} as ApiAnalyzeExpenseResponse;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testExpenseJson: ApiAnalyzeExpenseResponse = require("../data/invoice-expense-response.json");
+const testExpenseMissingGeomsJson: ApiAnalyzeExpenseResponse = require(
+  "../data/expense-missing-geoms-response.json"
+);
 
 describe("Expense", () => {
   it("throws status error on failed job JSON", () => {
@@ -38,7 +41,7 @@ describe("Expense", () => {
       expect(field.parent).toBe(expenseDoc);
     }
     expect(nFieldsSeen).toStrictEqual(expenseDoc.nSummaryFields);
-    expect(nFieldsSeen).toStrictEqual(15);
+    expect(nFieldsSeen).toStrictEqual(31);
   });
 
   it("iterates through expense document item groups, line items, and fields", () => {
@@ -80,10 +83,10 @@ describe("Expense", () => {
     const expense = new TextractExpense(testExpenseJson);
     const expenseDoc = expense.listDocs()[0];
 
-    const vendorNameFields = expenseDoc.searchSummaryFieldsByType("VENDOR_NAME");
-    expect(vendorNameFields.length).toStrictEqual(1);
-    expect(vendorNameFields[0].fieldType.text).toStrictEqual("VENDOR_NAME");
-    expect(vendorNameFields[0].value.text).toStrictEqual("Amazon.com");
+    const testFields = expenseDoc.searchSummaryFieldsByType("INVOICE_RECEIPT_ID");
+    expect(testFields.length).toStrictEqual(1);
+    expect(testFields[0].fieldType.text).toStrictEqual("INVOICE_RECEIPT_ID");
+    expect(testFields[0].value.text).toStrictEqual("123PQR456");
 
     const subtotalField = expenseDoc.getSummaryFieldByType("SUBTOTAL");
     expect(subtotalField).toBeTruthy();
@@ -95,12 +98,12 @@ describe("Expense", () => {
     expect(subtotalField.fieldType.text).toStrictEqual("SUBTOTAL");
     expect(subtotalField.label?.confidence).toBeGreaterThan(1); // (<1% very unlikely)
     expect(subtotalField.label?.confidence).toBeLessThanOrEqual(100);
-    expect(subtotalField.label?.geometry.parentObject).toBe(subtotalField.label);
+    expect(subtotalField.label?.geometry?.parentObject).toBe(subtotalField.label);
     expect(subtotalField.label?.parentField).toBe(subtotalField);
     expect(subtotalField.label?.text).toStrictEqual("Total");
     expect(subtotalField.value.confidence).toBeGreaterThan(1); // (<1% very unlikely)
     expect(subtotalField.value.confidence).toBeLessThanOrEqual(100);
-    expect(subtotalField.value.geometry.parentObject).toBe(subtotalField.value);
+    expect(subtotalField.value.geometry?.parentObject).toBe(subtotalField.value);
     expect(subtotalField.value.parentField).toBe(subtotalField);
     expect(subtotalField.value.text).toStrictEqual("$6169.40");
   });
@@ -114,6 +117,17 @@ describe("Expense", () => {
 
     const getResult = expenseDoc.getSummaryFieldByType("alsodoesnotexist");
     expect(getResult).toStrictEqual(null);
+  });
+
+  it("handles missing summary field geometries when no text detected", () => {
+    const expense = new TextractExpense(testExpenseMissingGeomsJson);
+    const expenseDoc = expense.listDocs()[0];
+
+    const searchResult = expenseDoc.searchSummaryFieldsByType("CITY");
+    expect(searchResult.length).toStrictEqual(1);
+    expect(searchResult[0].value).toBeDefined();
+    expect(searchResult[0].value?.text).toStrictEqual("");
+    expect(searchResult[0].value?.geometry).toBeUndefined();
   });
 
   it("fetches line item fields by type", () => {

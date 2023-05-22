@@ -8,7 +8,7 @@ describe("Form", () => {
   it("loads and navigates form fields per page", () => {
     const doc = new TextractDocument(testResponseJson);
     const page = doc.pageNumber(1);
-    expect(page.form.nFields).toStrictEqual(9);
+    expect(page.form.nFields).toStrictEqual(14);
     expect(page.form.parentPage).toBe(page);
 
     const iterFields = [...page.form.iterFields()];
@@ -27,7 +27,7 @@ describe("Form", () => {
 
   it("loads and navigates form fields at document level", () => {
     const doc = new TextractDocument(testResponseJson);
-    expect(doc.form.nFields).toStrictEqual(9);
+    expect(doc.form.nFields).toStrictEqual(14);
     expect(doc.form.parentDocument).toBe(doc);
 
     const iterFields = [...doc.form.iterFields()];

@@ -28,7 +28,7 @@ const runTestDocAssertions = (doc: TextractDocument, formsEnabled = true, tables
   expect([...firstPage.iterLines()].reduce((acc, next) => acc + next.listWords().length, 0)).toStrictEqual(
     71
   );
-  expect(firstPage.form.nFields).toStrictEqual(formsEnabled ? 9 : 0);
+  expect(firstPage.form.nFields).toStrictEqual(formsEnabled ? 14 : 0);
   expect(firstPage.nTables).toStrictEqual(tablesEnabled ? 1 : 0);
 };
 
@@ -84,11 +84,11 @@ describe("TextractDocument", () => {
       expect(expense.nDocs).toStrictEqual(1);
       const expenseDoc = expense.listDocs()[0];
 
-      const vendorNameField = expenseDoc.getSummaryFieldByType("VENDOR_NAME");
-      expect(vendorNameField).toBeTruthy();
-      if (!vendorNameField) return;
-      expect(vendorNameField.fieldType.text).toStrictEqual("VENDOR_NAME");
-      expect(vendorNameField.value.text).toStrictEqual("Amazon.com");
+      const testField = expenseDoc.getSummaryFieldByType("INVOICE_RECEIPT_ID");
+      expect(testField).toBeTruthy();
+      if (!testField) return;
+      expect(testField.fieldType.text).toStrictEqual("INVOICE_RECEIPT_ID");
+      expect(testField.value.text).toStrictEqual("123PQR456");
     },
     60 * 1000 // 60sec timeout
   );
