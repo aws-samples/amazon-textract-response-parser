@@ -1,6 +1,6 @@
 # Changelog
 
-## In development (targeting 0.2.1)
+## 0.2.1 (2023-05-22)
 ### Changed
 - `.geometry` on Expense result fields is now optional, as the underlying field may not be returned by Amazon Textract in some cases. Typings updated to reflect the fix. ([Issue #102](https://github.com/aws-samples/amazon-textract-response-parser/issues/102))
 
