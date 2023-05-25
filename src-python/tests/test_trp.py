@@ -188,3 +188,12 @@ def test_2023_q2_table_model(caplog):
     j = json.load(f)
     doc = Document(j)
     assert doc
+
+
+def test_issue_83(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data", "issue_83.json"))
+    j = json.load(f)
+    doc = Document(j)
+    assert doc

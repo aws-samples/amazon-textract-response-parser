@@ -8,13 +8,14 @@ logging.getLogger(__name__).addHandler(NullHandler())
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.1.46'
+__version__ = '0.1.47'
 
 ENTITY_TYPE_COLUMN_HEADER = "COLUMN_HEADER"
 ENTITY_TYPE_MERGED_CELL = "MERGED_CELL"
 
 
 class BaseBlock():
+
     def __init__(self, block, blockMap):
         self._block = block
         self._confidence = block['Confidence']
@@ -22,9 +23,9 @@ class BaseBlock():
         self._id = block['Id']
         self._text = ""
         self._text_type = ""
-        if 'Text' in block:
+        if 'Text' in block and block['Text']:
             self._text = block['Text']
-        if "Custom" in block:
+        if "Custom" in block and block['Custom']:
             self._custom = block["Custom"]
         if 'TextType' in block and block['TextType']:
             self._text_type = block['TextType']
@@ -62,6 +63,7 @@ class BaseBlock():
 
 
 class BoundingBox:
+
     def __init__(self, width, height, left, top):
         self._width = width
         self._height = height
@@ -89,6 +91,7 @@ class BoundingBox:
 
 
 class Polygon:
+
     def __init__(self, x, y):
         self._x = x
         self._y = y
@@ -106,6 +109,7 @@ class Polygon:
 
 
 class Geometry:
+
     def __init__(self, geometry):
         boundingBox = geometry["BoundingBox"]
         polygon = geometry["Polygon"]
@@ -131,11 +135,13 @@ class Geometry:
 
 
 class Word(BaseBlock):
+
     def __init__(self, block, blockMap):
         super().__init__(block, blockMap)
 
 
 class Line(BaseBlock):
+
     def __init__(self, block, blockMap):
         super().__init__(block, blockMap)
 
@@ -161,6 +167,7 @@ class Line(BaseBlock):
 
 
 class SelectionElement:
+
     def __init__(self, block, blockMap):
         self._confidence = block['Confidence']
         self._geometry = Geometry(block['Geometry'])
@@ -185,6 +192,7 @@ class SelectionElement:
 
 
 class FieldKey(BaseBlock):
+
     def __init__(self, block, children, blockMap):
         super().__init__(block, blockMap)
         self._content = []
@@ -207,6 +215,7 @@ class FieldKey(BaseBlock):
 
 
 class FieldValue(BaseBlock):
+
     def __init__(self, block, children, blockMap):
         super().__init__(block, blockMap)
         self._content = []
@@ -233,6 +242,7 @@ class FieldValue(BaseBlock):
 
 
 class Field(BaseBlock):
+
     def __init__(self, block, blockMap):
         super().__init__(block, blockMap)
         self._key = None
@@ -274,6 +284,7 @@ class Field(BaseBlock):
 
 
 class Form:
+
     def __init__(self):
         self._fields = []
         self._fieldsMap = {}
@@ -308,6 +319,7 @@ class Form:
 
 
 class BaseCell(BaseBlock):
+
     def __init__(self, block, blockMap):
         super().__init__(block, blockMap)
         self._rowIndex = block['RowIndex']
@@ -345,6 +357,7 @@ class BaseCell(BaseBlock):
 
 
 class Cell(BaseCell):
+
     def __init__(self, block, blockMap):
         super().__init__(block, blockMap)
         self._mergedText = None
@@ -375,6 +388,7 @@ class Cell(BaseCell):
 
 
 class MergedCell(BaseCell):
+
     def __init__(self, block, blockMap, rows):
         super().__init__(block, blockMap)
         self._rowIndex = block['RowIndex']
@@ -402,6 +416,7 @@ class MergedCell(BaseCell):
 
 
 class Row:
+
     def __init__(self):
         self._cells: List[Cell] = []
 
@@ -425,6 +440,7 @@ class Row:
 
 
 class Table(BaseBlock):
+
     def __init__(self, block, blockMap):
         super().__init__(block, blockMap)
         self._rows: List[Row] = []
@@ -510,6 +526,7 @@ class Table(BaseBlock):
 
 
 class Page:
+
     def __init__(self, blocks, blockMap):
         self._blocks = blocks
         self._text = ""
@@ -625,6 +642,7 @@ class Page:
 
 
 class Document:
+
     def __init__(self, responsePages):
 
         if (not isinstance(responsePages, list)):
