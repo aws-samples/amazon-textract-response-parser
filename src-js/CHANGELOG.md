@@ -1,5 +1,9 @@
 # Changelog
 
+## In development (targeting 0.2.2)
+### Changed
+- Removed `browser` field from package.json because front end bundlers like webpack use it, and the (IIFE `dist/browser`) build it pointed to was not appropriate for these build systems. Added `jsdelivr` field in its place to help ensure direct-to-browser CDN imports continue to consume the IIFE build by default.
+
 ## 0.2.1 (2023-05-22)
 ### Changed
 - `.geometry` on Expense result fields is now optional, as the underlying field may not be returned by Amazon Textract in some cases. Typings updated to reflect the fix. ([Issue #102](https://github.com/aws-samples/amazon-textract-response-parser/issues/102))
