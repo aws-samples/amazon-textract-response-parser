@@ -519,9 +519,11 @@ class TDocument():
         self.relationships_recursive.cache_clear()
 
     @staticmethod
-    def create_geometry_from_blocks(values: List[TBlock]) -> TGeometry:
-        all_points = [p.geometry.bounding_box.points for p in values]
+    def create_geometry_from_blocks(values: List[TBlock]) -> Optional[TGeometry]:
+        all_points = [p.geometry.bounding_box.points for p in values if p.geometry and p.geometry.bounding_box]
         all_points = [i for sublist in all_points for i in sublist]
+        if not all_points:
+            return None
         ymin = min([p.y for p in all_points])
         xmin = min([p.x for p in all_points])
         ymax = max([p.y for p in all_points])
@@ -534,7 +536,9 @@ class TDocument():
     def create_value_block(values: List[TBlock]) -> TBlock:
         value_block = TBlock(id=str(uuid4()), block_type="KEY_VALUE_SET", entity_types=["VALUE"])
         value_block.add_ids_to_relationships([b.id for b in values])
-        value_block.geometry = TDocument.create_geometry_from_blocks(values=values)
+        geo = TDocument.create_geometry_from_blocks(values=values)
+        if geo:
+            value_block.geometry = geo
         value_block.confidence = statistics.mean([b.confidence for b in values])
         return value_block
 

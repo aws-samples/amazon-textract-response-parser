@@ -894,3 +894,16 @@ def test_lines_in_order(caplog):
     page = t_document.pages[0]
     assert "The Project Gutenberg EBook of Little Women, by Louisa M. Alcott" == t_document.lines(page=page)[0].text
     assert "This eBook is for the use of anyone anywhere at no cost and with" == t_document.lines(page=page)[1].text
+
+
+# >   all_points = [p.geometry.bounding_box.points for p in values]
+# E   AttributeError: 'NoneType' object has no attribute 'bounding_box'
+def test_create_geometry_from_blocks(caplog):
+    caplog.set_level(logging.DEBUG)
+    p = os.path.dirname(os.path.realpath(__file__))
+    f = open(os.path.join(p, "data/bounding_box_issue.json"))
+    j = json.load(f)
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    # type: ignore
+    no_geometry = t_document.find_block_by_id(id="5c860e58-deb4-4c24-8282-2394a2c535c0")
+    assert no_geometry
+    assert not t_document.create_geometry_from_blocks([no_geometry])
