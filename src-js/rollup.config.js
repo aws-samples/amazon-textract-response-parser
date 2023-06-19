@@ -3,15 +3,12 @@ import resolve from "@rollup/plugin-node-resolve";
 import typescript from "@rollup/plugin-typescript";
 import { terser } from "rollup-plugin-terser";
 
-// Local Dependencies:
-import pkg from "./package.json";
-
 export default [
   {
     input: "src/index.ts",
     output: {
       name: "trp",
-      file: pkg.browser,
+      file: "dist/browser/trp.min.js",
       format: "iife",
       sourcemap: true,
       plugins: [
