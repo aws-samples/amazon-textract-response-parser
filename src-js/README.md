@@ -109,6 +109,29 @@ const linesArrsByPage = doc.listPages().map((p) => p.listLines());
 These arrays are in the raw order returned by Amazon Textract, which is not necessarily a logical human reading order especially for multi-column documents. See the *Other generic document analyses* section below for extra content sorting utilities.
 
 
+## Queries
+
+The results of [Amazon Textract Queries](https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html) are accessible at the page level under `page.queries`. You can `get*` a query by exact question text or alias, or `search*` them by case-insensitive substrings:
+
+```typescript
+doc.listPages().forEach((page) => {
+  // Log a quick human-readable overview of queries & answers:
+  console.log(page.queries.str());
+
+  // Get a query (and its top result's text) by exact alias:
+  const customer = page.queries.getQueryByAlias("customer_name")?.topResult?.text;
+
+  // Get possible results of a query from most to least confident:
+  const shippingAddrCandidates =
+    page.queries.getQueryByAlias("shipping_addr")?.listResultsByConfidence() || [];
+  const shippingAddrTopConf = shippingAddrCandidates[0].confidence;
+
+  // Seaching matches queries e.g. 'What is the Shipping Address?', 'FIND THE BILLING ADDRESS', etc
+  const addrQueries = page.queries.searchQueriesByQuestion("address");
+});
+```
+
+
 ## Forms
 
 As well as looping through the [form data key-value pairs](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html) in the document, you can query fields by key:
@@ -136,6 +159,7 @@ console.log(`Detected Address on page ${fieldByDoc.parentPage.pageNumber}`);
 const page = doc.pageNumber(1);
 const fieldByPage = page.form.getFieldByKey("Address");
 ```
+
 
 ## Tables
 

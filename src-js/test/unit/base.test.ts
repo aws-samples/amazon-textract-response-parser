@@ -1,4 +1,4 @@
-import { AggregationMethod, aggregate, modalAvg } from "../../src/base";
+import { AggregationMethod, aggregate, argMax, modalAvg } from "../../src/base";
 
 // Precision limit for testing summary statistics
 const EPSILON = 1e-15;
@@ -32,7 +32,7 @@ describe("aggregate", () => {
   it("supports geometric mean value aggregation of positive numbers", () => {
     expect(aggregate([1, 1, 8], AggregationMethod.GeometricMean)).toStrictEqual(2);
     expect(
-      Math.abs((aggregate([4, 1, 1/32], AggregationMethod.GeometricMean) as number) - 0.5)
+      Math.abs((aggregate([4, 1, 1 / 32], AggregationMethod.GeometricMean) as number) - 0.5)
     ).toBeLessThan(EPSILON);
   });
 
@@ -44,12 +44,12 @@ describe("aggregate", () => {
 
   it("supports mean value aggregation", () => {
     expect(aggregate([-5, -1, 0, 1, 5], AggregationMethod.Mean)).toStrictEqual(0);
-    expect(
-      Math.abs((aggregate([3.6, 6.3, 2.4], AggregationMethod.Mean) as number) - 4.1)
-    ).toBeLessThan(EPSILON);
-    expect(
-      Math.abs((aggregate([-3.6, -6.3, -2.4], AggregationMethod.Mean) as number) + 4.1)
-    ).toBeLessThan(EPSILON);
+    expect(Math.abs((aggregate([3.6, 6.3, 2.4], AggregationMethod.Mean) as number) - 4.1)).toBeLessThan(
+      EPSILON
+    );
+    expect(Math.abs((aggregate([-3.6, -6.3, -2.4], AggregationMethod.Mean) as number) + 4.1)).toBeLessThan(
+      EPSILON
+    );
   });
 
   it("supports min value aggregation", () => {
@@ -66,5 +66,21 @@ describe("aggregate", () => {
 
   it("throws an error for unsupported aggregation types", () => {
     expect(() => aggregate([1, 2, 3], "foobar" as AggregationMethod)).toThrow("Unsupported aggMethod");
+  });
+});
+
+describe("argMax", () => {
+  it("returns expected values for empty inputs", () => {
+    expect(argMax([])).toStrictEqual({ maxValue: -Infinity, maxIndex: -1 });
+  });
+
+  it("finds the first occurrence of the maximum number in the list", () => {
+    expect(argMax([1, 5, 4, 2, 3])).toStrictEqual({ maxValue: 5, maxIndex: 1 });
+    expect(argMax([-3, 4.7, 20, 0, 20])).toStrictEqual({ maxValue: 20, maxIndex: 2 });
+    expect(argMax([Infinity, -Infinity, NaN, 0, Infinity])).toStrictEqual({
+      maxValue: Infinity,
+      maxIndex: 0,
+    });
+    expect(argMax([8, -6, NaN, 13, NaN, 3.14])).toStrictEqual({ maxValue: 13, maxIndex: 3 });
   });
 });

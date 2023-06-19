@@ -2,6 +2,7 @@
 
 ## In development (targeting 0.3.0 release)
 ### Added
+- Page-level access to [Amazon Textract Queries](https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html) results. (Still assessing compositing architecture for a unified document-level view in future)
 - Average OCR (text recognition) confidence is now available on form fields (and their keys and values) as well as tables, table rows, and table cells - via `getOcrConfidence()`, with configurable aggregation method (including minimum, mean, etc.).
 - `EntityTypes` for tables and table cells/merged-cells are now accessible through `Table.tableType` property and `Cell.hasEntityTypes()` function - and also added to the underlying API data types.
 ### Changed

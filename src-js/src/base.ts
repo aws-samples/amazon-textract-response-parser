@@ -142,6 +142,19 @@ export function aggregate(arr: Iterable<number>, aggMethod: AggregationMethod): 
 }
 
 /**
+ * Extract the maximum value and the first index where it appears from an array of numbers
+ *
+ * If `arr` is empty or no elements are numeric, this function will return a value of `-Infinity`
+ * and an index of `-1`.
+ */
+export function argMax(arr: number[]): { maxValue: number; maxIndex: number } {
+  return arr.reduce(
+    (state, nextVal, nextIx) => (nextVal > state.maxValue ? { maxValue: nextVal, maxIndex: nextIx } : state),
+    { maxValue: -Infinity, maxIndex: -1 }
+  );
+}
+
+/**
  * Interface for a (TextractDocument-like) object that can query Textract Blocks
  *
  * This is used to avoid circular references in child classes which need to reference some

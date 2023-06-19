@@ -12,6 +12,7 @@ import {
   ApiLineBlock,
   ApiMergedCellBlock,
   ApiPageBlock,
+  ApiQueryBlock,
 } from "./api-models/document";
 import {
   ApiDocumentMetadata,
@@ -31,6 +32,7 @@ import {
 import { LineGeneric } from "./content";
 import { FieldGeneric, FieldKeyGeneric, FieldValueGeneric, FormsCompositeGeneric, FormGeneric } from "./form";
 import { BoundingBox, Geometry } from "./geometry";
+import { QueryInstanceCollectionGeneric, QueryInstanceGeneric, QueryResultGeneric } from "./query";
 import { CellBaseGeneric, CellGeneric, MergedCellGeneric, RowGeneric, TableGeneric } from "./table";
 
 // Direct Exports:
@@ -109,6 +111,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
   _geometry: Geometry<ApiPageBlock, Page>;
   _lines: LineGeneric<Page>[];
   _parentDocument: TextractDocument;
+  _queries: QueryInstanceCollectionGeneric<Page>;
   _tables: TableGeneric<Page>[];
 
   constructor(pageBlock: ApiPageBlock, blocks: ApiBlock[], parentDocument: TextractDocument) {
@@ -122,6 +125,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
     this._lines = [];
     this._tables = [];
     this._form = new FormGeneric<Page>([], this);
+    this._queries = new QueryInstanceCollectionGeneric<Page>([], this);
     // Parse the content:
     this._parse(blocks);
   }
@@ -131,6 +135,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
     this._lines = [];
     this._tables = [];
     const formKeyBlocks: ApiKeyValueSetBlock[] = [];
+    const queryBlocks: ApiQueryBlock[] = [];
 
     blocks.forEach((item) => {
       if (item.BlockType == ApiBlockType.Line) {
@@ -145,10 +150,13 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
         if (item.EntityTypes.indexOf(ApiKeyValueEntityType.Key) >= 0) {
           formKeyBlocks.push(item);
         }
+      } else if (item.BlockType == ApiBlockType.Query) {
+        queryBlocks.push(item);
       }
     });
 
     this._form = new FormGeneric<Page>(formKeyBlocks, this);
+    this._queries = new QueryInstanceCollectionGeneric<Page>(queryBlocks, this);
   }
 
   /**
@@ -810,6 +818,13 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
   get parentDocument(): TextractDocument {
     return this._parentDocument;
   }
+
+  /**
+   * Amazon Textract Queries on this page
+   */
+  get queries(): QueryInstanceCollectionGeneric<Page> {
+    return this._queries;
+  }
   get text(): string {
     return this._lines.map((l) => l.text).join("\n");
   }
@@ -827,6 +842,11 @@ export class Field extends FieldGeneric<Page> {}
 export class FieldKey extends FieldKeyGeneric<Page> {}
 export class FieldValue extends FieldValueGeneric<Page> {}
 export class Form extends FormGeneric<Page> {}
+
+// query.ts concrete Page-dependent types:
+export class QueryInstance extends QueryInstanceGeneric<Page> {}
+export class QueryInstanceCollection extends QueryInstanceCollectionGeneric<Page> {}
+export class QueryResult extends QueryResultGeneric<Page> {}
 
 // table.ts concrete Page-dependent types:
 export class Cell extends CellGeneric<Page> {}

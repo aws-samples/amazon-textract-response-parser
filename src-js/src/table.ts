@@ -223,14 +223,17 @@ export class RowGeneric<TPage extends WithParentDocBlocks> {
 
   /**
    * Aggregate table structure confidence score of the cells in this row
-   * 
+   *
    * This score reflects the overall confidence of the table cell structure in this row. For the
    * actual OCR confidence of cell contents, see `.getOcrConfidence()`.
    *
    * @param {AggregationMethod} aggMethod How to combine individual cell confidences together
    */
   getConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
-    return aggregate(this._cells.map((c) => c.confidence), aggMethod);
+    return aggregate(
+      this._cells.map((c) => c.confidence),
+      aggMethod
+    );
   }
 
   /**
