@@ -14,7 +14,7 @@ import {
   ApiTableEntityType,
   ApiWordBlock,
 } from "./api-models/document";
-import { ApiBlockWrapper, getIterable, WithParentDocBlocks } from "./base";
+import { aggregate, AggregationMethod, ApiBlockWrapper, getIterable, WithParentDocBlocks } from "./base";
 import { SelectionElement, Word } from "./content";
 import { Geometry } from "./geometry";
 
@@ -42,6 +42,13 @@ export abstract class CellBaseGeneric<
   get columnSpan(): number {
     return this._dict.ColumnSpan || 1;
   }
+
+  /**
+   * Confidence score of the table cell structure detection
+   *
+   * This score reflects the confidence of the model detecting the table cell structure itself. For
+   * the text OCR confidence, see the `.getOcrConfidence()` method instead.
+   */
   get confidence(): number {
     return this._dict.Confidence;
   }
@@ -60,6 +67,21 @@ export abstract class CellBaseGeneric<
   }
   get rowSpan(): number {
     return this._dict.RowSpan || 1;
+  }
+
+  /**
+   * Aggregate OCR confidence score of the text (and selection elements) in this cell
+   *
+   * This score reflects the aggregated OCR confidence of all the text content detected in the
+   * cell. For the model's confidence on the table structure itself, see `.confidence`.
+   *
+   * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   */
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+    return aggregate(
+      this.listContent().map((c) => c.confidence),
+      aggMethod
+    );
   }
 
   /**
@@ -197,6 +219,33 @@ export class RowGeneric<TPage extends WithParentDocBlocks> {
   }
   get parentTable(): TableGeneric<TPage> {
     return this._parentTable;
+  }
+
+  /**
+   * Aggregate table structure confidence score of the cells in this row
+   * 
+   * This score reflects the overall confidence of the table cell structure in this row. For the
+   * actual OCR confidence of cell contents, see `.getOcrConfidence()`.
+   *
+   * @param {AggregationMethod} aggMethod How to combine individual cell confidences together
+   */
+  getConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+    return aggregate(this._cells.map((c) => c.confidence), aggMethod);
+  }
+
+  /**
+   * Aggregate OCR confidence score of the text (and selection elements) in this row
+   *
+   * This score reflects the aggregated OCR confidence of all the text content detected in this
+   * row's cells. For the model's confidence on the table structure itself, see `.getConfidence()`.
+   *
+   * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   */
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+    const contentConfs = ([] as number[]).concat(
+      ...this._cells.map((cell) => cell.listContent().map((content) => content.confidence))
+    );
+    return aggregate(contentConfs, aggMethod);
   }
 
   /**
@@ -390,6 +439,21 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
   }
 
   /**
+   * Aggregate OCR confidence score of the text (and selection elements) in this table
+   *
+   * This score reflects the aggregated OCR confidence of all the text content detected in this
+   * table. For the model's confidence on the table structure itself, see `.confidence`.
+   *
+   * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   */
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+    const contentConfs = ([] as number[]).concat(
+      ...this._cells.map((cell) => cell.listContent().map((content) => content.confidence))
+    );
+    return aggregate(contentConfs, aggMethod);
+  }
+
+  /**
    * Iterate through the rows of the table
    * @param repeatMultiRowCells Set `true` to include rowspan>1 cells in every `Row` they intersect with.
    * @example
@@ -450,6 +514,12 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
     );
   }
 
+  /**
+   * Confidence score of the table structure detection
+   *
+   * This score reflects the confidence of the model detecting the table structure itself. For the
+   * combined table content OCR confidence, see the `.getOcrConfidence()` method instead.
+   */
   get confidence(): number {
     return this._dict.Confidence;
   }

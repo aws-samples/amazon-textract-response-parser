@@ -22,8 +22,8 @@ describe("Form", () => {
 
     const field = fieldList[0];
     expect(field.parentForm).toBe(page.form);
-    expect(field.structureConfidence).toBeGreaterThan(1); // (<1% very unlikely)
-    expect(field.structureConfidence).toBeLessThanOrEqual(100);
+    expect(field.confidence).toBeGreaterThan(1); // (<1% very unlikely)
+    expect(field.confidence).toBeLessThanOrEqual(100);
   });
 
   it("loads and navigates form fields at document level", () => {
@@ -45,8 +45,8 @@ describe("Form", () => {
 
     const field = fieldList[0];
     expect(field.parentForm).toBe(doc.pageNumber(1).form);
-    expect(field.structureConfidence).toBeGreaterThan(1); // (<1% very unlikely)
-    expect(field.structureConfidence).toBeLessThanOrEqual(100);
+    expect(field.confidence).toBeGreaterThan(1); // (<1% very unlikely)
+    expect(field.confidence).toBeLessThanOrEqual(100);
   });
 
   it("loads correct types of form field content", () => {
@@ -85,12 +85,12 @@ describe("Form", () => {
     // We also do bulk of field functionality validation here because we know what the field is:
     expect(field.key?.parentField).toBe(field);
     expect(field.value?.parentField).toBe(field);
-    expect(field.key?.structureConfidence).toBeGreaterThan(1); // (<1% very unlikely)
-    expect(field.key?.structureConfidence).toBeLessThanOrEqual(100);
+    expect(field.key?.confidence).toBeGreaterThan(1); // (<1% very unlikely)
+    expect(field.key?.confidence).toBeLessThanOrEqual(100);
     expect(field.key?.geometry.parentObject).toBe(field.key);
     expect(field.key?.str()).toStrictEqual(field.key?.text);
-    expect(field.value?.structureConfidence).toBeGreaterThan(1); // (<1% very unlikely)
-    expect(field.value?.structureConfidence).toBeLessThanOrEqual(100);
+    expect(field.value?.confidence).toBeGreaterThan(1); // (<1% very unlikely)
+    expect(field.value?.confidence).toBeLessThanOrEqual(100);
     expect(field.value?.geometry.parentObject).toBe(field.value);
     expect(field.value?.text).toStrictEqual("555-0100");
     expect(field.value?.str()).toStrictEqual(field.value?.text);
@@ -151,14 +151,14 @@ describe("Form", () => {
     const keyOcrConf = field.key.getOcrConfidence();
     expect(keyOcrConf).not.toBeNaN();
     expect(keyOcrConf).toStrictEqual(mean(keyWords.map((word) => word.confidence)));
-    expect(keyOcrConf).not.toEqual(field.key.structureConfidence);
+    expect(keyOcrConf).not.toEqual(field.key.confidence);
 
     if (!field.value) throw new Error("Test missing expected document field value");
     const valueContent = field.value.listContent();
     const valueOcrConf = field.value.getOcrConfidence();
     expect(valueOcrConf).not.toBeNaN();
     expect(valueOcrConf).toStrictEqual(mean(valueContent.map((c) => c.confidence)));
-    expect(valueOcrConf).not.toEqual(field.value.structureConfidence);
+    expect(valueOcrConf).not.toEqual(field.value.confidence);
 
     expect(field.getOcrConfidence()).toStrictEqual(
       mean(valueContent.map((c) => c.confidence).concat(keyWords.map((w) => w.confidence)))

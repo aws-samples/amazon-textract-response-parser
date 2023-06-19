@@ -64,12 +64,12 @@ export class FieldKeyGeneric<TPage extends WithParentDocBlocks> extends WithWord
   }
 
   /**
-   * Confidence score of the structural key/value pair detection
+   * Structural (not text) confidence score of the key/value pair detection
    *
    * This score reflects the confidence of the model detecting the key-value relation. For the text
    * OCR confidence, see the `.getOcrConfidence()` method instead.
    */
-  get structureConfidence(): number {
+  get confidence(): number {
     return this._dict.Confidence;
   }
   get text(): string {
@@ -80,7 +80,7 @@ export class FieldKeyGeneric<TPage extends WithParentDocBlocks> extends WithWord
    * Aggregate OCR confidence score of the text in this field key
    *
    * This score reflects the aggregated OCR confidence of the text detected in the field key. For
-   * the model's confidence on the key/value relation itself, see `.structureConfidence`.
+   * the model's confidence on the key/value relation itself, see `.confidence`.
    *
    * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
    */
@@ -140,12 +140,12 @@ export class FieldValueGeneric<
   }
 
   /**
-   * Confidence score of the structural key/value pair detection
+   * Structural (not text) confidence score of the key/value pair detection
    *
    * This score reflects the confidence of the model detecting the key-value relation. For the text
    * OCR confidence, see the `.getOcrConfidence()` method instead.
    */
-  get structureConfidence(): number {
+  get confidence(): number {
     return this._dict.Confidence;
   }
   get geometry(): Geometry<ApiKeyValueSetBlock, FieldValueGeneric<TPage>> {
@@ -162,7 +162,7 @@ export class FieldValueGeneric<
    * Aggregate OCR confidence score of the text in this field value
    *
    * This score reflects the aggregated OCR confidence of the text detected in the field value. For
-   * the model's confidence on the key/value relation itself, see `.structureConfidence`.
+   * the model's confidence on the key/value relation itself, see `.confidence`.
    *
    * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
    */
@@ -224,18 +224,20 @@ export class FieldGeneric<TPage extends WithParentDocBlocks> {
   }
 
   /**
-   * Return average key-value detection confidence over whichever of {key, value} are present.
+   * Overall structural (not text) confidence score of the key/value pair detection
    *
    * Note this score describes the model's confidence in the validity of the key-value pair, not
    * the underlying OCR confidence of the text. (For that, see `.getOcrConfidence()` instead)
+   *
+   * Returns the average structure confidence over whichever of {key} and {value} are present.
    */
-  get structureConfidence(): number {
+  get confidence(): number {
     const scores = [];
     if (this._key) {
-      scores.push(this._key.structureConfidence || 0);
+      scores.push(this._key.confidence || 0);
     }
     if (this._value) {
-      scores.push(this._value.structureConfidence || 0);
+      scores.push(this._value.confidence || 0);
     }
     if (scores.length) {
       return scores.reduce((acc, next) => acc + next, 0) / scores.length;
@@ -261,7 +263,7 @@ export class FieldGeneric<TPage extends WithParentDocBlocks> {
    *
    * This score reflects the aggregated OCR confidence of all the text content detected in the
    * field key and/or value (whichever of the two are present). For the model's confidence on the
-   * key/value relation itself, see `.structureConfidence`.
+   * key/value relation itself, see `.confidence`.
    *
    * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
    */
@@ -300,7 +302,7 @@ export class FormGeneric<TPage extends WithParentDocBlocks> {
       const fieldKeyText = f.key.text || "";
       if (fieldKeyText) {
         if (fieldKeyText in this._fieldsMap) {
-          if (f.structureConfidence > this._fieldsMap[fieldKeyText].structureConfidence) {
+          if (f.confidence > this._fieldsMap[fieldKeyText].confidence) {
             this._fieldsMap[fieldKeyText] = f;
           }
         } else {

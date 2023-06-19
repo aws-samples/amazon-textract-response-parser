@@ -8,7 +8,9 @@ import {
   ApiTableCellEntityType,
   ApiTableEntityType,
 } from "../../src/api-models";
-import { TextractDocument, Word } from "../../src/document";
+import { AggregationMethod } from "../../src/base";
+import { Page, TextractDocument, Word } from "../../src/document";
+import { CellGeneric, MergedCellGeneric } from "../../src/table";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testTableMergedCellsJson: ApiResponsePage = require("../data/table-example-response.json");
@@ -40,7 +42,7 @@ describe("Table", () => {
     // Create a clone to avoid messing up the shared imported object:
     const responseCopy: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testTableMergedCellsJson));
     // Prepend a non-existent block ID to every table's list of cells and list of merged_cells:
-    const tableBlocks = responseCopy.Blocks.filter((b) => (b.BlockType === "TABLE")) as ApiTableBlock[];
+    const tableBlocks = responseCopy.Blocks.filter((b) => b.BlockType === "TABLE") as ApiTableBlock[];
     let nFakeCells = 0;
     let nFakeMergedCells = 0;
     tableBlocks.forEach((block) => {
@@ -66,26 +68,24 @@ describe("Table", () => {
     consoleWarnMock.mockRestore();
 
     // doc tables should still be functional:
-    expect(
-      () => {
-        for (const page of doc.iterPages()) {
-          for (const table of page.iterTables()) {
-            table.cellAt(1, 1);
-          }
+    expect(() => {
+      for (const page of doc.iterPages()) {
+        for (const table of page.iterTables()) {
+          table.cellAt(1, 1);
         }
       }
-    ).not.toThrow();
+    }).not.toThrow();
   });
 
   it("gracefully handles table cells with missing referenced content blocks", () => {
     // Create a clone to avoid messing up the shared imported object:
     const responseCopy: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testTableMergedCellsJson));
     // Prepend a non-existent block ID to every table cell's list of content blocks:
-    const cellBlocks = responseCopy.Blocks.filter((b) => (b.BlockType === "CELL")) as ApiCellBlock[];
+    const cellBlocks = responseCopy.Blocks.filter((b) => b.BlockType === "CELL") as ApiCellBlock[];
     let nFakeBlocks = 0;
     cellBlocks.forEach((block) => {
       if (!block.Relationships) return;
-      block.Relationships.filter((rel) => (rel.Type === ApiRelationshipType.Child)).forEach((rel) => {
+      block.Relationships.filter((rel) => rel.Type === ApiRelationshipType.Child).forEach((rel) => {
         rel.Ids.unshift(`DOESNOTEXIST-${++nFakeBlocks}`);
       });
     });
@@ -100,37 +100,35 @@ describe("Table", () => {
     consoleWarnMock.mockRestore();
 
     // doc tables should still be functional:
-    expect(
-      () => {
-        for (const page of doc.iterPages()) {
-          for (const table of page.iterTables()) {
-            for (const row of table.iterRows()) {
-              for (const cell of row.iterCells()) {
-                cell.text;
-              }
+    expect(() => {
+      for (const page of doc.iterPages()) {
+        for (const table of page.iterTables()) {
+          for (const row of table.iterRows()) {
+            for (const cell of row.iterCells()) {
+              cell.text;
             }
           }
         }
       }
-    ).not.toThrow();
+    }).not.toThrow();
   });
 
   it("differentiates structured from semi-structured tables", () => {
     // Create a clone to avoid messing up the shared imported object:
     const responseCopy: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testResponseJson));
-  
+
     // Check correct behaviour on the response object as-is:
     let doc = new TextractDocument(responseCopy);
     let table = doc.pageNumber(1).tableAtIndex(0);
     expect(table.tableType).toStrictEqual(ApiTableEntityType.StructuredTable);
-  
+
     // Find and manipulate the TABLE block, and check the parser responds correctly:
     const tableBlocks = responseCopy.Blocks.filter((block) => block.BlockType === ApiBlockType.Table);
     expect(tableBlocks.length).toStrictEqual(1);
     const tableBlock = tableBlocks[0] as ApiTableBlock;
-  
+
     tableBlock.EntityTypes = ["SEMI_STRUCTURED_TABLE" as ApiTableEntityType];
-    expect((new TextractDocument(responseCopy)).pageNumber(1).tableAtIndex(0).tableType).toStrictEqual(
+    expect(new TextractDocument(responseCopy).pageNumber(1).tableAtIndex(0).tableType).toStrictEqual(
       ApiTableEntityType.SemiStructuredTable
     );
 
@@ -138,11 +136,12 @@ describe("Table", () => {
       "STRUCTURED_TABLE" as ApiTableEntityType,
       "SEMI_STRUCTURED_TABLE" as ApiTableEntityType,
     ];
-    expect(() => ((new TextractDocument(responseCopy)).pageNumber(1).tableAtIndex(0).tableType))
-      .toThrow("multiple conflicting table types");
-  
+    expect(() => new TextractDocument(responseCopy).pageNumber(1).tableAtIndex(0).tableType).toThrow(
+      "multiple conflicting table types"
+    );
+
     delete tableBlock.EntityTypes;
-    expect((new TextractDocument(responseCopy)).pageNumber(1).tableAtIndex(0).tableType).toBeNull();
+    expect(new TextractDocument(responseCopy).pageNumber(1).tableAtIndex(0).tableType).toBeNull();
   });
 
   it("throws errors on out-of-bounds tables", () => {
@@ -307,6 +306,96 @@ describe("Table", () => {
     expect(targetCellFound).toStrictEqual(true);
   });
 
+  it("aggregates OCR confidence of cell content", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const page = doc.pageNumber(1);
+    const table = page.tableAtIndex(0);
+    const firstCell = table.cellAt(1, 1);
+
+    expect(firstCell).toBeTruthy();
+    const cellContentRaw = firstCell?.listContent();
+    expect(cellContentRaw?.length).toBeGreaterThan(1); // (to validate different agg methods)
+    const cellContent = cellContentRaw || []; // Give us nice typings for the rest of this suite
+
+    const minOcrConf = firstCell?.getOcrConfidence(AggregationMethod.Min);
+    expect(minOcrConf).toStrictEqual(Math.min(...cellContent.map((c) => c.confidence)));
+    const maxOcrConf = firstCell?.getOcrConfidence(AggregationMethod.Max);
+    expect(maxOcrConf).toStrictEqual(Math.max(...cellContent.map((c) => c.confidence)));
+
+    const avgOcrConf = firstCell?.getOcrConfidence();
+    expect(firstCell?.getOcrConfidence(AggregationMethod.Mean)).toStrictEqual(avgOcrConf);
+    expect(avgOcrConf).toStrictEqual(
+      cellContent.reduce((acc, next) => acc + next.confidence, 0) / cellContent.length
+    );
+  });
+
+  it("aggregates OCR confidence of row content", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const page = doc.pageNumber(1);
+    const table = page.tableAtIndex(0);
+    const firstRow = table.rowAt(1);
+    const firstRowCells = firstRow.listCells();
+
+    // List the OCR confidence scores of all content in this row:
+    let contentConfs: number[] = [];
+    firstRowCells.forEach((cell) => {
+      contentConfs = contentConfs.concat(cell.listContent().map((c) => c.confidence));
+    });
+
+    // Check the row contains multiple content to ensure the different aggs are well tested:
+    expect(contentConfs.length).toBeGreaterThan(1);
+
+    // Check the OCR confidences scores behave as expected:
+    expect(firstRow.getOcrConfidence(AggregationMethod.Max)).toStrictEqual(Math.max(...contentConfs));
+    expect(firstRow.getOcrConfidence(AggregationMethod.Min)).toStrictEqual(Math.min(...contentConfs));
+    expect(firstRow.getOcrConfidence()).toStrictEqual(
+      contentConfs.reduce((acc, next) => acc + next, 0) / contentConfs.length
+    );
+  });
+
+  it("aggregates structure confidence of row cells", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const page = doc.pageNumber(1);
+    const table = page.tableAtIndex(0);
+    const firstRow = table.rowAt(1);
+    let cellConfs: number[] = firstRow.listCells().map((c) => c.confidence);
+
+    // Check the row contains multiple content to ensure the different aggs are well tested:
+    expect(cellConfs.length).toBeGreaterThan(1);
+
+    // Check the aggregate structure confidences scores behave as expected:
+    expect(firstRow.getConfidence(AggregationMethod.Max)).toStrictEqual(Math.max(...cellConfs));
+    expect(firstRow.getConfidence(AggregationMethod.Min)).toStrictEqual(Math.min(...cellConfs));
+    expect(firstRow.getConfidence()).toStrictEqual(
+      cellConfs.reduce((acc, next) => acc + next, 0) / cellConfs.length
+    );
+  });
+
+  it("aggregates OCR confidence of table content", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const page = doc.pageNumber(1);
+    const table = page.tableAtIndex(0);
+    const cells = ([] as Array<CellGeneric<Page> | MergedCellGeneric<Page>>).concat(
+      ...table.listRows().map((row) => row.listCells())
+    );
+
+    // List the OCR confidence scores of all content in this row:
+    let contentConfs: number[] = [];
+    cells.forEach((cell) => {
+      contentConfs = contentConfs.concat(cell.listContent().map((c) => c.confidence));
+    });
+
+    // Check the table contains multiple content to ensure the different aggs are well tested:
+    expect(contentConfs.length).toBeGreaterThan(1);
+
+    // Check the OCR confidences scores behave as expected:
+    expect(table.getOcrConfidence(AggregationMethod.Max)).toStrictEqual(Math.max(...contentConfs));
+    expect(table.getOcrConfidence(AggregationMethod.Min)).toStrictEqual(Math.min(...contentConfs));
+    expect(table.getOcrConfidence()).toStrictEqual(
+      contentConfs.reduce((acc, next) => acc + next, 0) / contentConfs.length
+    );
+  });
+
   it("exposes raw table dicts with traversal up and down the tree", () => {
     const doc = new TextractDocument(testResponseJson);
     const page = doc.pageNumber(1);
@@ -321,9 +410,12 @@ describe("Table", () => {
     const page = doc.pageNumber(1);
     const table = page.tableAtIndex(0);
     expect(
-      table.rowAt(1).listCells().filter((c) => c.hasEntityTypes(ApiTableCellEntityType.ColumnHeader)).length
+      table
+        .rowAt(1)
+        .listCells()
+        .filter((c) => c.hasEntityTypes(ApiTableCellEntityType.ColumnHeader)).length
     ).toStrictEqual(5);
-    
+
     // Query one type at a time:
     for (const row of table.iterRows()) {
       for (const cell of row.iterCells()) {
@@ -337,10 +429,12 @@ describe("Table", () => {
 
     // Query multiple types at once:
     const firstCell = table.cellAt(1, 1);
-    expect(firstCell?.hasEntityTypes([ApiTableCellEntityType.ColumnHeader, ApiTableCellEntityType.Footer]))
-      .toStrictEqual(true);
-    expect(firstCell?.hasEntityTypes([ApiTableCellEntityType.Summary, ApiTableCellEntityType.Footer]))
-      .toStrictEqual(false);
+    expect(
+      firstCell?.hasEntityTypes([ApiTableCellEntityType.ColumnHeader, ApiTableCellEntityType.Footer])
+    ).toStrictEqual(true);
+    expect(
+      firstCell?.hasEntityTypes([ApiTableCellEntityType.Summary, ApiTableCellEntityType.Footer])
+    ).toStrictEqual(false);
   });
 
   it("stringifies tables to contain each row's representation", () => {

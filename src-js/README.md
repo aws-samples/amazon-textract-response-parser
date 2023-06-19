@@ -125,6 +125,8 @@ const addresses = doc.form.searchFieldsByKey("address");
 addresses.forEach((addrField) => { console.log(addrField.key.text); });
 ```
 
+Note that the `Field.confidence`, `FieldKey.confidence` and `FieldValue.confidence` scores reflect confidence of the **key-value structure detection** model. For aggregated OCR confidence of their **actual text**, use `.getOcrConfidence()` instead.
+
 You can also search form keys at the individual page level, or look up the page number for detected fields:
 
 ```typescript
@@ -165,6 +167,8 @@ for (const row of table.iterRows(true)) {}
 // Return split sub-cells instead of merged cells when indexing:
 const firstColCellFragments = table.cellsAt(null, 1, true);
 ```
+
+The `Table.confidence`, `Row.getConfidence()` and `Cell.confidence` scores reflect confidence of the **table structure detection** model. For aggregated OCR confidence of the text contained inside, use `.getOcrConfidence()` instead.
 
 Use `Table.tableType` and `Cell.hasEntityTypes()` to explore the more advanced [entity types](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html) extracted by Amazon Textract: For example column headers, titles, footers, and summaries:
 
