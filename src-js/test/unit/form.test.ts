@@ -170,21 +170,25 @@ describe("Form", () => {
     const field = doc.form.getFieldByKey("Phone Number:");
     if (!field) throw new Error("Test missing expected document field");
 
-    const keyOcrConf = field.key.getOcrConfidence();
-    expect(keyOcrConf).toStrictEqual(field.key.getOcrConfidence(AggregationMethod.Mean));
-    expect(keyOcrConf).toBeGreaterThan(field.key.getOcrConfidence(AggregationMethod.Min));
-    expect(keyOcrConf).toBeLessThan(field.key.getOcrConfidence(AggregationMethod.Max));
+    const keyOcrConf = field.key.getOcrConfidence() as number;
+    expect(keyOcrConf).not.toBeNull();
+    expect(field.key.getOcrConfidence(AggregationMethod.Mean)).toStrictEqual(keyOcrConf);
+    expect(field.key.getOcrConfidence(AggregationMethod.Min)).toBeLessThan(keyOcrConf);
+    expect(field.key.getOcrConfidence(AggregationMethod.Max)).toBeGreaterThan(keyOcrConf);
 
     if (!field.value) throw new Error("Test missing expected document field value");
-    const valueOcrConf = field.value.getOcrConfidence();
-    expect(valueOcrConf).toStrictEqual(field.value.getOcrConfidence(AggregationMethod.Mean));
+    const valueOcrConf = field.value.getOcrConfidence() as number;
+    expect(valueOcrConf).not.toBeNull();
+    expect(field.value.getOcrConfidence(AggregationMethod.Mean)).toStrictEqual(valueOcrConf);
     // The test doc has exactly one WORD/content in this field value:
-    expect(valueOcrConf).toStrictEqual(field.value.getOcrConfidence(AggregationMethod.Min));
-    expect(valueOcrConf).toStrictEqual(field.value.getOcrConfidence(AggregationMethod.Max));
+    expect(field.value.listContent().length).toStrictEqual(1);
+    expect(field.value.getOcrConfidence(AggregationMethod.Min)).toStrictEqual(valueOcrConf);
+    expect(field.value.getOcrConfidence(AggregationMethod.Max)).toStrictEqual(valueOcrConf);
 
-    const fieldOcrConf = field.getOcrConfidence();
-    expect(fieldOcrConf).toStrictEqual(field.getOcrConfidence(AggregationMethod.Mean));
-    expect(fieldOcrConf).toBeGreaterThan(field.getOcrConfidence(AggregationMethod.Min));
-    expect(fieldOcrConf).toBeLessThan(field.getOcrConfidence(AggregationMethod.Max));
+    const fieldOcrConf = field.getOcrConfidence() as number;
+    expect(fieldOcrConf).not.toBeNull();
+    expect(field.getOcrConfidence(AggregationMethod.Mean)).toStrictEqual(fieldOcrConf);
+    expect(field.getOcrConfidence(AggregationMethod.Min)).toBeLessThan(fieldOcrConf);
+    expect(field.getOcrConfidence(AggregationMethod.Max)).toBeGreaterThan(fieldOcrConf);
   });
 });

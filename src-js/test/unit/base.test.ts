@@ -22,11 +22,11 @@ describe("modalAvg", () => {
 
 describe("aggregate", () => {
   it("returns expected values for empty inputs", () => {
-    expect(aggregate([], AggregationMethod.GeometricMean)).toBeNaN();
-    expect(aggregate([], AggregationMethod.Max)).toStrictEqual(-Infinity);
-    expect(aggregate([], AggregationMethod.Mean)).toBeNaN();
-    expect(aggregate([], AggregationMethod.Min)).toStrictEqual(Infinity);
-    expect(aggregate([], AggregationMethod.Mode)).toBeNaN();
+    expect(aggregate([], AggregationMethod.GeometricMean)).toBeNull();
+    expect(aggregate([], AggregationMethod.Max)).toBeNull();
+    expect(aggregate([], AggregationMethod.Mean)).toBeNull();
+    expect(aggregate([], AggregationMethod.Min)).toBeNull();
+    expect(aggregate([], AggregationMethod.Mode)).toBeNull();
   });
 
   it("supports geometric mean value aggregation of positive numbers", () => {

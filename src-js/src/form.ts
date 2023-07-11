@@ -83,8 +83,9 @@ export class FieldKeyGeneric<TPage extends WithParentDocBlocks> extends WithWord
    * the model's confidence on the key/value relation itself, see `.confidence`.
    *
    * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   * @returns Aggregated confidence, or null if this field key has no content/text
    */
-  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     return aggregate(
       this._words.map((w) => w.confidence),
       aggMethod
@@ -165,8 +166,9 @@ export class FieldValueGeneric<
    * the model's confidence on the key/value relation itself, see `.confidence`.
    *
    * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   * @returns Aggregated confidence, or null if this field value has no content/text
    */
-  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     return aggregate(
       this._content.map((c) => c.confidence),
       aggMethod
@@ -266,8 +268,9 @@ export class FieldGeneric<TPage extends WithParentDocBlocks> {
    * key/value relation itself, see `.confidence`.
    *
    * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   * @returns Aggregated confidence, or null if this field has no content/text
    */
-  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     const keyValContent = (this._value ? this._value._content : []).concat(this._key._words);
     return aggregate(
       keyValContent.map((c) => c.confidence),

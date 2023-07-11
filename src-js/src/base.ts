@@ -119,23 +119,26 @@ export function modalAvg(arr: Iterable<number>): number {
 /**
  * Summarize an Iterable of numbers using a statistic of your choice
  *
- * If `arr` is empty, this function will return `NaN` for most aggregations except: Max returns
- * `-Infinity`; Min returns `+Infinity`.
+ * If `arr` is empty, this function will return `null`.
  */
-export function aggregate(arr: Iterable<number>, aggMethod: AggregationMethod): number {
+export function aggregate(arr: Iterable<number>, aggMethod: AggregationMethod): number | null {
+  // Altough some aggregations could process streaming-style, we'd need to implement zero-length
+  // detection separately for each one. Therefore simplest method is just to extract arr as an
+  // actual array up-front:
+  const actualArr: Array<number> = Array.isArray(arr) ? arr : Array.from(arr);
+  if (actualArr.length === 0) return null;
+
   if (aggMethod === AggregationMethod.GeometricMean) {
-    const actualArr = Array.isArray(arr) ? arr : Array.from(arr);
     // Performing arithmetic mean in logspace better numerically conditioned than just multiplying:
     return Math.exp(actualArr.reduce((acc, next) => acc + Math.log(next), 0) / actualArr.length);
   } else if (aggMethod === AggregationMethod.Max) {
-    return Math.max(...arr);
+    return Math.max(...actualArr);
   } else if (aggMethod === AggregationMethod.Mean) {
-    const actualArr = Array.isArray(arr) ? arr : Array.from(arr);
     return actualArr.reduce((acc, next) => acc + next, 0) / actualArr.length;
   } else if (aggMethod === AggregationMethod.Min) {
-    return Math.min(...arr);
+    return Math.min(...actualArr);
   } else if (aggMethod === AggregationMethod.Mode) {
-    return modalAvg(arr);
+    return modalAvg(actualArr);
   } else {
     throw new Error(`Unsupported aggMethod '${aggMethod}' not in allowed AggregationMethod enum`);
   }

@@ -76,8 +76,9 @@ export abstract class CellBaseGeneric<
    * cell. For the model's confidence on the table structure itself, see `.confidence`.
    *
    * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   * @returns Aggregated confidence, or null if this cell contains no content/text
    */
-  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     return aggregate(
       this.listContent().map((c) => c.confidence),
       aggMethod
@@ -228,8 +229,9 @@ export class RowGeneric<TPage extends WithParentDocBlocks> {
    * actual OCR confidence of cell contents, see `.getOcrConfidence()`.
    *
    * @param {AggregationMethod} aggMethod How to combine individual cell confidences together
+   * @returns Aggregated confidence, or null if this row contains no content/text
    */
-  getConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+  getConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     return aggregate(
       this._cells.map((c) => c.confidence),
       aggMethod
@@ -243,8 +245,9 @@ export class RowGeneric<TPage extends WithParentDocBlocks> {
    * row's cells. For the model's confidence on the table structure itself, see `.getConfidence()`.
    *
    * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   * @returns Aggregated confidence, or null if this row contains no content/text
    */
-  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     const contentConfs = ([] as number[]).concat(
       ...this._cells.map((cell) => cell.listContent().map((content) => content.confidence))
     );
@@ -448,8 +451,9 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
    * table. For the model's confidence on the table structure itself, see `.confidence`.
    *
    * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   * @returns Aggregated confidence, or null if this table contains no content/text
    */
-  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number {
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     const contentConfs = ([] as number[]).concat(
       ...this._cells.map((cell) => cell.listContent().map((content) => content.confidence))
     );
