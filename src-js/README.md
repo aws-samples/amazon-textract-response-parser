@@ -33,10 +33,19 @@ const { TextractDocument, TextractIdentity } = require("amazon-textract-response
 
 At a low level, the distribution of this library provides multiple builds:
 
-- `dist/cjs` (default `main`), for CommonJS environments like NodeJS,
-- `dist/es` (default `module`), for ES6/ES2015/esnext capable environments,
-- `dist/browser` (default `jsdelivr` and `unpkg`), for use directly in the browser with no module framework (IIFE), and
+- `dist/cjs` (default `main`), for CommonJS environments like NodeJS - including most front end applications built with tools like React and Webpack.
+- `dist/es` (default `module`), for ES6/ES2015/esnext capable environments.
+- `dist/browser` (default `jsdelivr` and `unpkg`), for linking directly from browser HTML with no module framework (IIFE).
 - **(Deprecated):** `dist/umd`, for other [Universal Module Definition](https://github.com/umdjs/umd)-compatible environments. This build is slated to be removed in a future release so please let us know via GitHub issues if you have blockers for migrating to another build.
+
+This means that **deep imports** will depend on your build environment. For example:
+
+```typescript
+import { aggregate, AggregationMethod } from "amazon-textract-response-parser/dist/cjs/base";
+
+const minConfidence = aggregate([80, 90, 85], AggregationMethod.Min);
+```
+
 
 ## Loading data
 
