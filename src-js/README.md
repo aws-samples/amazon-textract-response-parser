@@ -193,11 +193,11 @@ for (const row of table.iterRows()) {
 Further configuration arguments can be used to change the treatment of merged cells if needed:
 
 ```typescript
-// Iterate over rows repeating any cells merged across rows:
-for (const row of table.iterRows(true)) {}
+// Iterate over rows repeating any cells spanning multiple rows:
+for (const row of table.iterRows({repeatMultiRowCells: true})) {}
 
 // Return split sub-cells instead of merged cells when indexing:
-const firstColCellFragments = table.cellsAt(null, 1, true);
+const firstColCellFragments = table.cellsAt(null, 1, {ignoreMerged: true});
 ```
 
 The `Table.confidence`, `Row.getConfidence()` and `Cell.confidence` scores reflect confidence of the **table structure detection** model. For aggregated OCR confidence of the text contained inside, use `.getOcrConfidence()` instead.
