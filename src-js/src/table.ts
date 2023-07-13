@@ -279,6 +279,31 @@ export class RowGeneric<TPage extends WithParentDocBlocks> {
 }
 
 /**
+ * Configuration options for listing merged & multi-spanned table cells
+ */
+export interface IGetCellOptions {
+  /**
+   * Set `true` to ignore merged cells, returning specific sub-cells. (Default `false`)
+   */
+  ignoreMerged?: boolean;
+}
+
+/**
+ * Configuration options for listing table rows
+ */
+export interface IGetRowOptions {
+  /**
+   * Set `true` to ignore merged cells, returning specific sub-cells. (Default `false`)
+   */
+  ignoreMerged?: boolean;
+
+  /**
+   * Set `true` to include rowspan>1 cells in every `Row` they intersect with. (Default `false`)
+   */
+  repeatMultiRowCells?: boolean
+}
+
+/**
  * Generic base class for a table, since Page is not defined yet here
  *
  * If you're consuming this library, you probably just want to use `document.ts/Table`.
@@ -382,14 +407,15 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
    * Get the Cell at a particular Y, X coordinate in the table.
    * @param rowIndex 1-based index of the target row in the table
    * @param columnIndex 1-based index of the target column in the table
-   * @param ignoreMerged Set `true` to ignore merged cells (returning specific sub-cells)
+   * @param opts Configuration options for merged and multi-spanning cells
    * @returns Cell at the specified row & column, or undefined if none is present.
    */
   cellAt(
     rowIndex: number,
     columnIndex: number,
-    ignoreMerged = false
+    opts: IGetCellOptions = {},
   ): CellGeneric<TPage> | MergedCellGeneric<TPage> | undefined {
+    const ignoreMerged = opts.ignoreMerged || false;
     const mergedResult =
       !ignoreMerged &&
       this._mergedCells.find(
@@ -411,14 +437,15 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
    * List the cells at a particular {row, column, or combination} in the table
    * @param rowIndex 1-based index of the target row in the table
    * @param columnIndex 1-based index of the target column in the table
-   * @param ignoreMerged Set `true` to ignore merged cells (returning specific sub-cells)
+   * @param opts Configuration options for merged and multi-spanning cells
    * @returns Cell at the specified row & column, or undefined if none is present.
    */
   cellsAt(
     rowIndex: number | null,
     columnIndex: number | null,
-    ignoreMerged = false
+    opts: IGetCellOptions = {},
   ): Array<CellGeneric<TPage> | MergedCellGeneric<TPage>> {
+    const ignoreMerged = opts.ignoreMerged || false;
     const mergedCells = ignoreMerged
       ? []
       : this._mergedCells.filter(
@@ -462,7 +489,7 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
 
   /**
    * Iterate through the rows of the table
-   * @param repeatMultiRowCells Set `true` to include rowspan>1 cells in every `Row` they intersect with.
+   * @param opts Configuration options for merged and multi-spanning cells
    * @example
    * for (const row of table.iterRows()) {
    *   for (const cell of row.iterCells()) {
@@ -476,7 +503,7 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
    *   )
    * );
    */
-  iterRows(repeatMultiRowCells = false): Iterable<RowGeneric<TPage>> {
+  iterRows(opts: IGetRowOptions = {}): Iterable<RowGeneric<TPage>> {
     const getIterator = (): Iterator<RowGeneric<TPage>> => {
       let ixRow = 0;
       return {
@@ -484,7 +511,7 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
           if (ixRow < this._nRows) {
             return {
               done: false,
-              value: this.rowAt(++ixRow, repeatMultiRowCells),
+              value: this.rowAt(++ixRow, opts),
             };
           } else {
             return {
@@ -502,19 +529,20 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
 
   /**
    * List the rows of the table
-   * @param repeatMultiRowCells Set `true` to include rowspan>1 cells in every `Row` they intersect with.
+   * @param opts Configuration options for merged and multi-spanning cells
    */
-  listRows(repeatMultiRowCells = false): RowGeneric<TPage>[] {
-    return [...Array(this._nRows).keys()].map((ixRow) => this.rowAt(ixRow + 1, repeatMultiRowCells));
+  listRows(opts: IGetRowOptions = {}): RowGeneric<TPage>[] {
+    return [...Array(this._nRows).keys()].map((ixRow) => this.rowAt(ixRow + 1, opts));
   }
 
   /**
    * List the cells at a particular {row, column, or combination} in the table
    * @param rowIndex 1-based index of the target row in the table
-   * @param repeatMultiRowCells Set `true` to include rowspan>1 cells in every `Row` they intersect with.
+   * @param opts Configuration options for merged and multi-spanning cells
    */
-  rowAt(rowIndex: number, repeatMultiRowCells = false): RowGeneric<TPage> {
-    const allRowCells = this.cellsAt(rowIndex, null);
+  rowAt(rowIndex: number, opts: IGetRowOptions = {}): RowGeneric<TPage> {
+    const repeatMultiRowCells = opts.repeatMultiRowCells || false;
+    const allRowCells = this.cellsAt(rowIndex, null, {ignoreMerged: opts.ignoreMerged});
     return new RowGeneric(
       repeatMultiRowCells ? allRowCells : allRowCells.filter((c) => c.rowIndex === rowIndex),
       this

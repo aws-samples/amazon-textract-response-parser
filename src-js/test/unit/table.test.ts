@@ -168,10 +168,10 @@ describe("Table", () => {
     const table = [...doc.pageNumber(1).iterTables()][0];
 
     expect(table.cellAt(1, 2)?.text).toMatch("End Date");
-    expect(table.cellAt(2, 2)?.text).toMatch("6/30/2011");
+    expect(table.cellAt(2, 2, {ignoreMerged: false})?.text).toMatch("6/30/2011");
     // Explicitly ignoring merged cells:
-    expect(table.cellAt(1, 2, true)?.text).toMatch("End Date");
-    expect(table.cellAt(2, 2, true)?.text).toMatch("6/30/2011");
+    expect(table.cellAt(1, 2, {ignoreMerged: true})?.text).toMatch("End Date");
+    expect(table.cellAt(2, 2, {ignoreMerged: true})?.text).toMatch("6/30/2011");
   });
 
   it("indexes merged cells by row and column", () => {
@@ -183,17 +183,17 @@ describe("Table", () => {
     // Horizontal merge:
     expect(table.cellAt(2, 1)?.text).toMatch("Previous Balance");
     expect(table.cellAt(2, 4)?.text).toMatch("Previous Balance");
-    expect(table.cellAt(2, 4, true)?.text).toStrictEqual("");
+    expect(table.cellAt(2, 4, {ignoreMerged: true})?.text).toStrictEqual("");
     // Merged cell contents equals sum of split cell contents:
     const mergedContents = table.cellAt(2, 1)?.listContent() || [];
     const splitContents = [1, 2, 3, 4]
-      .map((ixCol) => table.cellAt(2, ixCol, true)?.listContent() || [])
+      .map((ixCol) => table.cellAt(2, ixCol, {ignoreMerged: true})?.listContent() || [])
       .flat();
     expect(mergedContents.map((c) => c.id)).toStrictEqual(splitContents.map((c) => c.id));
     // Vertical merge:
     expect(table.cellAt(3, 1)?.text).toMatch("2022-01-01");
     expect(table.cellAt(4, 1)?.text).toMatch("2022-01-01");
-    expect(table.cellAt(3, 1, true)?.text).toStrictEqual("");
+    expect(table.cellAt(3, 1, {ignoreMerged: true})?.text).toStrictEqual("");
   });
 
   it("fetches table row cells by index", () => {
@@ -202,13 +202,13 @@ describe("Table", () => {
 
     // No merges:
     expect(table.cellsAt(1, null).length).toStrictEqual(5);
-    expect(table.cellsAt(1, null, true).length).toStrictEqual(5);
+    expect(table.cellsAt(1, null, {ignoreMerged: true}).length).toStrictEqual(5);
     // Merges in row, no merges across rows:
     expect(table.cellsAt(2, null).length).toStrictEqual(2);
-    expect(table.cellsAt(2, null, true).length).toStrictEqual(5);
+    expect(table.cellsAt(2, null, {ignoreMerged: true}).length).toStrictEqual(5);
     // Includes cells merged across rows:
     expect(table.cellsAt(3, null).length).toStrictEqual(5);
-    expect(table.cellsAt(3, null, true).length).toStrictEqual(5);
+    expect(table.cellsAt(3, null, {ignoreMerged: true}).length).toStrictEqual(5);
   });
 
   it("fetches table column cells by index", () => {
@@ -217,13 +217,13 @@ describe("Table", () => {
 
     // No merges:
     expect(table.cellsAt(null, 5).length).toStrictEqual(6);
-    expect(table.cellsAt(null, 5, true).length).toStrictEqual(6);
+    expect(table.cellsAt(null, 5, {ignoreMerged: true}).length).toStrictEqual(6);
     // Cross-column merges:
     expect(table.cellsAt(null, 4).length).toStrictEqual(6);
-    expect(table.cellsAt(null, 4, true).length).toStrictEqual(6);
+    expect(table.cellsAt(null, 4, {ignoreMerged: true}).length).toStrictEqual(6);
     // Cross-column and in-column merges:
     expect(table.cellsAt(null, 1).length).toStrictEqual(5);
-    expect(table.cellsAt(null, 1, true).length).toStrictEqual(6);
+    expect(table.cellsAt(null, 1, {ignoreMerged: true}).length).toStrictEqual(6);
   });
 
   it("iterates table rows", () => {
@@ -250,7 +250,23 @@ describe("Table", () => {
     const tableRows = table.listRows();
     expect(tableRows.length).toStrictEqual(table.nRows);
     let nRows = 0;
-    for (const row of table.iterRows(true)) {
+    for (const row of table.iterRows({repeatMultiRowCells: true})) {
+      expect(row.nCells).toStrictEqual(expectedCellsPerRow[nRows]);
+      ++nRows;
+    }
+    expect(nRows).toStrictEqual(table.nRows);
+    expect(nRows).toStrictEqual(6);
+  });
+
+  it("iterates table rows ignoring merged cells and repeating spanned cells", () => {
+    const doc = new TextractDocument(testTableMergedCellsJson);
+    const expectedCellsPerRow = [5, 5, 5, 5, 5, 5];
+
+    const table = doc.pageNumber(1).tableAtIndex(0);
+    const tableRows = table.listRows();
+    expect(tableRows.length).toStrictEqual(table.nRows);
+    let nRows = 0;
+    for (const row of table.iterRows({ignoreMerged: true, repeatMultiRowCells: true})) {
       expect(row.nCells).toStrictEqual(expectedCellsPerRow[nRows]);
       ++nRows;
     }
@@ -262,7 +278,7 @@ describe("Table", () => {
     const doc = new TextractDocument(testResponseJson);
 
     const table = doc.pageNumber(1).tableAtIndex(0);
-    expect(table.listRows(true).length).toStrictEqual(table.nRows);
+    expect(table.listRows({repeatMultiRowCells: true}).length).toStrictEqual(table.nRows);
   });
 
   it("navigates table row cells", () => {
@@ -272,7 +288,7 @@ describe("Table", () => {
     let nCellsTotal = 0;
     let nRows = 0;
     let targetCellFound = false;
-    for (const row of table.iterRows(false)) {
+    for (const row of table.iterRows({repeatMultiRowCells: false})) {
       const rowCells = row.listCells();
       expect(rowCells.length).toStrictEqual(expectedRowLengths[nRows]);
       let nCells = 0;
@@ -448,5 +464,25 @@ describe("Table", () => {
       expect(rowStrLoc).toBeGreaterThanOrEqual(0);
       lastDetectedLoc += rowStrLoc + rowStr.length;
     });
+  });
+
+  it("mutates confidence fields", () => {
+    const NEW_CONFIDENCE = 42.42;
+    const response: ApiAnalyzeDocumentResponse = require("../data/test-response.json");
+    const doc = new TextractDocument(response);
+    const table = doc.pageNumber(1).tableAtIndex(0);
+    const tableBlock = response.Blocks.find((b) => (b.Id === table.id)) as ApiTableBlock;
+    expect(table.confidence).not.toEqual(NEW_CONFIDENCE);
+    table.confidence = NEW_CONFIDENCE;
+    expect(table.confidence).toEqual(NEW_CONFIDENCE);
+    expect(tableBlock.Confidence).toStrictEqual(NEW_CONFIDENCE);
+
+    const cell = table.cellAt(1, 1);
+    if (typeof cell === "undefined") throw new Error("Expected table cell not found");
+    const cellBlock = response.Blocks.find((b) => (b.Id === cell.id)) as ApiCellBlock;
+    expect(cell.confidence).not.toEqual(NEW_CONFIDENCE);
+    cell.confidence = NEW_CONFIDENCE;
+    expect(cell.confidence).toEqual(NEW_CONFIDENCE);
+    expect(cellBlock.Confidence).toStrictEqual(NEW_CONFIDENCE);
   });
 });
