@@ -134,6 +134,16 @@ export class QueryInstanceGeneric<TPage extends WithParentDocBlocks> extends Api
 }
 
 /**
+ * Configuration options for listing/filtering Amazon Textract Queries
+ */
+export interface IFilterQueryOpts {
+  /**
+   * Set `true` to skip queries with no answers (by default, they're included)
+   */
+  skipUnanswered?: boolean;
+}
+
+/**
  * Generic base class for a collection of query instances, as parent Page is not defined here.
  *
  * If you're consuming this library, you probably just want to use `document.ts/QueryInstanceCollection`.
@@ -180,7 +190,7 @@ export class QueryInstanceCollectionGeneric<TPage extends WithParentDocBlocks> {
 
   /**
    * Iterate through the Queries in the collection.
-   * @param skipUnanswered Set `true` to skip queries with no answers (included by default)
+   * @param opts Filtering options to control which queries are included
    * @example
    * for (const query of q.iterQueries()) {
    *   console.log(query.text);
@@ -188,36 +198,38 @@ export class QueryInstanceCollectionGeneric<TPage extends WithParentDocBlocks> {
    * @example
    * const queries = [...q.iterQueries()];
    */
-  iterQueries(skipUnanswered = false): Iterable<QueryInstanceGeneric<TPage>> {
-    return getIterable(() => this.listQueries(skipUnanswered));
+  iterQueries(opts: IFilterQueryOpts = {}): Iterable<QueryInstanceGeneric<TPage>> {
+    return getIterable(() => this.listQueries(opts));
   }
 
   /**
    * List the Queries in the collection.
-   * @param skipUnanswered Set `true` to skip queries with no answers (included by default)
+   * @param opts Filtering options to control which queries are included
    */
-  listQueries(skipUnanswered = false): QueryInstanceGeneric<TPage>[] {
-    return skipUnanswered ? this._queries.filter((q) => q.nResults > 0) : this._queries.slice();
+  listQueries(opts: IFilterQueryOpts = {}): QueryInstanceGeneric<TPage>[] {
+    return opts.skipUnanswered ? this._queries.filter((q) => q.nResults > 0) : this._queries.slice();
   }
 
   /**
    * List the Queries in the collection with alias text containing (case-insensitive) `alias`
    * @param alias The text to search for in query aliases
+   * @param opts Filtering options to control which queries are included in the search
    */
-  searchQueriesByAlias(alias: string): QueryInstanceGeneric<TPage>[] {
+  searchQueriesByAlias(alias: string, opts: IFilterQueryOpts = {}): QueryInstanceGeneric<TPage>[] {
     if (!alias) return [];
     const searchKey = alias.toLowerCase();
-    return this._queries.filter((q) => q.alias && q.alias.toLowerCase().indexOf(searchKey) >= 0);
+    return this.listQueries(opts).filter((q) => q.alias && q.alias.toLowerCase().indexOf(searchKey) >= 0);
   }
 
   /**
    * List the Queries in the collection with question text containing (case-insensitive) `question`
    * @param question The text to search for in query text
+   * @param opts Filtering options to control which queries are included in the search
    */
-  searchQueriesByQuestion(question: string): QueryInstanceGeneric<TPage>[] {
+  searchQueriesByQuestion(question: string, opts: IFilterQueryOpts = {}): QueryInstanceGeneric<TPage>[] {
     if (!question) return [];
     const searchKey = question.toLowerCase();
-    return this._queries.filter((q) => q.text.toLowerCase().indexOf(searchKey) >= 0);
+    return this.listQueries(opts).filter((q) => q.text.toLowerCase().indexOf(searchKey) >= 0);
   }
 
   /**

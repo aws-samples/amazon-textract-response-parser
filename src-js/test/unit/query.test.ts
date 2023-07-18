@@ -1,4 +1,11 @@
-import { ApiResponsePage } from "../../src/api-models";
+import {
+  ApiAnalyzeDocumentResponse,
+  ApiBlockType,
+  ApiQueryBlock,
+  ApiQueryResultBlock,
+  ApiRelationshipType,
+  ApiResponsePage,
+} from "../../src/api-models";
 import { QueryInstance, QueryResult, TextractDocument } from "../../src/document";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -115,10 +122,40 @@ describe("QueryCollection", () => {
   });
 
   it("ranks query answers by descending confidence", () => {
+    // Load (a new copy of) the response JSON:
+    const response: ApiAnalyzeDocumentResponse = require("../data/test-query-response.json");
+    // Since our sample doc only has single-answer queries, synthetically create extra answers for
+    // a question:
+    const queryBlock = (response.Blocks.filter((b) => b.BlockType === "QUERY") as ApiQueryBlock[])[0];
+    const queryText = queryBlock.Query.Text;
+    const answerRel = queryBlock.Relationships?.filter((r) => r.Type === ApiRelationshipType.Answer)[0];
+    if (!answerRel) throw new Error("No answer relationship found in test response JSON");
+    const dummyAnswer1: ApiQueryResultBlock = {
+      BlockType: ApiBlockType.QueryResult,
+      Confidence: 3,
+      Id: "DUMMY-BLOCK-1",
+      Page: 0,
+      Text: "Dummy Answer 1",
+      SearchKey: "Dummy Answer 1",
+    };
+    response.Blocks.push(dummyAnswer1);
+    answerRel.Ids.push(dummyAnswer1.Id);
+    const dummyAnswer2: ApiQueryResultBlock = {
+      BlockType: ApiBlockType.QueryResult,
+      Confidence: 4,
+      Id: "DUMMY-BLOCK-2",
+      Page: 0,
+      Text: "Dummy Answer 2",
+      SearchKey: "Dummy Answer 2",
+    };
+    response.Blocks.push(dummyAnswer2);
+    answerRel.Ids.push(dummyAnswer2.Id);
+
+    // Check the TRP behaves as expected:
     // TODO: This test is not ideal at the moment because test doc only has single-answer Qs.
     const page = new TextractDocument(testResponseJson).pageNumber(1);
     // Cast types to keep IDE happy because it can't tell the following expect() will error on undef
-    const query = page.queries.getQueryByAlias("name") as QueryInstance;
+    const query = page.queries.getQueryByQuestion(queryText) as QueryInstance;
     expect(query).toBeTruthy();
     const topResult = query.topResult as QueryResult;
     expect(topResult).toBeTruthy();
@@ -156,7 +193,6 @@ describe("QueryCollection", () => {
   });
 
   it("provides access to underlying API result objects", () => {
-    // TODO: This test is not ideal at the moment because test doc only has single-answer Qs.
     const page = new TextractDocument(testResponseJson).pageNumber(1);
     // Cast types to keep IDE happy because it can't tell the following expect() will error on undef
     const query = page.queries.getQueryByAlias("name") as QueryInstance;
@@ -167,5 +203,22 @@ describe("QueryCollection", () => {
     expect(query.dict.Query.Text).toStrictEqual(query.text);
     expect(topResult.dict.Confidence).toStrictEqual(topResult.confidence);
     expect(topResult.dict.Geometry?.Polygon[0].X).toStrictEqual(topResult.geometry?.polygon[0].x);
+  });
+
+  it("filters queries without answers", () => {
+    // Load (a new copy of) the response JSON:
+    const response: ApiAnalyzeDocumentResponse = require("../data/test-query-response.json");
+    // Explicitly remove one of the query answers:
+    const queryBlocks = response.Blocks.filter((b) => b.BlockType === "QUERY") as ApiQueryBlock[];
+    queryBlocks[0].Relationships = [];
+    const queryText = queryBlocks[0].Query.Text;
+
+    // Check the TRP omits the unanswered query from results when instructed:
+    const page = new TextractDocument(testResponseJson).pageNumber(1);
+    expect(page.queries.nQueries).toStrictEqual(queryBlocks.length);
+    expect(page.queries.listQueries().length).toStrictEqual(queryBlocks.length);
+    expect(page.queries.listQueries({ skipUnanswered: true }).length).toStrictEqual(queryBlocks.length - 1);
+    expect(page.queries.searchQueriesByQuestion(queryText).length).toStrictEqual(1);
+    expect(page.queries.searchQueriesByQuestion(queryText, { skipUnanswered: true }).length).toStrictEqual(0);
   });
 });
