@@ -162,9 +162,9 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
   /**
    * Calculate the most common orientation (in whole degrees) of 'WORD' content in the page.
    *
-   * May return 'NaN' if the page contains no valid word blocks
+   * Returns `null` if the page contains no valid word blocks.
    */
-  getModalWordOrientationDegrees(): number {
+  getModalWordOrientationDegrees(): number | null {
     const wordDegreesByLine = this.listLines().map((line) =>
       line.listWords().map((word) => word.geometry.orientationDegrees())
     );

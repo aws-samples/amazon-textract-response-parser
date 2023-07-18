@@ -93,9 +93,9 @@ export const enum AggregationMethod {
 /**
  * Get the most common value in an Iterable of numbers
  *
- * @returns The most common value, or NaN if `arr` was empty.
+ * @returns The most common value, or null if `arr` was empty.
  */
-export function modalAvg(arr: Iterable<number>): number {
+export function modalAvg(arr: Iterable<number>): number | null {
   const freqs: { [key: number]: { value: number; freq: number } } = {};
   for (const item of arr) {
     if (freqs[item]) {
@@ -106,7 +106,7 @@ export function modalAvg(arr: Iterable<number>): number {
   }
 
   let maxFreq = 0;
-  let mode = NaN;
+  let mode: number | null = null;
   for (const item in freqs) {
     if (freqs[item].freq > maxFreq) {
       maxFreq = freqs[item].freq;

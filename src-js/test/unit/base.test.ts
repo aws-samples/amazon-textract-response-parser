@@ -9,8 +9,8 @@ describe("modalAvg", () => {
     expect(modalAvg([0.9, 0.7, 0.8, 0.7, 0.6, 0.7, 0.6, 0.9])).toStrictEqual(0.7);
   });
 
-  it("returns NaN for empty lists", () => {
-    expect(modalAvg([])).toBeNaN();
+  it("returns null for empty lists", () => {
+    expect(modalAvg([])).toBeNull();
   });
 
   it("breaks ties by choosing one candidate", () => {

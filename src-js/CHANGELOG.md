@@ -4,13 +4,13 @@
 ### Added
 - **(BREAKING)** `ignoreMerged` and `repeatMultiRowCells` options on `Table` methods are now wrapped into `opts` objects for better future extensibility and clearer user code.
 - Expose the `ignoreMerged` option through `Table.rowAt()`, `Table.iterRows()`, and `Table.listRows()`, to enable navigating table rows ignoring merged cells.
-- Page-level access to [Amazon Textract Queries](https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html) results. (Still assessing compositing architecture for a unified document-level view in future)
+- Page-level access to [Amazon Textract Queries](https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html) results. (Still assessing compositing architecture for a unified document-level view in future) (#80)
 - Average OCR (text recognition) confidence is now available on form fields (and their keys and values) as well as tables, table rows, and table cells - via `getOcrConfidence()`, with configurable aggregation method (including minimum, mean, etc.).
-- `EntityTypes` for tables and table cells/merged-cells are now accessible through `Table.tableType` property and `Cell.hasEntityTypes()` function - and also added to the underlying API data types.
+- `EntityTypes` for tables and table cells/merged-cells are now accessible through `Table.tableType` property and `Cell.hasEntityTypes()` function - and also added to the underlying API data types. (#78)
 ### Changed
+- **(BREAKING)** UMD module output `dist/umd` removed, following deprecation at v0.2.0
 - Corrected wrongly typed `ApiCellBlock.Relationships` from an array of `ApiChildRelationship` to an optional array of same: This field may be omitted altogether when a cell is detected but has no content.
 - Corrected wrongly typed `ApiKeyValueSetBlock.EntityTypes` data model from `ApiKeyValueEntityType` to an array of same.
-- `base.modalAvg()` (and therefore `Page.getModalWordOrientationDegrees()`) now returns `NaN` instead of `null` when given an empty list (e.g. a page with no WORDs), for better consistency with other averaging methods.
 
 ## 0.2.2 (2023-06-19)
 ### Fixed
