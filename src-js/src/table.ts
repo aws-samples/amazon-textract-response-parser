@@ -300,7 +300,7 @@ export interface IGetRowOptions {
   /**
    * Set `true` to include rowspan>1 cells in every `Row` they intersect with. (Default `false`)
    */
-  repeatMultiRowCells?: boolean
+  repeatMultiRowCells?: boolean;
 }
 
 /**
@@ -413,7 +413,7 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
   cellAt(
     rowIndex: number,
     columnIndex: number,
-    opts: IGetCellOptions = {},
+    opts: IGetCellOptions = {}
   ): CellGeneric<TPage> | MergedCellGeneric<TPage> | undefined {
     const ignoreMerged = opts.ignoreMerged || false;
     const mergedResult =
@@ -443,7 +443,7 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
   cellsAt(
     rowIndex: number | null,
     columnIndex: number | null,
-    opts: IGetCellOptions = {},
+    opts: IGetCellOptions = {}
   ): Array<CellGeneric<TPage> | MergedCellGeneric<TPage>> {
     const ignoreMerged = opts.ignoreMerged || false;
     const mergedCells = ignoreMerged
@@ -542,7 +542,7 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
    */
   rowAt(rowIndex: number, opts: IGetRowOptions = {}): RowGeneric<TPage> {
     const repeatMultiRowCells = opts.repeatMultiRowCells || false;
-    const allRowCells = this.cellsAt(rowIndex, null, {ignoreMerged: opts.ignoreMerged});
+    const allRowCells = this.cellsAt(rowIndex, null, { ignoreMerged: opts.ignoreMerged });
     return new RowGeneric(
       repeatMultiRowCells ? allRowCells : allRowCells.filter((c) => c.rowIndex === rowIndex),
       this
