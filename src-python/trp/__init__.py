@@ -8,7 +8,7 @@ logging.getLogger(__name__).addHandler(NullHandler())
 
 logger = logging.getLogger(__name__)
 
-__version__ = '0.1.48'
+__version__ = '1.0.0'
 
 ENTITY_TYPE_COLUMN_HEADER = "COLUMN_HEADER"
 ENTITY_TYPE_MERGED_CELL = "MERGED_CELL"
