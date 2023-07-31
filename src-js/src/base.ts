@@ -77,7 +77,23 @@ export function getIterable<T>(collectionFetcher: () => T[]): Iterable<T> {
 }
 
 /**
+ * Statistical methods for aggregating multiple scores/numbers into one representative value
+ *
+ * Different use-cases may wish to use different aggregations: For example summarizing OCR
+ * confidence for a whole page or region based on the individual words/lines.
+ */
+export const enum AggregationMethod {
+  GeometricMean = "GEOMEAN",
+  Max = "MAX",
+  Mean = "MEAN",
+  Min = "MIN",
+  Mode = "MODE",
+}
+
+/**
  * Get the most common value in an Iterable of numbers
+ *
+ * @returns The most common value, or null if `arr` was empty.
  */
 export function modalAvg(arr: Iterable<number>): number | null {
   const freqs: { [key: number]: { value: number; freq: number } } = {};
@@ -98,6 +114,47 @@ export function modalAvg(arr: Iterable<number>): number | null {
     }
   }
   return mode;
+}
+
+/**
+ * Summarize an Iterable of numbers using a statistic of your choice
+ *
+ * If `arr` is empty, this function will return `null`.
+ */
+export function aggregate(arr: Iterable<number>, aggMethod: AggregationMethod): number | null {
+  // Altough some aggregations could process streaming-style, we'd need to implement zero-length
+  // detection separately for each one. Therefore simplest method is just to extract arr as an
+  // actual array up-front:
+  const actualArr: Array<number> = Array.isArray(arr) ? arr : Array.from(arr);
+  if (actualArr.length === 0) return null;
+
+  if (aggMethod === AggregationMethod.GeometricMean) {
+    // Performing arithmetic mean in logspace better numerically conditioned than just multiplying:
+    return Math.exp(actualArr.reduce((acc, next) => acc + Math.log(next), 0) / actualArr.length);
+  } else if (aggMethod === AggregationMethod.Max) {
+    return Math.max(...actualArr);
+  } else if (aggMethod === AggregationMethod.Mean) {
+    return actualArr.reduce((acc, next) => acc + next, 0) / actualArr.length;
+  } else if (aggMethod === AggregationMethod.Min) {
+    return Math.min(...actualArr);
+  } else if (aggMethod === AggregationMethod.Mode) {
+    return modalAvg(actualArr);
+  } else {
+    throw new Error(`Unsupported aggMethod '${aggMethod}' not in allowed AggregationMethod enum`);
+  }
+}
+
+/**
+ * Extract the maximum value and the first index where it appears from an array of numbers
+ *
+ * If `arr` is empty or no elements are numeric, this function will return a value of `-Infinity`
+ * and an index of `-1`.
+ */
+export function argMax(arr: number[]): { maxValue: number; maxIndex: number } {
+  return arr.reduce(
+    (state, nextVal, nextIx) => (nextVal > state.maxValue ? { maxValue: nextVal, maxIndex: nextIx } : state),
+    { maxValue: -Infinity, maxIndex: -1 }
+  );
 }
 
 /**

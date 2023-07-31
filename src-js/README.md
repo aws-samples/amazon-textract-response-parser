@@ -4,7 +4,7 @@ This library loads [Amazon Textract](https://docs.aws.amazon.com/textract/latest
 
 It's designed to work in both NodeJS and browser environments, and to support projects in either JavaScript or TypeScript.
 
-> ⚠️ **Warning:** If you're migrating from another TRP implementation such as the [Textract Response Parser for Python](https://github.com/aws-samples/amazon-textract-response-parser/tree/master/src-python), please note that the APIs and available features may be substantially different - due to differences between the languages' ecosystems.
+> ⚠️ **Warning:** If you're migrating from another TRP implementation such as the [Textract Response Parser for Python](https://github.com/aws-samples/amazon-textract-response-parser/tree/master/src-python), please note that the APIs and available features may be substantially different - due to differences between the languages' conventions and ecosystems.
 
 
 ## Installation
@@ -26,17 +26,25 @@ const { TextractDocument, TextractIdentity } = require("amazon-textract-response
 <script src="https://unpkg.com/amazon-textract-response-parser@x.y.z"></script>
 
 <script>
-  // Use via `trp`:
+  // Use via global `trp` object:
   var doc = new trp.TextractDocument(...);
 </script>
 ```
 
 At a low level, the distribution of this library provides multiple builds:
 
-- `dist/cjs` (default `main`), for CommonJS environments like NodeJS,
-- `dist/es` (default `module`), for ES6/ES2015/esnext capable environments,
-- `dist/browser` (default `jsdelivr` and `unpkg`), for use directly in the browser with no module framework (IIFE), and
-- **(Deprecated):** `dist/umd`, for other [Universal Module Definition](https://github.com/umdjs/umd)-compatible environments. This build is slated to be removed in a future release so please let us know via GitHub issues if you have blockers for migrating to another build.
+- `dist/cjs` (default `main`), for CommonJS environments like NodeJS - including most front end applications built with tools like React and Webpack.
+- `dist/es` (default `module`), for ES6/ES2015/esnext capable environments.
+- `dist/browser` (default `jsdelivr` and `unpkg`), for linking directly from browser HTML with no module framework (IIFE).
+
+This means that **deep imports** will depend on your build environment. For example:
+
+```typescript
+import { aggregate, AggregationMethod } from "amazon-textract-response-parser/dist/cjs/base";
+
+const minConfidence = aggregate([80, 90, 85], AggregationMethod.Min);
+```
+
 
 ## Loading data
 
@@ -109,6 +117,29 @@ const linesArrsByPage = doc.listPages().map((p) => p.listLines());
 These arrays are in the raw order returned by Amazon Textract, which is not necessarily a logical human reading order especially for multi-column documents. See the *Other generic document analyses* section below for extra content sorting utilities.
 
 
+## Queries
+
+The results of [Amazon Textract Queries](https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html) are accessible at the page level under `page.queries`. You can `get*` a query by exact question text or alias, or `search*` them by case-insensitive substrings:
+
+```typescript
+doc.listPages().forEach((page) => {
+  // Log a quick human-readable overview of queries & answers:
+  console.log(page.queries.str());
+
+  // Get a query (and its top result's text) by exact alias:
+  const customer = page.queries.getQueryByAlias("customer_name")?.topResult?.text;
+
+  // Get possible results of a query from most to least confident:
+  const shippingAddrCandidates =
+    page.queries.getQueryByAlias("shipping_addr")?.listResultsByConfidence() || [];
+  const shippingAddrTopConf = shippingAddrCandidates[0].confidence;
+
+  // Seaching matches queries e.g. 'What is the Shipping Address?', 'FIND THE BILLING ADDRESS', etc
+  const addrQueries = page.queries.searchQueriesByQuestion("address");
+});
+```
+
+
 ## Forms
 
 As well as looping through the [form data key-value pairs](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html) in the document, you can query fields by key:
@@ -125,6 +156,8 @@ const addresses = doc.form.searchFieldsByKey("address");
 addresses.forEach((addrField) => { console.log(addrField.key.text); });
 ```
 
+Note that the `Field.confidence`, `FieldKey.confidence` and `FieldValue.confidence` scores reflect confidence of the **key-value structure detection** model. For aggregated OCR confidence of their **actual text**, use `.getOcrConfidence()` instead.
+
 You can also search form keys at the individual page level, or look up the page number for detected fields:
 
 ```typescript
@@ -134,6 +167,7 @@ console.log(`Detected Address on page ${fieldByDoc.parentPage.pageNumber}`);
 const page = doc.pageNumber(1);
 const fieldByPage = page.form.getFieldByKey("Address");
 ```
+
 
 ## Tables
 
@@ -159,11 +193,23 @@ for (const row of table.iterRows()) {
 Further configuration arguments can be used to change the treatment of merged cells if needed:
 
 ```typescript
-// Iterate over rows repeating any cells merged across rows:
-for (const row of table.iterRows(true)) {}
+// Iterate over rows repeating any cells spanning multiple rows:
+for (const row of table.iterRows({repeatMultiRowCells: true})) {}
 
 // Return split sub-cells instead of merged cells when indexing:
-const firstColCellFragments = table.cellsAt(null, 1, true);
+const firstColCellFragments = table.cellsAt(null, 1, {ignoreMerged: true});
+```
+
+The `Table.confidence`, `Row.getConfidence()` and `Cell.confidence` scores reflect confidence of the **table structure detection** model. For aggregated OCR confidence of the text contained inside, use `.getOcrConfidence()` instead.
+
+Use `Table.tableType` and `Cell.hasEntityTypes()` to explore the more advanced [entity types](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html) extracted by Amazon Textract: For example column headers, titles, footers, and summaries:
+
+```typescript
+import { ApiTableCellEntityType, ApiTableEntityType } from "amazon-textract-response-parser/api-models";
+
+const isSemiStruct = table.tableType === ApiTableEntityType.SemiStructuredTable;
+const colHeaders = table.rowAt(1).listCells()
+  .filter((c) => c.hasEntityTypes(ApiTableCellEntityType.ColumnHeader));
 ```
 
 

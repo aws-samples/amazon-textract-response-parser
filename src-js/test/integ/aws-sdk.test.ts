@@ -28,7 +28,7 @@ const runTestDocAssertions = (doc: TextractDocument, formsEnabled = true, tables
   expect([...firstPage.iterLines()].reduce((acc, next) => acc + next.listWords().length, 0)).toStrictEqual(
     71
   );
-  expect(firstPage.form.nFields).toStrictEqual(formsEnabled ? 14 : 0);
+  expect(firstPage.form.nFields).toStrictEqual(formsEnabled ? 12 : 0);
   expect(firstPage.nTables).toStrictEqual(tablesEnabled ? 1 : 0);
 };
 

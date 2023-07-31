@@ -10,9 +10,11 @@ import {
   ApiRelationshipType,
   ApiSelectionElementBlock,
   ApiTableBlock,
+  ApiTableCellEntityType,
+  ApiTableEntityType,
   ApiWordBlock,
 } from "./api-models/document";
-import { ApiBlockWrapper, getIterable, WithParentDocBlocks } from "./base";
+import { aggregate, AggregationMethod, ApiBlockWrapper, getIterable, WithParentDocBlocks } from "./base";
 import { SelectionElement, Word } from "./content";
 import { Geometry } from "./geometry";
 
@@ -40,6 +42,13 @@ export abstract class CellBaseGeneric<
   get columnSpan(): number {
     return this._dict.ColumnSpan || 1;
   }
+
+  /**
+   * Confidence score of the table cell structure detection
+   *
+   * This score reflects the confidence of the model detecting the table cell structure itself. For
+   * the text OCR confidence, see the `.getOcrConfidence()` method instead.
+   */
   get confidence(): number {
     return this._dict.Confidence;
   }
@@ -58,6 +67,42 @@ export abstract class CellBaseGeneric<
   }
   get rowSpan(): number {
     return this._dict.RowSpan || 1;
+  }
+
+  /**
+   * Aggregate OCR confidence score of the text (and selection elements) in this cell
+   *
+   * This score reflects the aggregated OCR confidence of all the text content detected in the
+   * cell. For the model's confidence on the table structure itself, see `.confidence`.
+   *
+   * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   * @returns Aggregated confidence, or null if this cell contains no content/text
+   */
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
+    return aggregate(
+      this.listContent().map((c) => c.confidence),
+      aggMethod
+    );
+  }
+
+  /**
+   * Check if this cell is tagged with any of the given EntityType(s) e.g. COLUMN_HEADER, etc.
+   *
+   * For more information on table cell entity types returnable by Amazon Textract, see:
+   * https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+   *
+   * @param entityType The type to check for, or an array of multiple types to allow.
+   * @returns true if the EntityType is set, null if block EntityTypes is undefined, false otherwise.
+   */
+  hasEntityTypes(entityType: ApiTableCellEntityType | ApiTableCellEntityType[]): boolean | null {
+    if (!this._dict.EntityTypes) return null;
+    if (Array.isArray(entityType)) {
+      return entityType.some(
+        // (Safe type cast because the block above has already returned null if Entitytypes not set)
+        (eType) => (this._dict.EntityTypes as ApiTableCellEntityType[]).indexOf(eType) >= 0
+      );
+    }
+    return this._dict.EntityTypes.indexOf(entityType) >= 0;
   }
 
   abstract get text(): string;
@@ -178,6 +223,38 @@ export class RowGeneric<TPage extends WithParentDocBlocks> {
   }
 
   /**
+   * Aggregate table structure confidence score of the cells in this row
+   *
+   * This score reflects the overall confidence of the table cell structure in this row. For the
+   * actual OCR confidence of cell contents, see `.getOcrConfidence()`.
+   *
+   * @param {AggregationMethod} aggMethod How to combine individual cell confidences together
+   * @returns Aggregated confidence, or null if this row contains no content/text
+   */
+  getConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
+    return aggregate(
+      this._cells.map((c) => c.confidence),
+      aggMethod
+    );
+  }
+
+  /**
+   * Aggregate OCR confidence score of the text (and selection elements) in this row
+   *
+   * This score reflects the aggregated OCR confidence of all the text content detected in this
+   * row's cells. For the model's confidence on the table structure itself, see `.getConfidence()`.
+   *
+   * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   * @returns Aggregated confidence, or null if this row contains no content/text
+   */
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
+    const contentConfs = ([] as number[]).concat(
+      ...this._cells.map((cell) => cell.listContent().map((content) => content.confidence))
+    );
+    return aggregate(contentConfs, aggMethod);
+  }
+
+  /**
    * Iterate through the cells in this row
    * @example
    * for (const cell of row.iterCells()) {
@@ -199,6 +276,31 @@ export class RowGeneric<TPage extends WithParentDocBlocks> {
   str(): string {
     return this._cells.map((cell) => `[${cell.str()}]`).join("");
   }
+}
+
+/**
+ * Configuration options for listing merged & multi-spanned table cells
+ */
+export interface IGetCellOptions {
+  /**
+   * Set `true` to ignore merged cells, returning specific sub-cells. (Default `false`)
+   */
+  ignoreMerged?: boolean;
+}
+
+/**
+ * Configuration options for listing table rows
+ */
+export interface IGetRowOptions {
+  /**
+   * Set `true` to ignore merged cells, returning specific sub-cells. (Default `false`)
+   */
+  ignoreMerged?: boolean;
+
+  /**
+   * Set `true` to include rowspan>1 cells in every `Row` they intersect with. (Default `false`)
+   */
+  repeatMultiRowCells?: boolean;
 }
 
 /**
@@ -305,14 +407,15 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
    * Get the Cell at a particular Y, X coordinate in the table.
    * @param rowIndex 1-based index of the target row in the table
    * @param columnIndex 1-based index of the target column in the table
-   * @param ignoreMerged Set `true` to ignore merged cells (returning specific sub-cells)
+   * @param opts Configuration options for merged and multi-spanning cells
    * @returns Cell at the specified row & column, or undefined if none is present.
    */
   cellAt(
     rowIndex: number,
     columnIndex: number,
-    ignoreMerged = false
+    opts: IGetCellOptions = {}
   ): CellGeneric<TPage> | MergedCellGeneric<TPage> | undefined {
+    const ignoreMerged = opts.ignoreMerged || false;
     const mergedResult =
       !ignoreMerged &&
       this._mergedCells.find(
@@ -334,14 +437,15 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
    * List the cells at a particular {row, column, or combination} in the table
    * @param rowIndex 1-based index of the target row in the table
    * @param columnIndex 1-based index of the target column in the table
-   * @param ignoreMerged Set `true` to ignore merged cells (returning specific sub-cells)
+   * @param opts Configuration options for merged and multi-spanning cells
    * @returns Cell at the specified row & column, or undefined if none is present.
    */
   cellsAt(
     rowIndex: number | null,
     columnIndex: number | null,
-    ignoreMerged = false
+    opts: IGetCellOptions = {}
   ): Array<CellGeneric<TPage> | MergedCellGeneric<TPage>> {
+    const ignoreMerged = opts.ignoreMerged || false;
     const mergedCells = ignoreMerged
       ? []
       : this._mergedCells.filter(
@@ -368,8 +472,24 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
   }
 
   /**
+   * Aggregate OCR confidence score of the text (and selection elements) in this table
+   *
+   * This score reflects the aggregated OCR confidence of all the text content detected in this
+   * table. For the model's confidence on the table structure itself, see `.confidence`.
+   *
+   * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+   * @returns Aggregated confidence, or null if this table contains no content/text
+   */
+  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
+    const contentConfs = ([] as number[]).concat(
+      ...this._cells.map((cell) => cell.listContent().map((content) => content.confidence))
+    );
+    return aggregate(contentConfs, aggMethod);
+  }
+
+  /**
    * Iterate through the rows of the table
-   * @param repeatMultiRowCells Set `true` to include rowspan>1 cells in every `Row` they intersect with.
+   * @param opts Configuration options for merged and multi-spanning cells
    * @example
    * for (const row of table.iterRows()) {
    *   for (const cell of row.iterCells()) {
@@ -383,7 +503,7 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
    *   )
    * );
    */
-  iterRows(repeatMultiRowCells = false): Iterable<RowGeneric<TPage>> {
+  iterRows(opts: IGetRowOptions = {}): Iterable<RowGeneric<TPage>> {
     const getIterator = (): Iterator<RowGeneric<TPage>> => {
       let ixRow = 0;
       return {
@@ -391,7 +511,7 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
           if (ixRow < this._nRows) {
             return {
               done: false,
-              value: this.rowAt(++ixRow, repeatMultiRowCells),
+              value: this.rowAt(++ixRow, opts),
             };
           } else {
             return {
@@ -409,25 +529,32 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
 
   /**
    * List the rows of the table
-   * @param repeatMultiRowCells Set `true` to include rowspan>1 cells in every `Row` they intersect with.
+   * @param opts Configuration options for merged and multi-spanning cells
    */
-  listRows(repeatMultiRowCells = false): RowGeneric<TPage>[] {
-    return [...Array(this._nRows).keys()].map((ixRow) => this.rowAt(ixRow + 1, repeatMultiRowCells));
+  listRows(opts: IGetRowOptions = {}): RowGeneric<TPage>[] {
+    return [...Array(this._nRows).keys()].map((ixRow) => this.rowAt(ixRow + 1, opts));
   }
 
   /**
    * List the cells at a particular {row, column, or combination} in the table
    * @param rowIndex 1-based index of the target row in the table
-   * @param repeatMultiRowCells Set `true` to include rowspan>1 cells in every `Row` they intersect with.
+   * @param opts Configuration options for merged and multi-spanning cells
    */
-  rowAt(rowIndex: number, repeatMultiRowCells = false): RowGeneric<TPage> {
-    const allRowCells = this.cellsAt(rowIndex, null);
+  rowAt(rowIndex: number, opts: IGetRowOptions = {}): RowGeneric<TPage> {
+    const repeatMultiRowCells = opts.repeatMultiRowCells || false;
+    const allRowCells = this.cellsAt(rowIndex, null, { ignoreMerged: opts.ignoreMerged });
     return new RowGeneric(
       repeatMultiRowCells ? allRowCells : allRowCells.filter((c) => c.rowIndex === rowIndex),
       this
     );
   }
 
+  /**
+   * Confidence score of the table structure detection
+   *
+   * This score reflects the confidence of the model detecting the table structure itself. For the
+   * combined table content OCR confidence, see the `.getOcrConfidence()` method instead.
+   */
   get confidence(): number {
     return this._dict.Confidence;
   }
@@ -448,6 +575,32 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
   }
   get parentPage(): TPage {
     return this._parentPage;
+  }
+
+  /**
+   * Get the overall type (EntityType) of this table
+   *
+   * In the underlying Amazon Textract API, table EntityTypes is a list. In practice though, it will either
+   * contain `STRUCTURED_TABLE`, or `SEMI_STRUCTURED_TABLE`, or neither.
+   *
+   * This dynamic property simplifies checking whether a table is structured, semi-structured, or untagged.
+   *
+   * @throws Error if the table block is tagged with multiple conflicting EntityTypes.
+   */
+  get tableType(): ApiTableEntityType | null {
+    if (!this._dict.EntityTypes) return null;
+
+    const isStructured = this._dict.EntityTypes.indexOf(ApiTableEntityType.StructuredTable) >= 0;
+    const isSemiStructured = this._dict.EntityTypes.indexOf(ApiTableEntityType.SemiStructuredTable) >= 0;
+    const nMatches = +isStructured + +isSemiStructured;
+    if (nMatches === 0) return null;
+    if (nMatches > 1) {
+      throw new Error(
+        `TABLE block ${this._dict.Id} EntityTypes contained multiple conflicting table types: "${this._dict.EntityTypes}"`
+      );
+    }
+    if (isStructured) return ApiTableEntityType.StructuredTable;
+    return ApiTableEntityType.SemiStructuredTable;
   }
 
   str(): string {

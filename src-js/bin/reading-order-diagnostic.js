@@ -14,7 +14,7 @@ const fs = require("fs");
 const path = require("path");
 
 // Local Dependencies:
-const { TextractDocument } = require("../dist/umd");
+const { TextractDocument } = require("../dist/cjs");
 
 const IN_FOLDER = "test/data/corpus";
 const OUT_FOLDER = "test/data/corpus-readingorder";
