@@ -1,14 +1,15 @@
 # Changelog
 
-## In development (targeting 0.3.0 release)
+## 0.3.0 (2023-07-31)
 ### Added
 - **(BREAKING)** `ignoreMerged` and `repeatMultiRowCells` options on `Table` methods are now wrapped into `opts` objects for better future extensibility and clearer user code.
 - Expose the `ignoreMerged` option through `Table.rowAt()`, `Table.iterRows()`, and `Table.listRows()`, to enable navigating table rows ignoring merged cells.
-- Page-level access to [Amazon Textract Queries](https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html) results. (Still assessing compositing architecture for a unified document-level view in future) (#80)
+- Page-level access to [Amazon Textract Queries](https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html) results. (Still assessing compositing architecture for a unified document-level view in future) ([#80](https://github.com/aws-samples/amazon-textract-response-parser/issues/80))
 - Average OCR (text recognition) confidence is now available on form fields (and their keys and values) as well as tables, table rows, and table cells - via `getOcrConfidence()`, with configurable aggregation method (including minimum, mean, etc.).
-- `EntityTypes` for tables and table cells/merged-cells are now accessible through `Table.tableType` property and `Cell.hasEntityTypes()` function - and also added to the underlying API data types. (#78)
+- `EntityTypes` for tables and table cells/merged-cells are now accessible through `Table.tableType` property and `Cell.hasEntityTypes()` function - and also added to the underlying API data types. ([#78](https://github.com/aws-samples/amazon-textract-response-parser/issues/78))
 ### Changed
-- **(BREAKING)** UMD module output `dist/umd` removed, following deprecation at v0.2.0
+- **(BREAKING)** UMD module output `dist/umd` removed, following deprecation at v0.2.0 and no requests from users to restore it.
+### Fixed
 - Corrected wrongly typed `ApiCellBlock.Relationships` from an array of `ApiChildRelationship` to an optional array of same: This field may be omitted altogether when a cell is detected but has no content.
 - Corrected wrongly typed `ApiKeyValueSetBlock.EntityTypes` data model from `ApiKeyValueEntityType` to an array of same.
 

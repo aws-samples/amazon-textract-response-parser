@@ -4,7 +4,7 @@ This library loads [Amazon Textract](https://docs.aws.amazon.com/textract/latest
 
 It's designed to work in both NodeJS and browser environments, and to support projects in either JavaScript or TypeScript.
 
-> ⚠️ **Warning:** If you're migrating from another TRP implementation such as the [Textract Response Parser for Python](https://github.com/aws-samples/amazon-textract-response-parser/tree/master/src-python), please note that the APIs and available features may be substantially different - due to differences between the languages' ecosystems.
+> ⚠️ **Warning:** If you're migrating from another TRP implementation such as the [Textract Response Parser for Python](https://github.com/aws-samples/amazon-textract-response-parser/tree/master/src-python), please note that the APIs and available features may be substantially different - due to differences between the languages' conventions and ecosystems.
 
 
 ## Installation
@@ -26,7 +26,7 @@ const { TextractDocument, TextractIdentity } = require("amazon-textract-response
 <script src="https://unpkg.com/amazon-textract-response-parser@x.y.z"></script>
 
 <script>
-  // Use via `trp`:
+  // Use via global `trp` object:
   var doc = new trp.TextractDocument(...);
 </script>
 ```
