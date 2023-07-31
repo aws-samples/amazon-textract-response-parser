@@ -1,4 +1,10 @@
-import { ApiBlockType, ApiResponsePage, ApiResponsePages } from "../../src/api-models";
+import {
+  ApiAsyncDocumentAnalysis,
+  ApiAsyncJobOuputSucceded,
+  ApiBlockType,
+  ApiResponsePage,
+  ApiResponsePages,
+} from "../../src/api-models";
 import { Line, TextractDocument } from "../../src/document";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -89,6 +95,46 @@ describe("TextractDocument", () => {
     expect(() => {
       new TextractDocument(testResponseJson);
     }).not.toThrowError();
+  });
+
+  it("logs a warning when single-page input content has a NextToken", () => {
+    // Load a new copy of the response JSON so we can edit it:
+    const testJson1: ApiAsyncDocumentAnalysis &
+      ApiAsyncJobOuputSucceded = require("../data/test-response.json");
+    let warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    // Single page response should not have a truthy NextToken:
+    delete testJson1.NextToken; // Should NOT log a warning
+    new TextractDocument(testJson1);
+    testJson1.NextToken = ""; // Should NOT log a warning
+    new TextractDocument(testJson1);
+    expect(warn).not.toHaveBeenCalled();
+    testJson1.NextToken = "DUMMY"; // Should log a warning
+    new TextractDocument(testJson1);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenNthCalledWith(1, expect.stringMatching(/NextToken/));
+    warn.mockReset();
+  });
+
+  it("logs a warning when multi-page input content has a NextToken in the final page", () => {
+    // Load a new copies of the response JSON so we can edit them:
+    const testJson1: ApiAsyncDocumentAnalysis &
+      ApiAsyncJobOuputSucceded = require("../data/test-response.json");
+    const testJson2: ApiAsyncDocumentAnalysis &
+      ApiAsyncJobOuputSucceded = require("../data/test-response.json");
+
+    let warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    testJson1.NextToken = "DUMMY";
+    delete testJson2.NextToken;
+    new TextractDocument([testJson1, testJson2]); // Should NOT log a warning
+    expect(warn).not.toHaveBeenCalled();
+
+    testJson2.NextToken = "DUMMY";
+    new TextractDocument([testJson1, testJson2]); // Should log a warning
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenNthCalledWith(1, expect.stringMatching(/NextToken/));
+    warn.mockReset();
   });
 
   it("loads and navigates pages", () => {

@@ -1,5 +1,9 @@
 # Changelog
 
+## In development (targeting 0.3.1)
+### Fixed
+- Suppress "content may be truncated" warnings when API `NextToken` is present but `null` ([#154](https://github.com/aws-samples/amazon-textract-response-parser/issues/154))
+
 ## 0.3.0 (2023-07-31)
 ### Added
 - **(BREAKING)** `ignoreMerged` and `repeatMultiRowCells` options on `Table` methods are now wrapped into `opts` objects for better future extensibility and clearer user code.
