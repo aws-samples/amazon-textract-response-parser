@@ -60,30 +60,34 @@ export interface ApiAsyncJobOuputInProgress {
   ];
 }
 
+interface ApiAsyncJobOutputStatus {
+  JobStatus: "IN_PROGRESS" | "SUCCEEDED" | "FAILED" | "PARTIAL_SUCCESS";
+  /**
+   * When present, a continuation token to fetch the next section of the response
+   *
+   * In some cases this field can be present but set to null, as raised in
+   * https://github.com/aws-samples/amazon-textract-response-parser/issues/154
+   */
+  NextToken?: string | null;
+  StatusMessage?: string;
+  Warnings?: ApiResultWarning[];
+}
+
 export interface ApiResultWarning {
   ErrorCode: string;
   Pages: number[];
 }
 
-export interface ApiAsyncJobOuputSucceded extends ApiResponseWithContent {
+export interface ApiAsyncJobOuputSucceded extends ApiResponseWithContent, ApiAsyncJobOutputStatus {
   JobStatus: "SUCCEEDED";
-  NextToken?: string;
-  StatusMessage?: string;
-  Warnings?: ApiResultWarning[];
 }
 
-export interface ApiAsyncJobOutputPartialSuccess extends ApiResponseWithContent {
+export interface ApiAsyncJobOutputPartialSuccess extends ApiResponseWithContent, ApiAsyncJobOutputStatus {
   JobStatus: "PARTIAL_SUCCESS";
-  NextToken?: string;
-  StatusMessage?: string;
-  Warnings?: ApiResultWarning[];
 }
 
-export interface ApiAsyncJobOutputFailed {
+export interface ApiAsyncJobOutputFailed extends ApiAsyncJobOutputStatus {
   JobStatus: "FAILED";
-  NextToken?: string;
-  StatusMessage?: string;
-  Warnings?: ApiResultWarning[];
 }
 
 export type ApiAsyncDocumentAnalysis =
