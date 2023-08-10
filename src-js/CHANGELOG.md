@@ -3,6 +3,7 @@
 ## In development (targeting 0.3.1)
 ### Fixed
 - Suppress "content may be truncated" warnings when API `NextToken` is present but `null` ([#154](https://github.com/aws-samples/amazon-textract-response-parser/issues/154))
+- Fix typed `TABLE_FOOTER` and `TABLE_SECTION_HEADER` EntityType values to match the [API doc](https://docs.aws.amazon.com/textract/latest/dg/API_Block.html) ([#158](https://github.com/aws-samples/amazon-textract-response-parser/issues/158))
 
 ## 0.3.0 (2023-07-31)
 ### Added
