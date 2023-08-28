@@ -53,6 +53,7 @@ class TextractBlockTypes(Enum):
 class TextractEntityTypes(Enum):
     KEY = auto()
     VALUE = auto()
+    COLUMN_HEADER = auto()
 
 
 @dataclass(eq=True, repr=True)
@@ -790,6 +791,12 @@ class TDocument():
                                     cell_block = self.get_block_by_id(cell_id)
                                     if cell_block and cell_block.row_index and parent_last_row:
                                         cell_block.row_index = parent_last_row + cell_block.row_index
+                                        # This is to make sure the child table's headers are merged
+                                        # as regular rows into the parent.
+                                        if cell_block.entity_types and len(cell_block.entity_types) > 0:
+                                            cell_block.entity_types = [
+                                                entity_type for entity_type in cell_block.entity_types if entity_type != TextractEntityTypes.COLUMN_HEADER.name]
+
                                         if parent_relationships.ids and cell_id not in parent_relationships.ids:
                                             parent_relationships.ids.append(cell_id)
                     self.delete_blocks([table_id])

@@ -15,6 +15,7 @@ class HeaderFooterType(Enum):
     NONE = 0
     NARROW = 0.5
     NORMAL = 1
+    WIDE = 2.5
 
 
 logger = logging.getLogger(__name__)
