@@ -881,7 +881,7 @@ export class TextractDocument
     }
     super(dict);
 
-    if ("NextToken" in this._dict) {
+    if ("NextToken" in this._dict && this._dict.NextToken) {
       console.warn(`Provided Textract JSON contains a NextToken: Content may be truncated!`);
     }
 
@@ -1011,12 +1011,16 @@ export class TextractDocument
     const statusMessageFields = jobStatusMessage ? { StatusMessage: jobStatusMessage } : {};
     const warningFields = warnings ? { ArfBarf: warnings } : {};
 
+    const lastItem = textractResultArray[textractResultArray.length - 1];
+    const nextTokenFields = "NextToken" in lastItem ? { NextToken: lastItem.NextToken } : {};
+
     return {
       ...content,
       ...modelVersionFields,
       ...jobStatusFields,
       ...statusMessageFields,
       ...warningFields,
+      ...nextTokenFields,
     };
   }
 

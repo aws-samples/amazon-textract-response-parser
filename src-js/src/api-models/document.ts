@@ -118,8 +118,8 @@ export interface ApiTableBlock {
 
 export const enum ApiTableCellEntityType {
   Title = "TABLE_TITLE",
-  Footer = "FOOTER",
-  SectionTitle = "SECTION_TITLE",
+  Footer = "TABLE_FOOTER",
+  SectionTitle = "TABLE_SECTION_TITLE",
   ColumnHeader = "COLUMN_HEADER",
   Summary = "TABLE_SUMMARY",
 }
