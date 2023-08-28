@@ -1,6 +1,6 @@
 {
   "name": "amazon-textract-response-parser",
-  "version": "0.3.1-alpha.2",
+  "version": "0.3.1",
   "description": "Parse API responses from Amazon Textract with higher-level helpers",
   "keywords": [
     "aws",
@@ -34,6 +34,7 @@
     "test:unit": "jest --coverage --testPathPattern=test/unit"
   },
   "repository": {
+    "directory": "src-js",
     "type": "git",
     "url": "git+https://github.com/aws-samples/amazon-textract-response-parser.git"
   },
