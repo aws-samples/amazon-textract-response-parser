@@ -65,7 +65,7 @@ from enum import Enum, auto
 import marshmallow as m
 from marshmallow import post_load
 from trp.trp2 import (BaseSchema, TGeometry, TGeometrySchema, TDocumentMetadata, TDocumentMetadataSchema, TWarnings,
-                      TWarningsSchema, TResponseMetadata, TResponseMetadataSchema)
+                      TWarningsSchema, TResponseMetadata, TResponseMetadataSchema, TBlock, TBlockSchema)
 from dataclasses import dataclass, field
 
 
@@ -272,6 +272,16 @@ class TExpense():
     expense_idx: int = None
     summaryfields: List[TSummaryField] = None
     lineitemgroups: List[TLineItemGroup] = None
+    blocks: List[TBlock] = None
+
+
+    def lines(self, page: TBlock) -> List[TBlock]:
+        relationships = page.get_relationships_for_type()
+        if relationships:
+            blocks = self.get_blocks_for_relationships(relationships)
+            blocks = [x for x in blocks if x.block_type == 'LINE']
+            return blocks
+        return list()
 
 
 class TExpenseSchema(BaseSchema):
@@ -290,6 +300,11 @@ class TExpenseSchema(BaseSchema):
 
     lineitemgroups = m.fields.List(m.fields.Nested(TLineItemGroupSchema),
                                    data_key="LineItemGroups",
+                                   required=False,
+                                   allow_none=False)
+
+    blocks = m.fields.List(m.fields.Nested(TBlockSchema),
+                                   data_key="Blocks",
                                    required=False,
                                    allow_none=False)
 
