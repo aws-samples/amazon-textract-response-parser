@@ -53,6 +53,10 @@ class BaseBlock():
     def text(self):
         return self._text
 
+    @text.setter
+    def text(self, text):
+        self._text = text
+
     @property
     def block(self):
         return self._block
@@ -399,18 +403,16 @@ class MergedCell(BaseCell):
         if 'Relationships' in block and block['Relationships']:
             for rs in block['Relationships']:
                 if rs['Type'] == 'CHILD':
-                    cells = []
-                    for row in rows:
-                        cells.extend(row._cells)
+                    # generate the merged cell text
                     for cid in rs['Ids']:
-                        blockType = blockMap[cid]["BlockType"]
-                        if (blockType == "CELL"):
-                            child_cell = next((x for x in cells if x.id == cid), None)
-                            if child_cell != None:
-                                child_cell._isChildOfMergedCell = True
-                                child_cell._mergedCellParent = self
-                                if len(self._text) == 0 and len(child_cell.text) > 0:
-                                    self._text = child_cell.text.strip()
+                        self.text += Cell(blockMap[cid], blockMap).text
+                    # now find the cell-ids in the current rows and set the _isChildOfMergedCell and _mergedCellParent
+                    for row in rows:
+                        for cell in row.cells:
+                            if cell.id in rs['Ids']:
+                                cell._mergedCellParent = self
+                                cell._isChildOfMergedCell = True
+
         if ('EntityTypes' in block and block['EntityTypes']):
             self._entityTypes = block['EntityTypes']
 

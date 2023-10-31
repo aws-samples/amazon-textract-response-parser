@@ -37,3 +37,18 @@ def test_multipage(caplog, json_response_2):
     caplog.set_level(logging.DEBUG)
     exp_docs: texp.TAnalyzeExpenseDocument = texp.TAnalyzeExpenseDocumentSchema().load(json_response_2)
     assert 2 == len(exp_docs.expenses_documents)
+
+def test_generate_multipage_text(caplog, json_response_2):
+    caplog.set_level(logging.DEBUG)
+    exp_docs: texp.TAnalyzeExpenseDocument = texp.TAnalyzeExpenseDocumentSchema().load(json_response_2) #type: ignore
+    assert 2 == len(exp_docs.expenses_documents)
+    for idx, page in enumerate(exp_docs.expenses_documents):
+        print(f"page: {idx} ")
+        line_texts = " ".join([block.text for block in page.blocks
+                               if block.block_type == 'LINE' and block.text ])
+        print(line_texts)
+
+
+
+
+
