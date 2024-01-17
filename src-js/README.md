@@ -219,6 +219,18 @@ const colHeaders = table.rowAt(1).listCells()
 
 For [overall table-level title and footer captions](https://aws.amazon.com/blogs/machine-learning/announcing-enhanced-table-extractions-with-amazon-textract/), see `table.listTitles()` and `table.listFooters()`, etc.
 
+## Signatures
+
+If you enabled [signature detection in Amazon Textract](https://aws.amazon.com/blogs/machine-learning/detect-signatures-on-documents-or-images-using-the-signatures-feature-in-amazon-textract/), you can check for signatures at the page level:
+
+```typescript
+// e.g. print number of signatures detected by page:
+doc.listPages()
+      .forEach((page, ix) => { console.log(`${page.nSignatures} signatures on page ${ix+1}`); });
+// ...Or get the position of the first signature on the first page:
+const bbox = doc.pageNumber(1).listSignatures()[0].geometry.boundingBox;
+```
+
 ## Other generic document analyses
 
 Some tools are built in to the library for other common but complex analyses you might want to tackle.

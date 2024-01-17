@@ -89,3 +89,23 @@ export interface ApiSelectionElementBlock extends ApiBlockBase {
    */
   SelectionStatus: ApiSelectionStatus;
 }
+
+/**
+ * Block representing a detected signature
+ *
+ * Signature blocks don't return OCR results, just their presence and locations
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-analyzing.html
+ */
+export interface ApiSignatureBlock extends ApiBlockBase {
+  BlockType: ApiBlockType.Signature;
+  /**
+   * 0-100 based confidence of the signature detection model for this result
+   */
+  Confidence: number;
+  Geometry: ApiGeometry; // Should always be present for SIGNATURE blocks
+  /**
+   * SIGNATURE blocks don't seem to specify any related blocks
+   */
+  Relationships?: never[];
+}

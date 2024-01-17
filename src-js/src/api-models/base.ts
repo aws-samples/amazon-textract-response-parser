@@ -161,6 +161,12 @@ export const enum ApiBlockType {
    */
   SelectionElement = "SELECTION_ELEMENT",
   /**
+   * A detected signature (possibly in a key-value pair or table cell)
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-analyzing.html
+   */
+  Signature = "SIGNATURE",
+  /**
    * An overall table object
    *
    * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html

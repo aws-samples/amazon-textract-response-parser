@@ -15,6 +15,8 @@ const testInProgressJson: ApiResponsePage = require("../data/test-inprogress-res
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testResponseJson: ApiAnalyzeDocumentResponse = require("../data/test-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
+const taxFormResponseJson: ApiAnalyzeDocumentResponse = require("../data/form1005-response.json");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const testMultiColumnJson: ApiResponsePage = require("../data/test-multicol-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testMultiColumnJson2: ApiResponsePage = require("../data/test-multicol-response-2.json");
@@ -140,11 +142,25 @@ describe("Basic TextractDocument parsing", () => {
     const baseDoc = new TextractDocument(testResponseJson);
     expect(
       () => testResponseJson.Blocks.forEach((block) => {
-        // TODO: Remove this TEMPORARY restriction once TABLE_FOOTER, TABLE_TITLE are supported:
-        if (["TABLE_FOOTER", "TABLE_TITLE"].indexOf(block.BlockType) >= 0) return;
         expect(baseDoc.getItemByBlockId(block.Id)).toBeTruthy()
       })
     ).not.toThrow();
+  });
+})
+
+describe("Page", () => {
+  it("exposes and navigates through results from Textract Signature Detection", () => {
+    const page = new TextractDocument(taxFormResponseJson).pageNumber(1);
+    expect(page.nSignatures).toStrictEqual(3);
+    const sigList = page.listSignatures();
+    let nSignatures = 0;
+    for (const sig of page.iterSignatures()) {
+      expect(sig.blockType).toStrictEqual(ApiBlockType.Signature);
+      expect(sig).toBe(sigList[nSignatures]);
+      ++nSignatures;
+    }
+    expect(sigList.length).toStrictEqual(nSignatures);
+    expect(nSignatures).toStrictEqual(page.nSignatures);
   });
 });
 

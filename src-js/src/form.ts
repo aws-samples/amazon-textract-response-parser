@@ -15,7 +15,7 @@ import {
   IRenderable,
   PageHostedApiBlockWrapper,
 } from "./base";
-import { buildWithContent, IWithContent, SelectionElement, WithWords, Word } from "./content";
+import { buildWithContent, IWithContent, SelectionElement, Signature, WithWords, Word } from "./content";
 import { Geometry, IWithGeometry } from "./geometry";
 
 /**
@@ -79,10 +79,13 @@ export class FieldKeyGeneric<TPage extends IBlockManager>
  * If you're consuming this library, you probably just want to use `document.ts/FieldValue`.
  */
 export class FieldValueGeneric<TPage extends IBlockManager>
-  extends buildWithContent<SelectionElement | Word>()(PageHostedApiBlockWrapper)<ApiKeyValueSetBlock, TPage>
+  extends buildWithContent<SelectionElement | Signature | Word>()(PageHostedApiBlockWrapper)<
+    ApiKeyValueSetBlock,
+    TPage
+  >
   implements
     IRenderable,
-    IWithContent<SelectionElement | Word>,
+    IWithContent<SelectionElement | Signature | Word>,
     IWithGeometry<ApiKeyValueSetBlock, FieldValueGeneric<TPage>>
 {
   _geometry: Geometry<ApiKeyValueSetBlock, FieldValueGeneric<TPage>>;

@@ -3,12 +3,13 @@ import {
   ApiLineBlock,
   ApiSelectionElementBlock,
   ApiSelectionStatus,
+  ApiSignatureBlock,
   ApiTextType,
   ApiWordBlock,
 } from "../../src/api-models/content";
 import { ApiBlock } from "../../src/api-models/document";
 import { IApiBlockWrapper, IBlockManager } from "../../src/base";
-import { LineGeneric, SelectionElement, Word } from "../../src/content";
+import { LineGeneric, SelectionElement, Signature, Word } from "../../src/content";
 
 const EXAMPLE_WORD_BLOCK: ApiWordBlock = {
   BlockType: "WORD" as ApiBlockType.Word,
@@ -75,6 +76,38 @@ const EXAMPLE_SELECT_BLOCK: ApiSelectionElementBlock = {
   },
   Id: "e6f55d8a-eaed-467d-9235-92d869bb71df",
   SelectionStatus: "SELECTED" as ApiSelectionStatus,
+};
+
+const EXAMPLE_SIG_BLOCK: ApiSignatureBlock = {
+  BlockType: "SIGNATURE" as ApiBlockType.Signature,
+  Confidence: 40.4,
+  Geometry: {
+    BoundingBox: {
+      Width: 0.155,
+      Height: 0.03,
+      Left: 0.126,
+      Top: 0.3,
+    },
+    Polygon: [
+      {
+        X: 0.126,
+        Y: 0.3,
+      },
+      {
+        X: 0.281,
+        Y: 0.3,
+      },
+      {
+        X: 0.281,
+        Y: 0.33,
+      },
+      {
+        X: 0.126,
+        Y: 0.33,
+      },
+    ],
+  },
+  Id: "19baf15e-ab45-436c-af37-b930ef61e540",
 };
 
 const EXAMPLE_LINE_BLOCK: ApiLineBlock = {
@@ -248,6 +281,46 @@ describe("SelectionElement", () => {
     selEl.selectionStatus = ApiSelectionStatus.NotSelected;
     expect(selEl.selectionStatus).toStrictEqual(ApiSelectionStatus.NotSelected);
     expect(selBlockCopy.SelectionStatus).toStrictEqual(ApiSelectionStatus.NotSelected);
+  });
+});
+
+describe("Signature", () => {
+  it("correctly stores raw dict properties", () => {
+    const sigEl = new Signature(EXAMPLE_SIG_BLOCK);
+    expect(sigEl.blockType).toStrictEqual(ApiBlockType.Signature);
+    expect(sigEl.confidence).toStrictEqual(EXAMPLE_SIG_BLOCK.Confidence);
+    expect(sigEl.dict).toBe(EXAMPLE_SIG_BLOCK);
+    expect(sigEl.geometry).toBeTruthy();
+    expect(sigEl.geometry.boundingBox).toBeTruthy();
+    expect(sigEl.geometry.boundingBox.top).toStrictEqual(EXAMPLE_SIG_BLOCK.Geometry.BoundingBox.Top);
+    expect(sigEl.geometry.boundingBox.left).toStrictEqual(EXAMPLE_SIG_BLOCK.Geometry.BoundingBox.Left);
+    expect(sigEl.geometry.boundingBox.height).toStrictEqual(EXAMPLE_SIG_BLOCK.Geometry.BoundingBox.Height);
+    expect(sigEl.geometry.boundingBox.width).toStrictEqual(EXAMPLE_SIG_BLOCK.Geometry.BoundingBox.Width);
+    expect(sigEl.geometry.polygon).toBeTruthy();
+    expect(sigEl.geometry.polygon.length).toStrictEqual(EXAMPLE_SIG_BLOCK.Geometry.Polygon.length);
+    EXAMPLE_SIG_BLOCK.Geometry.Polygon.forEach((rawPoly, ixPoint) => {
+      expect(sigEl.geometry.polygon[ixPoint].x).toStrictEqual(rawPoly.X);
+      expect(sigEl.geometry.polygon[ixPoint].y).toStrictEqual(rawPoly.Y);
+    });
+    expect(sigEl.id).toStrictEqual(EXAMPLE_SIG_BLOCK.Id);
+  });
+
+  it("reports empty text", () => {
+    const sigEl = new Signature(EXAMPLE_SIG_BLOCK);
+    expect(sigEl.text).toStrictEqual("");
+  });
+
+  it("renders an informational str() representation", () => {
+    const sigEl = new Signature(EXAMPLE_SIG_BLOCK);
+    expect(sigEl.str()).toStrictEqual("/-------------\\\n| [SIGNATURE] |\n\\-------------/");
+  });
+
+  it("propagates confidence updates to underlying dict", () => {
+    const sigBlockCopy: ApiSignatureBlock = JSON.parse(JSON.stringify(EXAMPLE_SIG_BLOCK));
+    const sigEl = new Signature(sigBlockCopy);
+    sigEl.confidence = 13;
+    expect(sigEl.confidence).toStrictEqual(13);
+    expect(sigBlockCopy.Confidence).toStrictEqual(13);
   });
 });
 

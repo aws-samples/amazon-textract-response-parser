@@ -26,7 +26,7 @@ import {
   IWithParentPage,
   IWithText,
 } from "./base";
-import { buildWithContent, IWithContent, SelectionElement, WithWords, Word } from "./content";
+import { buildWithContent, IWithContent, SelectionElement, Signature, WithWords, Word } from "./content";
 import { Geometry } from "./geometry";
 
 /**
@@ -118,7 +118,10 @@ function WithCellBaseProps<
   TBlock extends ApiCellBlock | ApiMergedCellBlock,
   TPage extends IBlockManager,
   T extends Constructor<
-    IApiBlockWrapper<TBlock> & IWithContent<SelectionElement | Word> & IWithParentPage<TPage> & IWithText
+    IApiBlockWrapper<TBlock> &
+      IWithContent<SelectionElement | Signature | Word> &
+      IWithParentPage<TPage> &
+      IWithText
   >
 >(SuperClass: T) {
   return class extends SuperClass implements ICellBaseProps, IRenderable {
@@ -199,8 +202,11 @@ function WithCellBaseProps<
  * If you're consuming this library, you probably just want to use `document.ts/Cell`.
  */
 export class CellGeneric<TPage extends IBlockManager>
-  extends WithCellBaseProps(buildWithContent<SelectionElement | Word>()(CellBaseGeneric))<ApiCellBlock, TPage>
-  implements IWithContent<SelectionElement | Word>
+  extends WithCellBaseProps(buildWithContent<SelectionElement | Signature | Word>()(CellBaseGeneric))<
+    ApiCellBlock,
+    TPage
+  >
+  implements IWithContent<SelectionElement | Signature | Word>
 {
   constructor(block: ApiCellBlock, parentTable: TableGeneric<TPage>) {
     super(block, parentTable);
@@ -219,7 +225,7 @@ export class CellGeneric<TPage extends IBlockManager>
  * If you're consuming this library, you probably just want to use `document.ts/MergedCell`.
  */
 export class MergedCellGeneric<TPage extends IBlockManager> extends WithCellBaseProps(
-  buildWithContent<SelectionElement | Word>()(CellBaseGeneric)
+  buildWithContent<SelectionElement | Signature | Word>()(CellBaseGeneric)
 )<ApiMergedCellBlock, TPage> {
   constructor(block: ApiMergedCellBlock, parentTable: TableGeneric<TPage>) {
     super(block, parentTable);
@@ -242,9 +248,9 @@ export class MergedCellGeneric<TPage extends IBlockManager> extends WithCellBase
     return this.childBlockIds.map((cid) => this.parentTable._getSplitCellByBlockId(cid));
   }
 
-  override iterContent(): Iterable<SelectionElement | Word> {
+  override iterContent(): Iterable<SelectionElement | Signature | Word> {
     // iterContent needs to traverse each child CELL in turn, instead of directly scannning current
-    const getIterator = (): Iterator<SelectionElement | Word> => {
+    const getIterator = (): Iterator<SelectionElement | Signature | Word> => {
       const cells = this.listSubCells();
       const tryListCellContents = (ixCell: number) =>
         cells.length > ixCell ? cells[ixCell].listContent() : [];
@@ -252,7 +258,7 @@ export class MergedCellGeneric<TPage extends IBlockManager> extends WithCellBase
       let cellContents = tryListCellContents(ixCurrCell);
       let ixCurrItem = -1;
       return {
-        next: (): IteratorResult<SelectionElement | Word> => {
+        next: (): IteratorResult<SelectionElement | Signature | Word> => {
           ++ixCurrItem;
           while (ixCurrItem >= cellContents.length) {
             ++ixCurrCell;
@@ -274,9 +280,11 @@ export class MergedCellGeneric<TPage extends IBlockManager> extends WithCellBase
    *
    * Concatenates content across all sub-cells
    */
-  override listContent(): Array<SelectionElement | Word> {
+  override listContent(): Array<SelectionElement | Signature | Word> {
     // listContent needs to traverse each child CELL in turn, instead of directly scannning current
-    return ([] as Array<SelectionElement | Word>).concat(...this.listSubCells().map((c) => c.listContent()));
+    return ([] as Array<SelectionElement | Signature | Word>).concat(
+      ...this.listSubCells().map((c) => c.listContent())
+    );
   }
 
   /**
@@ -715,8 +723,9 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
    * List the footer(s) associated with the table
    */
   listFooters(): TableFooterGeneric<TPage>[] {
-    return this.relatedBlockIdsByRelType(ApiRelationshipType.TableFooter)
-      .map((id) => this.parentPage.getItemByBlockId(id) as TableFooterGeneric<TPage>);
+    return this.relatedBlockIdsByRelType(ApiRelationshipType.TableFooter).map(
+      (id) => this.parentPage.getItemByBlockId(id) as TableFooterGeneric<TPage>
+    );
   }
 
   /**
@@ -731,8 +740,9 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
    * List the title(s) associated with the table
    */
   listTitles(): TableTitleGeneric<TPage>[] {
-    return this.relatedBlockIdsByRelType(ApiRelationshipType.TableTitle)
-      .map((id) => this.parentPage.getItemByBlockId(id) as TableTitleGeneric<TPage>);
+    return this.relatedBlockIdsByRelType(ApiRelationshipType.TableTitle).map(
+      (id) => this.parentPage.getItemByBlockId(id) as TableTitleGeneric<TPage>
+    );
   }
 
   /**

@@ -8,6 +8,7 @@ import {
   ApiLineBlock,
   ApiSelectionElementBlock,
   ApiSelectionStatus,
+  ApiSignatureBlock,
   ApiTextType,
   ApiWordBlock,
 } from "./api-models/content";
@@ -147,7 +148,7 @@ export interface IWithContentMixinOptions {
  *    to disable this filter and preserve all items
  */
 export function buildWithContent<TContent extends IApiBlockWrapper<ApiBlock> & IRenderable>({
-  contentTypes = [ApiBlockType.SelectionElement, ApiBlockType.Word],
+  contentTypes = [ApiBlockType.SelectionElement, ApiBlockType.Signature, ApiBlockType.Word],
   strict = false,
 }: IWithContentMixinOptions = {}) {
   /**
@@ -443,5 +444,58 @@ export class SelectionElement
    */
   get text(): string {
     return this.selectionStatus;
+  }
+}
+
+/**
+ * TRP.js parsed object for a detected signature
+ *
+ * Wraps an Amazon Textract `SIGNATURE` block in the underlying API response.
+ */
+export class Signature
+  extends ApiBlockWrapper<ApiSignatureBlock>
+  implements IRenderable, IWithGeometry<ApiSignatureBlock, Signature>
+{
+  _geometry: Geometry<ApiSignatureBlock, Signature>;
+
+  constructor(block: ApiSignatureBlock) {
+    super(block);
+    this._geometry = new Geometry(block.Geometry, this);
+  }
+
+  /**
+   * 0-100 based confidence of the model detecting this selection element and its status
+   */
+  get confidence(): number {
+    return this._dict.Confidence;
+  }
+  set confidence(newVal: number) {
+    this._dict.Confidence = newVal;
+  }
+  /**
+   * Position of the selection element on the input image / page
+   */
+  get geometry(): Geometry<ApiSignatureBlock, Signature> {
+    return this._geometry;
+  }
+
+  /**
+   * The human-readable `str()` representation of a signature is a placeholder
+   *
+   * Looks like:
+   *
+   * /-------------\
+   * | [SIGNATURE] |
+   * \-------------/
+   */
+  str(): string {
+    return "/-------------\\\n| [SIGNATURE] |\n\\-------------/";
+  }
+
+  /**
+   * The "text content" of a signature element is empty
+   */
+  get text(): "" {
+    return "";
   }
 }

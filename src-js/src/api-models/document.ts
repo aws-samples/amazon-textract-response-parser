@@ -8,7 +8,7 @@
  */
 // Local Dependencies:
 import { ApiBlockBase, ApiBlockType, ApiChildRelationship } from "./base";
-import { ApiLineBlock, ApiSelectionElementBlock, ApiWordBlock } from "./content";
+import { ApiLineBlock, ApiSelectionElementBlock, ApiSignatureBlock, ApiWordBlock } from "./content";
 import { ApiKeyValueSetBlock } from "./form";
 import { ApiGeometry } from "./geometry";
 import { ApiQueryBlock, ApiQueryResultBlock } from "./query";
@@ -145,6 +145,7 @@ export type ApiBlock =
   | ApiQueryBlock
   | ApiQueryResultBlock
   | ApiSelectionElementBlock
+  | ApiSignatureBlock
   | ApiTableBlock
   | ApiTableFooterBlock
   | ApiTableTitleBlock

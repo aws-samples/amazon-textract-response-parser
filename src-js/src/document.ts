@@ -25,7 +25,7 @@ import {
   IRenderable,
   IApiBlockWrapper,
 } from "./base";
-import { LineGeneric, SelectionElement, Word } from "./content";
+import { LineGeneric, SelectionElement, Signature, Word } from "./content";
 import {
   FieldGeneric,
   FieldKeyGeneric,
@@ -130,6 +130,7 @@ export class Page
     [blockId: string]:
       | LineGeneric<Page>
       | SelectionElement
+      | Signature
       | Word
       | FieldGeneric<Page>
       | FieldValueGeneric<Page>
@@ -183,6 +184,9 @@ export class Page
       } else if (item.BlockType === ApiBlockType.SelectionElement) {
         const s = new SelectionElement(item);
         this._itemsByBlockId[s.id] = s;
+      } else if (item.BlockType === ApiBlockType.Signature) {
+        const sig = new Signature(item);
+        this._itemsByBlockId[sig.id] = sig;
       } else if (item.BlockType === ApiBlockType.Table) {
         const t = new TableGeneric(item, this);
         this._tables.push(t);
@@ -219,6 +223,7 @@ export class Page
     | Page
     | LineGeneric<Page>
     | SelectionElement
+    | Signature
     | Word
     | FieldGeneric<Page>
     | FieldValueGeneric<Page>
@@ -838,6 +843,20 @@ export class Page
   }
 
   /**
+   * Iterate through any signatures detected on the page
+   *
+   * If this Textract feature was not enabled, the iterator will be empty
+   *
+   * @example
+   * for (const line of page.iterLines()) {
+   *   console.log(line.text);
+   * }
+   */
+  iterSignatures(): Iterable<Signature> {
+    return getIterable(() => this.listSignatures());
+  }
+
+  /**
    * Iterate through the tables on the page
    *
    * If TABLES analysis was not enabled, the iterable will be empty.
@@ -887,6 +906,19 @@ export class Page
    */
   listLines(): LineGeneric<Page>[] {
     return this._lines.slice();
+  }
+
+  /**
+   * Fetch a snapshot list of any signatures detected on the page
+   *
+   * If this Textract feature was not enabled, the iterator will be empty
+   *
+   * @returns (A shallow/snapshot copy of) the list of parsed `Signature`s present on this page
+   */
+  listSignatures(): Signature[] {
+    return this._blocks
+      .filter((block) => block.BlockType === ApiBlockType.Signature)
+      .map((block) => this.getItemByBlockId(block.Id) as Signature);
   }
 
   /**
@@ -954,6 +986,12 @@ export class Page
    */
   get nLines(): number {
     return this._lines.length;
+  }
+  /**
+   * Number of SIGNATURE blocks detected in the page (0 if Signatures analysis was not enabled)
+   */
+  get nSignatures(): number {
+    return this.listSignatures().length;
   }
   /**
    * Number of TABLEs present in the page (0 if Tables analysis was not enabled)
