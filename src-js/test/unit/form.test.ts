@@ -1,10 +1,27 @@
-import { ApiBlockType } from "../../src/api-models/base";
+import { ApiBlockType, ApiRelationshipType } from "../../src/api-models/base";
 import { ApiResponsePage } from "../../src/api-models/response";
 import { AggregationMethod } from "../../src/base";
-import { Field, TextractDocument } from "../../src/document";
+import { Field, FieldKey, TextractDocument } from "../../src/document";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testResponseJson: ApiResponsePage = require("../data/test-response.json");
+
+describe("FieldGeneric", () => {
+  it("hoists properties from FieldKey to behave like an ApiBlockWrapper", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const field = doc.form.getFieldByKey("Phone Number:");
+    expect(field?.blockType).toStrictEqual(field?.key.blockType);
+    expect(field?.childBlockIds).toStrictEqual(field?.key.childBlockIds);
+    expect(field?.dict).toBe(field?.key.dict);
+    expect(field?.id).toStrictEqual(field?.key.id);
+    const mock = jest
+      .spyOn(field?.key as FieldKey, "relatedBlockIdsByRelType")
+      .mockImplementation((relType: ApiRelationshipType | ApiRelationshipType[]) => [] as string[]);
+    expect(field?.relatedBlockIdsByRelType(ApiRelationshipType.Value).length).toStrictEqual(0);
+    expect(mock).toHaveBeenCalledTimes(1);
+    mock.mockReset();
+  });
+});
 
 describe("Form", () => {
   it("loads and navigates form fields per page", () => {
@@ -117,6 +134,24 @@ describe("Form", () => {
     });
   });
 
+  it("collects text from fields, per-page forms, and whole-document forms", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const page = doc.listPages()[0];
+    const fieldKeyText = "Phone Number:";
+    const fieldValText = "555-0100";
+    const field = doc.form.getFieldByKey(fieldKeyText);
+    // Individual field key & value:
+    expect(field?.key.text).toStrictEqual(fieldKeyText);
+    expect(field?.value?.text).toStrictEqual(fieldValText);
+    // Individual field:
+    expect(field?.text).toStrictEqual(`${fieldKeyText}: ${fieldValText}`);
+    // Page-level form:
+    expect(page.form.text).toMatch(/.*: .*(?:\n.*: .*)*/g);
+    expect(page.form.text).toContain(`\n${fieldKeyText}: ${fieldValText}\n`);
+    // Document-level form:
+    expect(doc.form.text).toContain(page.form.text);
+  });
+
   it("stringifies composite document forms consistently with per-page forms", () => {
     const doc = new TextractDocument(testResponseJson);
     const docFormStr = doc.form.str();
@@ -145,7 +180,7 @@ describe("Form", () => {
     if (!field) throw new Error("Test missing expected document field");
 
     function mean(numberArr: number[]): number {
-      return numberArr.reduce((acc, next) => (acc + next)) / numberArr.length
+      return numberArr.reduce((acc, next) => acc + next) / numberArr.length;
     }
 
     const keyWords = field.key.listWords();

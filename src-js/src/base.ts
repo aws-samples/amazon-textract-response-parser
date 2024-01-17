@@ -3,7 +3,18 @@
  */
 
 // Local Dependencies:
-import { ApiBlock, ApiBlockType, ApiDocumentMetadata } from "./api-models";
+import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
+import { ApiBlock } from "./api-models/document";
+import { ApiDocumentMetadata } from "./api-models/response";
+
+/**
+ * Generic typing for a concrete class constructor to support TypeScript Mixins pattern
+ *
+ * (could use `abstract new` to type abstract base clasess)
+ *
+ * See: https://www.typescriptlang.org/docs/handbook/mixins.html
+ */
+export type Constructor<T> = new (...args: any[]) => T; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /**
  * Base class for all classes which wrap over an actual Textract API object.
@@ -17,21 +28,91 @@ export class ApiObjectWrapper<T> {
     this._dict = dict;
   }
 
+  /**
+   * Raw underlying Amazon Textract API object that this parsed item wraps
+   */
   get dict(): T {
     return this._dict;
   }
 }
 
 /**
- * Base class for classes which wrap over a Textract API 'Block' object.
+ * Basic properties exposed by all classes which wrap over a Textract API `Block` object.
  */
-export class ApiBlockWrapper<T extends ApiBlock> extends ApiObjectWrapper<T> {
+export interface IApiBlockWrapper<T extends ApiBlock> {
+  /**
+   * Raw underlying Amazon Textract API `Block` object that this parsed item wraps
+   */
+  get dict(): T;
+  /**
+   * Unique ID of the underlying Amazon Textract API `Block` object that this parsed item wraps
+   */
+  get id(): string;
+  /**
+   * Type of underlying Amazon Textract API `Block` object that this parsed item wraps
+   */
+  get blockType(): ApiBlockType;
+  /**
+   * Dynamic accessor for the unique Block IDs of all CHILD relationships from this Block
+   */
+  get childBlockIds(): string[];
+  /**
+   * Fetch the unique Block IDs of this block's `Relationships`, filtered by type(s)
+   * @param relType Only keep IDs corresponding to relations of this type (or list of types)
+   */
+  relatedBlockIdsByRelType(relType: ApiRelationshipType | ApiRelationshipType[]): string[];
+}
+
+export interface IWithText {
+  /**
+   * Return the text content of this element (and any child content)
+   *
+   * Unlike `.str()`, this includes only the actual text content and no semantic information.
+   */
+  get text(): string;
+}
+
+export interface IRenderable extends IWithText {
+  /**
+   * Return a text representation of this element and its content
+   *
+   * Unlike `.text`, this may include additional characters to try and communicate the type of the
+   * element for an overall representation of a page.
+   */
+  str(): string;
+}
+
+/**
+ * Base for classes which wrap over a Textract API 'Block' object.
+ */
+export class ApiBlockWrapper<T extends ApiBlock> extends ApiObjectWrapper<T> implements IApiBlockWrapper<T> {
   get id(): string {
     return this._dict.Id;
   }
 
   get blockType(): ApiBlockType {
     return this._dict.BlockType;
+  }
+
+  get childBlockIds(): string[] {
+    return this.relatedBlockIdsByRelType(ApiRelationshipType.Child);
+  }
+
+  relatedBlockIdsByRelType(relType: ApiRelationshipType | ApiRelationshipType[]): string[] {
+    const isMultiType = Array.isArray(relType);
+    let ids: string[] = [];
+    (this._dict.Relationships || []).forEach((rs) => {
+      if (isMultiType) {
+        if (relType.indexOf(rs.Type) >= 0) {
+          ids = ids.concat(rs.Ids);
+        }
+      } else {
+        if (rs.Type === relType) {
+          ids = ids.concat(rs.Ids);
+        }
+      }
+    });
+    return ids;
   }
 }
 
@@ -160,20 +241,87 @@ export function argMax(arr: number[]): { maxValue: number; maxIndex: number } {
 /**
  * Interface for a (TextractDocument-like) object that can query Textract Blocks
  *
- * This is used to avoid circular references in child classes which need to reference some
+ * Unlike `IBlockManager` (below), implementers of `IDocBlocks` can only query underlying API Block
+ * objects - and not their associated parsed TRP items.
+ *
+ * This interface is used to avoid circular references in child classes which need to reference some
  * TextractDocument-like parent, before the actual TextractDocument class is defined.
  */
 export interface IDocBlocks {
+  /**
+   * Retrieve an underlying Amazon Textract API `Block` response object by its unique ID
+   */
   getBlockById: { (blockId: string): ApiBlock | undefined };
+  /**
+   * List all underlying Amazon Textract API `Block` objects managed by this parser
+   */
   listBlocks: { (): ApiBlock[] };
 }
 
 /**
- * Interface for a (Page-like) object that references a parent document
+ * Interface for a (Page-like) object that can query Textract Blocks and their parsed wrapper items
  *
- * This is used to avoid circular references in child classes which need to reference some
+ * This interface extends `IDocBlocks` to also support looking up parsed TRP items by underlying
+ * `Block` ID. It's used to avoid circular references in child classes which need to reference some
  * Page-like parent, before the actual Page class is defined.
  */
-export interface WithParentDocBlocks {
-  readonly parentDocument: IDocBlocks;
+export interface IBlockManager extends IDocBlocks {
+  /**
+   * Return a parsed TRP.js object corresponding to an API Block
+   *
+   * The return value is *nearly* always some subtype of `ApiBlockWrapper`, except that for form
+   * fields we return the overall `Field` object instead of the `FieldKey`.
+   *
+   * @param blockId Unique ID of the API Block for which a parsed object should be fetched
+   * @param allowBlockTypes Optional restriction on acceptable ApiBlockType(s) to return
+   * @throws If no parsed object exists for the block ID, or it doesn't match `allowBlockTypes`
+   */
+  getItemByBlockId(
+    blockId: string,
+    allowBlockTypes?: ApiBlockType | ApiBlockType[] | null
+  ): IApiBlockWrapper<ApiBlock>;
+  /**
+   * Register a newly parsed ApiBlockWrapper for a particular block ID
+   *
+   * In cases where a BlockManager devolves parsing certain block types down to an intermediate
+   * layer (e.g. QueryInstance parsing related QueryResult blocks) - the lower parser should use
+   * this function to register the created items with the block manager to allow later retrieval.
+   *
+   * @param blockId Unique ID of the API Block for which a parsed object should be registered
+   * @param allowBlockTypes Optional restriction on acceptable ApiBlockType(s) to return
+   * @throws If no parsed object exists for the block ID, or it doesn't match `allowBlockTypes`
+   */
+  registerParsedItem(blockId: string, item: IApiBlockWrapper<ApiBlock>): void;
+}
+
+/**
+ * Interface for objects that track a reference to the Page on which they're defined
+ */
+export interface IWithParentPage<TPage extends IBlockManager> {
+  /**
+   * Parsed TRP.js `Page` that this object is a member of
+   */
+  parentPage: TPage;
+}
+
+/**
+ * Base class for an item parser wrapping Textract `Block` object, that tracks its parent page
+ *
+ * Items derived from this base automatically register themselves with the parent page on construct
+ */
+export class PageHostedApiBlockWrapper<TBlock extends ApiBlock, TPage extends IBlockManager>
+  extends ApiBlockWrapper<TBlock>
+  implements IWithParentPage<TPage>
+{
+  _parentPage: TPage;
+
+  constructor(dict: TBlock, parentPage: TPage) {
+    super(dict);
+    this._parentPage = parentPage;
+    parentPage.registerParsedItem(dict.Id, this);
+  }
+
+  get parentPage(): TPage {
+    return this._parentPage;
+  }
 }

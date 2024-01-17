@@ -17,7 +17,7 @@
  * every use case - so if you're struggling to tune parameters for your own documents, you may find it easier
  * to write custom logic!
  */
-import { ApiResponsePages } from "../../../src/api-models";
+import { ApiResponsePages } from "../../../src/api-models/response";
 import { TextractDocument } from "../../../src/document";
 
 interface ReadingOrderTest {

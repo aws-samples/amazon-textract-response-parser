@@ -1,4 +1,4 @@
-import { ApiBlockType, ApiRelationshipType } from "../../src/api-models/base";
+import { ApiAnswerRelationship, ApiBlockType, ApiRelationshipType } from "../../src/api-models/base";
 import { ApiQueryBlock, ApiQueryResultBlock } from "../../src/api-models/query";
 import { ApiAnalyzeDocumentResponse, ApiResponsePage } from "../../src/api-models/response";
 import { QueryInstance, QueryResult, TextractDocument } from "../../src/document";
@@ -118,7 +118,7 @@ describe("QueryCollection", () => {
 
   it("ranks query answers by descending confidence", () => {
     // Load (a new copy of) the response JSON:
-    const response: ApiAnalyzeDocumentResponse = require("../data/test-query-response.json");
+    const response: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testResponseJson));
     // Since our sample doc only has single-answer queries, synthetically create extra answers for
     // a question:
     const queryBlock = (response.Blocks.filter((b) => b.BlockType === "QUERY") as ApiQueryBlock[])[0];
@@ -148,7 +148,7 @@ describe("QueryCollection", () => {
 
     // Check the TRP behaves as expected:
     // TODO: This test is not ideal at the moment because test doc only has single-answer Qs.
-    const page = new TextractDocument(testResponseJson).pageNumber(1);
+    const page = new TextractDocument(response).pageNumber(1);
     // Cast types to keep IDE happy because it can't tell the following expect() will error on undef
     const query = page.queries.getQueryByQuestion(queryText) as QueryInstance;
     expect(query).toBeTruthy();
@@ -202,18 +202,84 @@ describe("QueryCollection", () => {
 
   it("filters queries without answers", () => {
     // Load (a new copy of) the response JSON:
-    const response: ApiAnalyzeDocumentResponse = require("../data/test-query-response.json");
+    const response: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testResponseJson));
     // Explicitly remove one of the query answers:
     const queryBlocks = response.Blocks.filter((b) => b.BlockType === "QUERY") as ApiQueryBlock[];
     queryBlocks[0].Relationships = [];
     const queryText = queryBlocks[0].Query.Text;
 
     // Check the TRP omits the unanswered query from results when instructed:
-    const page = new TextractDocument(testResponseJson).pageNumber(1);
+    const page = new TextractDocument(response).pageNumber(1);
     expect(page.queries.nQueries).toStrictEqual(queryBlocks.length);
     expect(page.queries.listQueries().length).toStrictEqual(queryBlocks.length);
     expect(page.queries.listQueries({ skipUnanswered: true }).length).toStrictEqual(queryBlocks.length - 1);
     expect(page.queries.searchQueriesByQuestion(queryText).length).toStrictEqual(1);
     expect(page.queries.searchQueriesByQuestion(queryText, { skipUnanswered: true }).length).toStrictEqual(0);
+
+    // Check unanswered queries behave as expected when accessing results:
+    const unansQueries = page.queries.listQueries().filter((q) => q.nResults === 0);
+    expect(unansQueries[0].topResult).toBeUndefined();
+    expect(unansQueries[0].listResultsByConfidence()).toStrictEqual([]);
+  });
+
+  it("warns on and gracefully handles missing answer blocks", () => {
+    // Load (a new copy of) the response JSON:
+    const response: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testResponseJson));
+    // Add a dummy answer to one of the queries:
+    const queryBlocks = response.Blocks.filter((b) => (b.BlockType === "QUERY" && b.Relationships && b.Relationships.filter((r) => r.Type === ApiRelationshipType.Answer).length)) as ApiQueryBlock[];
+    const modifiedRel = queryBlocks[0].Relationships?.filter((r) => r.Type === ApiRelationshipType.Answer)[0] as ApiAnswerRelationship;
+    modifiedRel.Ids.push("DUMMY-BLOCK-1");
+    
+    const consoleWarnMock = jest.spyOn(console, "warn").mockImplementation();
+    // Check the TRP omits the unanswered query from results when instructed:
+    const page = new TextractDocument(response).pageNumber(1);
+    expect(consoleWarnMock).toHaveBeenCalledTimes(1);  // Warn on create
+
+    // No errors when iterating through results:
+    for (const query of page.queries.iterQueries()) {
+      for (const res of query.listResultsByConfidence()) {
+        expect(typeof res.text).toStrictEqual("string");  // No dummy answer entries
+      }
+    }
+    
+    expect(consoleWarnMock).toHaveBeenCalledTimes(1);  // No extra warnings on iteration
+    consoleWarnMock.mockRestore();
+  });
+
+  it("warns on and gracefully handles non-QUERY_RESULT answer blocks", () => {
+    // Load (a new copy of) the response JSON:
+    const response: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testResponseJson));
+    // Add a block of unexpected type to a query's ANSWER relationship:
+    const altBlocks = response.Blocks.filter((b) => b.BlockType === "QUERY") as ApiQueryBlock[];
+    const queryBlocks = response.Blocks.filter((b) => (b.BlockType === "QUERY" && b.Relationships && b.Relationships.filter((r) => r.Type === ApiRelationshipType.Answer).length)) as ApiQueryBlock[];
+    const modifiedRel = queryBlocks[0].Relationships?.filter((r) => r.Type === ApiRelationshipType.Answer)[0] as ApiAnswerRelationship;
+    modifiedRel.Ids.push(altBlocks[0].Id);
+    
+    const consoleWarnMock = jest.spyOn(console, "warn").mockImplementation();
+    // Check the TRP omits the unanswered query from results when instructed:
+    const page = new TextractDocument(response).pageNumber(1);
+    expect(consoleWarnMock).toHaveBeenCalledTimes(1);  // Warn on create
+
+    // No errors when iterating through results:
+    for (const query of page.queries.iterQueries()) {
+      for (const res of query.listResultsByConfidence()) {
+        expect(res.blockType).toStrictEqual(ApiBlockType.QueryResult);  // No dummy answer entries
+      }
+    }
+    
+    expect(consoleWarnMock).toHaveBeenCalledTimes(1);  // No extra warnings on iteration
+    consoleWarnMock.mockRestore();
+  });
+
+  it("summarizes the text of all queries and responses on a page", () => {
+    const page = new TextractDocument(testResponseJson).pageNumber(1);
+    // Cast type to keep IDE happy because it can't tell the following expect() will error on undef
+    const pageQueriesText = page.queries.text;
+    for (const query of page.queries.iterQueries()) {
+      expect(pageQueriesText).toContain(query.text);
+      for (const res of query.listResultsByConfidence()) {
+        expect(pageQueriesText).toContain(res.text);
+      }
+    }
   });
 });

@@ -8,53 +8,32 @@ import { ApiKeyValueSetBlock } from "./api-models/form";
 import {
   aggregate,
   AggregationMethod,
-  ApiBlockWrapper,
   getIterable,
+  IApiBlockWrapper,
+  IBlockManager,
   IDocBlocks,
-  WithParentDocBlocks,
+  IRenderable,
+  PageHostedApiBlockWrapper,
 } from "./base";
-import { SelectionElement, Word, WithWords } from "./content";
-import { Geometry } from "./geometry";
+import { buildWithContent, IWithContent, SelectionElement, WithWords, Word } from "./content";
+import { Geometry, IWithGeometry } from "./geometry";
 
 /**
  * Generic base class for a FieldKey, as the parent Page is not defined here.
  *
  * If you're consuming this library, you probably just want to use `document.ts/FieldKey`.
  */
-export class FieldKeyGeneric<TPage extends WithParentDocBlocks> extends WithWords(
-  ApiBlockWrapper
-)<ApiKeyValueSetBlock> {
+export class FieldKeyGeneric<TPage extends IBlockManager>
+  extends WithWords(PageHostedApiBlockWrapper)<ApiKeyValueSetBlock, TPage>
+  implements IRenderable, IWithGeometry<ApiKeyValueSetBlock, FieldKeyGeneric<TPage>>
+{
   _geometry: Geometry<ApiKeyValueSetBlock, FieldKeyGeneric<TPage>>;
   _parentField: FieldGeneric<TPage>;
 
   constructor(block: ApiKeyValueSetBlock, parentField: FieldGeneric<TPage>) {
-    super(block);
+    super(block, parentField.parentPage);
     this._parentField = parentField;
-    this._words = [];
     this._geometry = new Geometry(block.Geometry, this);
-
-    let childIds: string[] = [];
-    (block.Relationships || []).forEach((rs) => {
-      if (rs.Type == ApiRelationshipType.Child) {
-        childIds = childIds.concat(rs.Ids);
-      }
-    });
-
-    const parentDocument = parentField.parentForm.parentPage.parentDocument;
-    childIds
-      .map((id) => {
-        const block = parentDocument.getBlockById(id);
-        if (!block) {
-          console.warn(`Document missing child block ${id} referenced by field key ${this.id}`);
-        }
-        return block;
-      })
-      .forEach((block) => {
-        if (!block) return; // Already logged warning above
-        if (block.BlockType == ApiBlockType.Word) {
-          this._words.push(new Word(block));
-        }
-      });
   }
 
   get geometry(): Geometry<ApiKeyValueSetBlock, FieldKeyGeneric<TPage>> {
@@ -73,9 +52,6 @@ export class FieldKeyGeneric<TPage extends WithParentDocBlocks> extends WithWord
   get confidence(): number {
     return this._dict.Confidence;
   }
-  get text(): string {
-    return this._words.map((w) => w.text).join(" ");
-  }
 
   /**
    * Aggregate OCR confidence score of the text in this field key
@@ -88,7 +64,7 @@ export class FieldKeyGeneric<TPage extends WithParentDocBlocks> extends WithWord
    */
   getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     return aggregate(
-      this._words.map((w) => w.confidence),
+      this.listWords().map((w) => w.confidence),
       aggMethod
     );
   }
@@ -102,43 +78,20 @@ export class FieldKeyGeneric<TPage extends WithParentDocBlocks> extends WithWord
  *
  * If you're consuming this library, you probably just want to use `document.ts/FieldValue`.
  */
-export class FieldValueGeneric<
-  TPage extends WithParentDocBlocks
-> extends ApiBlockWrapper<ApiKeyValueSetBlock> {
-  _content: Array<SelectionElement | Word>;
+export class FieldValueGeneric<TPage extends IBlockManager>
+  extends buildWithContent<SelectionElement | Word>()(PageHostedApiBlockWrapper)<ApiKeyValueSetBlock, TPage>
+  implements
+    IRenderable,
+    IWithContent<SelectionElement | Word>,
+    IWithGeometry<ApiKeyValueSetBlock, FieldValueGeneric<TPage>>
+{
   _geometry: Geometry<ApiKeyValueSetBlock, FieldValueGeneric<TPage>>;
   _parentField: FieldGeneric<TPage>;
 
   constructor(valueBlock: ApiKeyValueSetBlock, parentField: FieldGeneric<TPage>) {
-    super(valueBlock);
-    this._content = [];
+    super(valueBlock, parentField.parentPage);
     this._parentField = parentField;
     this._geometry = new Geometry(valueBlock.Geometry, this);
-
-    let childIds: string[] = [];
-    (valueBlock.Relationships || []).forEach((rs) => {
-      if (rs.Type == ApiRelationshipType.Child) {
-        childIds = childIds.concat(rs.Ids);
-      }
-    });
-
-    const parentDocument = parentField.parentForm.parentPage.parentDocument;
-    childIds
-      .map((id) => {
-        const block = parentDocument.getBlockById(id);
-        if (!block) {
-          console.warn(`Document missing child block ${id} referenced by field value ${this.id}`);
-        }
-        return block;
-      })
-      .forEach((block) => {
-        if (!block) return; // Already logged warning above
-        if (block.BlockType == ApiBlockType.Word) {
-          this._content.push(new Word(block));
-        } else if (block.BlockType == ApiBlockType.SelectionElement) {
-          this._content.push(new SelectionElement(block));
-        }
-      });
   }
 
   /**
@@ -156,9 +109,6 @@ export class FieldValueGeneric<
   get parentField(): FieldGeneric<TPage> {
     return this._parentField;
   }
-  get text(): string {
-    return this._content.map((c) => ("selectionStatus" in c ? c.selectionStatus : c.text)).join(" ");
-  }
 
   /**
    * Aggregate OCR confidence score of the text in this field value
@@ -171,12 +121,9 @@ export class FieldValueGeneric<
    */
   getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     return aggregate(
-      this._content.map((c) => c.confidence),
+      this.listContent().map((c) => c.confidence),
       aggMethod
     );
-  }
-  listContent(): Array<SelectionElement | Word> {
-    return this._content.slice();
   }
   str(): string {
     return this.text;
@@ -187,8 +134,13 @@ export class FieldValueGeneric<
  * Generic base class for a Field, as the parent Page is not defined here.
  *
  * If you're consuming this library, you probably just want to use `document.ts/Field`.
+ *
+ * TODO: We should probably do away with FieldKeyGeneric and just use this class?
+ * Then it could directly wrap underlying objects
  */
-export class FieldGeneric<TPage extends WithParentDocBlocks> {
+export class FieldGeneric<TPage extends IBlockManager>
+  implements IApiBlockWrapper<ApiKeyValueSetBlock>, IRenderable
+{
   _key: FieldKeyGeneric<TPage>;
   _parentForm: FormGeneric<TPage>;
   _value: FieldValueGeneric<TPage> | null;
@@ -213,9 +165,8 @@ export class FieldGeneric<TPage extends WithParentDocBlocks> {
       );
     }
     if (valueBlockIds.length) {
-      const parentDocument = parentForm.parentPage.parentDocument;
       const valBlockId = valueBlockIds[0];
-      const valBlock = parentDocument.getBlockById(valBlockId);
+      const valBlock = parentForm.parentPage.getBlockById(valBlockId);
       if (!valBlock) {
         console.warn(
           `Document missing child block ${valBlockId} referenced by value for field key ${this.key.id}`
@@ -226,6 +177,10 @@ export class FieldGeneric<TPage extends WithParentDocBlocks> {
     }
   }
 
+  get blockType(): ApiBlockType {
+    // Hoisting required property from key to implement IApiBlockWrapper
+    return this._key.blockType;
+  }
   /**
    * Overall structural (not text) confidence score of the key/value pair detection
    *
@@ -248,6 +203,18 @@ export class FieldGeneric<TPage extends WithParentDocBlocks> {
       return 0;
     }
   }
+  get childBlockIds(): string[] {
+    // Hoisting required property from key to implement IApiBlockWrapper
+    return this._key.childBlockIds;
+  }
+  get dict(): ApiKeyValueSetBlock {
+    // Hoisting required property from key to implement IApiBlockWrapper
+    return this._key.dict;
+  }
+  get id(): string {
+    // Hoisting required property from key to implement IApiBlockWrapper
+    return this._key.id;
+  }
   get key(): FieldKeyGeneric<TPage> {
     return this._key;
   }
@@ -256,6 +223,9 @@ export class FieldGeneric<TPage extends WithParentDocBlocks> {
   }
   get parentPage(): TPage {
     return this._parentForm.parentPage;
+  }
+  get text(): string {
+    return `${this._key.text}: ${this._value?.text || ""}`;
   }
   get value(): FieldValueGeneric<TPage> | null {
     return this._value;
@@ -272,13 +242,20 @@ export class FieldGeneric<TPage extends WithParentDocBlocks> {
    * @returns Aggregated confidence, or null if this field has no content/text
    */
   getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
-    const keyValContent = (this._value ? this._value._content : []).concat(this._key._words);
+    const keyValContent = (this._value ? this._value.listContent() : []).concat(this._key.listWords());
     return aggregate(
       keyValContent.map((c) => c.confidence),
       aggMethod
     );
   }
+
+  relatedBlockIdsByRelType(relType: ApiRelationshipType | ApiRelationshipType[]): string[] {
+    // Hoisting required property from key to implement IApiBlockWrapper
+    return this._key.relatedBlockIdsByRelType(relType);
+  }
+
   str(): string {
+    // TODO: Probably we can do away with `._key?` checks as it should always be set per type moel?
     return `\nField\n==========\nKey: ${this._key ? this._key.str() : ""}\nValue: ${
       this._value ? this._value.str() : ""
     }`;
@@ -290,7 +267,7 @@ export class FieldGeneric<TPage extends WithParentDocBlocks> {
  *
  * If you're consuming this library, you probably just want to use `document.ts/Form`.
  */
-export class FormGeneric<TPage extends WithParentDocBlocks> {
+export class FormGeneric<TPage extends IBlockManager> implements IRenderable {
   _fields: FieldGeneric<TPage>[];
   _fieldsMap: { [keyText: string]: FieldGeneric<TPage> };
   _parentPage: TPage;
@@ -321,6 +298,11 @@ export class FormGeneric<TPage extends WithParentDocBlocks> {
   }
   get parentPage(): TPage {
     return this._parentPage;
+  }
+  get text(): string {
+    return this.listFields()
+      .map((f) => f.text)
+      .join("\n");
   }
 
   getFieldByKey(key: string): FieldGeneric<TPage> | null {
@@ -372,7 +354,9 @@ export class FormGeneric<TPage extends WithParentDocBlocks> {
  * for querying detected fields across all pages of the document at once. In general, results are analyzed
  * and presented in page order.
  */
-export class FormsCompositeGeneric<TPage extends WithParentDocBlocks, TDocument extends IDocBlocks> {
+export class FormsCompositeGeneric<TPage extends IBlockManager, TDocument extends IDocBlocks>
+  implements IRenderable
+{
   _forms: FormGeneric<TPage>[];
   _parentDocument: TDocument;
 
@@ -386,6 +370,9 @@ export class FormsCompositeGeneric<TPage extends WithParentDocBlocks, TDocument 
   }
   get parentDocument(): TDocument {
     return this._parentDocument;
+  }
+  get text(): string {
+    return this._forms.map((f) => f.text).join("\n\n");
   }
 
   getFieldByKey(key: string): FieldGeneric<TPage> | null {

@@ -1,5 +1,6 @@
 import { ApiBlockType } from "../../src/api-models/base";
 import {
+  ApiAnalyzeDocumentResponse,
   ApiAsyncDocumentAnalysis,
   ApiAsyncJobOuputSucceded,
   ApiResponsePage,
@@ -12,7 +13,7 @@ const testFailedJson: ApiResponsePage = require("../data/test-failed-response.js
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testInProgressJson: ApiResponsePage = require("../data/test-inprogress-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const testResponseJson: ApiResponsePage = require("../data/test-response.json");
+const testResponseJson: ApiAnalyzeDocumentResponse = require("../data/test-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testMultiColumnJson: ApiResponsePage = require("../data/test-multicol-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -78,7 +79,7 @@ function checkMultiColReadingOrder(
   expect(ixTest).toStrictEqual(expectedSeq.length);
 }
 
-describe("TextractDocument", () => {
+describe("Basic TextractDocument parsing", () => {
   it("should throw status error on failed async job JSONs (list)", () => {
     expect(() => {
       new TextractDocument([testFailedJson] as ApiResponsePages);
@@ -100,43 +101,54 @@ describe("TextractDocument", () => {
   it("logs a warning when single-page input content has a NextToken", () => {
     // Load a new copy of the response JSON so we can edit it:
     const testJson1: ApiAsyncDocumentAnalysis &
-      ApiAsyncJobOuputSucceded = require("../data/test-response.json");
-    let warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+      ApiAsyncJobOuputSucceded = JSON.parse(JSON.stringify(testResponseJson));
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
 
     // Single page response should not have a truthy NextToken:
     delete testJson1.NextToken; // Should NOT log a warning
     new TextractDocument(testJson1);
     testJson1.NextToken = ""; // Should NOT log a warning
     new TextractDocument(testJson1);
-    expect(warn).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalledWith(expect.stringMatching(/NextToken/));
     testJson1.NextToken = "DUMMY"; // Should log a warning
     new TextractDocument(testJson1);
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenNthCalledWith(1, expect.stringMatching(/NextToken/));
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/NextToken/));
     warn.mockReset();
   });
 
   it("logs a warning when multi-page input content has a NextToken in the final page", () => {
     // Load a new copies of the response JSON so we can edit them:
     const testJson1: ApiAsyncDocumentAnalysis &
-      ApiAsyncJobOuputSucceded = require("../data/test-response.json");
+      ApiAsyncJobOuputSucceded = JSON.parse(JSON.stringify(testResponseJson));
     const testJson2: ApiAsyncDocumentAnalysis &
-      ApiAsyncJobOuputSucceded = require("../data/test-response.json");
+      ApiAsyncJobOuputSucceded = JSON.parse(JSON.stringify(testResponseJson));
 
     let warn = jest.spyOn(console, "warn").mockImplementation(() => {});
 
     testJson1.NextToken = "DUMMY";
     delete testJson2.NextToken;
     new TextractDocument([testJson1, testJson2]); // Should NOT log a warning
-    expect(warn).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalledWith(expect.stringMatching(/NextToken/));
 
     testJson2.NextToken = "DUMMY";
     new TextractDocument([testJson1, testJson2]); // Should log a warning
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenNthCalledWith(1, expect.stringMatching(/NextToken/));
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/NextToken/));
     warn.mockReset();
   });
 
+  it("registers parsed items for all Blocks in the document", () => {
+    const baseDoc = new TextractDocument(testResponseJson);
+    expect(
+      () => testResponseJson.Blocks.forEach((block) => {
+        // TODO: Remove this TEMPORARY restriction once TABLE_FOOTER, TABLE_TITLE are supported:
+        if (["TABLE_FOOTER", "TABLE_TITLE"].indexOf(block.BlockType) >= 0) return;
+        expect(baseDoc.getItemByBlockId(block.Id)).toBeTruthy()
+      })
+    ).not.toThrow();
+  });
+});
+
+describe("TextractDocument", () => {
   it("loads and navigates pages", () => {
     const doc = new TextractDocument(testResponseJson);
     expect(doc.nPages).toStrictEqual(1);

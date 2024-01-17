@@ -1,4 +1,15 @@
-import { AggregationMethod, aggregate, argMax, modalAvg } from "../../src/base";
+import { ApiBlockType, ApiRelationshipType } from "../../src/api-models/base";
+import { ApiBlock } from "../../src/api-models/document";
+import { ApiDocumentMetadata } from "../../src/api-models/response";
+import {
+  AggregationMethod,
+  ApiBlockWrapper,
+  DocumentMetadata,
+  aggregate,
+  argMax,
+  getIterable,
+  modalAvg,
+} from "../../src/base";
 
 // Precision limit for testing summary statistics
 const EPSILON = 1e-15;
@@ -64,6 +75,27 @@ describe("aggregate", () => {
     expect(aggregate([0, 1, 1, 1, 2, 2, 2, 2], AggregationMethod.Mode)).toStrictEqual(2);
   });
 
+  it("works with iterables", () => {
+    expect(
+      aggregate(
+        getIterable(() => [1, 0, 2, 10, 5, 8, 7]),
+        AggregationMethod.Min
+      )
+    ).toStrictEqual(0);
+    expect(
+      aggregate(
+        getIterable(() => [2, 4, 4, 5, 7, 100, 100.001]),
+        AggregationMethod.Mode
+      )
+    ).toStrictEqual(4);
+    expect(
+      aggregate(
+        getIterable(() => [-5, -1, 0, 1, 5]),
+        AggregationMethod.Mean
+      )
+    ).toStrictEqual(0);
+  });
+
   it("throws an error for unsupported aggregation types", () => {
     expect(() => aggregate([1, 2, 3], "foobar" as AggregationMethod)).toThrow("Unsupported aggMethod");
   });
@@ -82,5 +114,56 @@ describe("argMax", () => {
       maxIndex: 0,
     });
     expect(argMax([8, -6, NaN, 13, NaN, 3.14])).toStrictEqual({ maxValue: 13, maxIndex: 3 });
+  });
+});
+
+describe("documentMetadata", () => {
+  it("fetches number of pages in document", () => {
+    const docMetaDict = { Pages: 42 };
+    const docMeta = new DocumentMetadata(docMetaDict);
+    expect(docMeta.dict).toBe(docMetaDict);
+    expect(docMeta.nPages).toStrictEqual(docMetaDict.Pages);
+  });
+
+  it("defaults missing page count to 0", () => {
+    expect(new DocumentMetadata({} as ApiDocumentMetadata).nPages).toStrictEqual(0);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(new DocumentMetadata(undefined as any).nPages).toStrictEqual(0);
+  });
+});
+
+describe("ApiBlockWrapper", () => {
+  it("fetches related blocks filtered by one or more relationship types", () => {
+    const wrapper = new ApiBlockWrapper({
+      BlockType: ApiBlockType.Line,
+      Id: "DUMMY-1",
+      Relationships: [
+        {
+          Ids: ["DUMMY-2", "DUMMY-3"],
+          Type: ApiRelationshipType.Answer,
+        },
+        {
+          Ids: ["DUMMY-4", "DUMMY-5", "DUMMY-6"],
+          Type: ApiRelationshipType.Child,
+        },
+        {
+          Ids: ["DUMMY-7", "DUMMY-8"],
+          Type: ApiRelationshipType.ComplexFeatures,
+        },
+        {
+          Ids: ["DUMMY-9", "DUMMY-0"],
+          Type: ApiRelationshipType.Child,
+        },
+      ],
+    } as unknown as ApiBlock);
+    expect(wrapper.childBlockIds).toStrictEqual(["DUMMY-4", "DUMMY-5", "DUMMY-6", "DUMMY-9", "DUMMY-0"]);
+    expect(wrapper.relatedBlockIdsByRelType(ApiRelationshipType.ComplexFeatures)).toStrictEqual([
+      "DUMMY-7",
+      "DUMMY-8",
+    ]);
+    expect(
+      wrapper.relatedBlockIdsByRelType([ApiRelationshipType.ComplexFeatures, ApiRelationshipType.Answer])
+    ).toStrictEqual(["DUMMY-2", "DUMMY-3", "DUMMY-7", "DUMMY-8"]);
+    expect(wrapper.relatedBlockIdsByRelType(ApiRelationshipType.MergedCell)).toStrictEqual([]);
   });
 });

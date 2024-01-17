@@ -8,7 +8,6 @@ import { ApiLineBlock } from "./api-models/content";
 import { ApiBlock, ApiPageBlock } from "./api-models/document";
 import { ApiKeyValueEntityType, ApiKeyValueSetBlock } from "./api-models/form";
 import { ApiQueryBlock } from "./api-models/query";
-import { ApiCellBlock, ApiMergedCellBlock } from "./api-models/table";
 import {
   ApiDocumentMetadata,
   ApiResponsePage,
@@ -22,13 +21,21 @@ import {
   getIterable,
   IDocBlocks,
   modalAvg,
-  WithParentDocBlocks,
+  IBlockManager,
+  IRenderable,
+  IApiBlockWrapper,
 } from "./base";
-import { LineGeneric } from "./content";
-import { FieldGeneric, FieldKeyGeneric, FieldValueGeneric, FormsCompositeGeneric, FormGeneric } from "./form";
+import { LineGeneric, SelectionElement, Word } from "./content";
+import {
+  FieldGeneric,
+  FieldKeyGeneric,
+  FieldValueGeneric,
+  FormsCompositeGeneric,
+  FormGeneric,
+} from "./form";
 import { BoundingBox, Geometry } from "./geometry";
 import { QueryInstanceCollectionGeneric, QueryInstanceGeneric, QueryResultGeneric } from "./query";
-import { CellBaseGeneric, CellGeneric, MergedCellGeneric, RowGeneric, TableGeneric } from "./table";
+import { CellGeneric, MergedCellGeneric, RowGeneric, TableGeneric } from "./table";
 
 // Direct Exports:
 // We don't directly export the *Generic classes here, and instead define concrete alternatives below once
@@ -104,11 +111,26 @@ export interface HeaderFooterSegmentModelParams {
   minGap?: number;
 }
 
-export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDocBlocks {
+export class Page
+  extends ApiBlockWrapper<ApiPageBlock>
+  implements IBlockManager, IRenderable
+{
   _blocks: ApiBlock[];
   _content: Array<LineGeneric<Page> | TableGeneric<Page> | FieldGeneric<Page>>;
   _form: FormGeneric<Page>;
   _geometry: Geometry<ApiPageBlock, Page>;
+  _itemsByBlockId: {
+    [blockId: string]:
+      | LineGeneric<Page>
+      | SelectionElement
+      | Word
+      | FieldGeneric<Page>
+      | FieldValueGeneric<Page>
+      | QueryInstanceGeneric<Page>
+      | QueryResultGeneric<Page>
+      | TableGeneric<Page>
+      | CellGeneric<Page>;
+  };
   _lines: LineGeneric<Page>[];
   _parentDocument: TextractDocument;
   _queries: QueryInstanceCollectionGeneric<Page>;
@@ -125,6 +147,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
     this._lines = [];
     this._tables = [];
     this._form = new FormGeneric<Page>([], this);
+    this._itemsByBlockId = {};
     this._queries = new QueryInstanceCollectionGeneric<Page>([], this);
     // Parse the content:
     this._parse(blocks);
@@ -132,6 +155,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
 
   _parse(blocks: ApiBlock[]): void {
     this._content = [];
+    this._itemsByBlockId = {};
     this._lines = [];
     this._tables = [];
     const formKeyBlocks: ApiKeyValueSetBlock[] = [];
@@ -142,21 +166,75 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
         const l = new LineGeneric(item, this);
         this._lines.push(l);
         this._content.push(l);
-      } else if (item.BlockType == ApiBlockType.Table) {
-        const t = new TableGeneric(item, this);
-        this._tables.push(t);
-        this._content.push(t);
-      } else if (item.BlockType == ApiBlockType.KeyValueSet) {
+        this._itemsByBlockId[l.id] = l;
+      } else if (item.BlockType === ApiBlockType.KeyValueSet) {
         if (item.EntityTypes.indexOf(ApiKeyValueEntityType.Key) >= 0) {
           formKeyBlocks.push(item);
         }
-      } else if (item.BlockType == ApiBlockType.Query) {
+      } else if (item.BlockType === ApiBlockType.Query) {
         queryBlocks.push(item);
+      } else if (item.BlockType === ApiBlockType.SelectionElement) {
+        const s = new SelectionElement(item);
+        this._itemsByBlockId[s.id] = s;
+      } else if (item.BlockType === ApiBlockType.Table) {
+        const t = new TableGeneric(item, this);
+        this._tables.push(t);
+        this._content.push(t);
+        this._itemsByBlockId[t.id] = t;
+      } else if (item.BlockType === ApiBlockType.Word) {
+        const w = new Word(item);
+        this._itemsByBlockId[w.id] = w;
       }
     });
 
     this._form = new FormGeneric<Page>(formKeyBlocks, this);
+    this._form.listFields().forEach((field) => {
+      this._itemsByBlockId[field.key.id] = field;
+      if (field.value) this._itemsByBlockId[field.value.id] = field.value;
+    });
     this._queries = new QueryInstanceCollectionGeneric<Page>(queryBlocks, this);
+    this._queries.listQueries().forEach((query) => {
+      this._itemsByBlockId[query.id] = query;
+      query.listResultsByConfidence().forEach((result) => {
+        this._itemsByBlockId[result.id] = result;
+      });
+    });
+  }
+
+  getBlockById(blockId: string): ApiBlock | undefined {
+    return this._parentDocument.getBlockById(blockId);
+  }
+
+  getItemByBlockId(
+    blockId: string,
+    allowBlockTypes?: ApiBlockType | ApiBlockType[] | null
+  ):
+    | Page
+    | LineGeneric<Page>
+    | SelectionElement
+    | Word
+    | FieldGeneric<Page>
+    | FieldValueGeneric<Page>
+    | QueryInstanceGeneric<Page>
+    | QueryResultGeneric<Page>
+    | TableGeneric<Page>
+    | CellGeneric<Page> {
+    if (blockId === this.id) return this;
+    const result = this._itemsByBlockId[blockId];
+    if (!result) {
+      throw new Error(`Missing parser item for block ID ${blockId}`);
+    }
+    if (allowBlockTypes) {
+      const typeMatch = Array.isArray(allowBlockTypes)
+        ? allowBlockTypes.indexOf(result.blockType) >= 0
+        : allowBlockTypes === result.blockType;
+      if (!typeMatch) {
+        throw new Error(
+          `Parser item for block ID ${blockId} had BlockType ${result.blockType} (expected ${allowBlockTypes})`
+        );
+      }
+    }
+    return result;
   }
 
   /**
@@ -739,9 +817,9 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
   }
 
   /**
-   * Iterate through the lines on the page in raw Textract order
+   * Iterate through the text lines on the page in raw Textract order
    *
-   * For reading order, see getLineClustersInReadingOrder instead.
+   * For reading order, see `.layout` or `.getLineClustersInReadingOrder` instead.
    *
    * @example
    * for (const line of page.iterLines()) {
@@ -754,6 +832,9 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
 
   /**
    * Iterate through the tables on the page
+   *
+   * If TABLES analysis was not enabled, the iterable will be empty.
+   *
    * @example
    * for (const table of page.iterTables()) {
    *   console.log(table.str());
@@ -765,6 +846,15 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
     return getIterable(() => this._tables);
   }
 
+  /**
+   * Fetch a particular parsed `Line` of text on the page by its index in the Textract result
+   *
+   * For reading order, see `.layout` or `.getLineClustersInReadingOrder` instead.
+   *
+   * @param ix 0-based index of the parsed Line to fetch
+   * @returns The item at position `ix` in this page's list of text lines (in raw Textract order)
+   * @throws If `ix` is less than 0, or gte than the number of text lines on the page
+   */
   lineAtIndex(ix: number): LineGeneric<Page> {
     if (ix < 0 || ix >= this._lines.length) {
       throw new Error(`Line index ${ix} must be >=0 and <${this._lines.length}`);
@@ -772,18 +862,62 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
     return this._lines[ix];
   }
 
+  /**
+   * Fetch a snapshot of the list of all API `Block` items owned by this PAGE
+   *
+   * @returns (A shallow copy of) the list of raw `Block` objects
+   */
   listBlocks(): ApiBlock[] {
     return this._blocks.slice();
   }
 
+  /**
+   * Fetch a snapshot of the list of all text lines on the page, in raw Textract order
+   *
+   * For reading order, see `.layout` or `.getLineClustersInReadingOrder` instead.
+   *
+   * @returns (A shallow copy of) the list of parsed `Line`s present on this page
+   */
   listLines(): LineGeneric<Page>[] {
     return this._lines.slice();
   }
 
+  /**
+   * Fetch a snapshot of the list of Tables present on this page
+   *
+   * If TABLES analysis was not enabled, will return empty list `[]`.
+   *
+   * @returns (A shallow copy of) the list of parsed `Table`s present on this page
+   */
   listTables(): TableGeneric<Page>[] {
     return this._tables.slice();
   }
 
+  registerParsedItem(
+    blockId: string,
+    item:
+      | LineGeneric<Page>
+      | SelectionElement
+      | Word
+      | FieldGeneric<Page>
+      | FieldValueGeneric<Page>
+      | QueryInstanceGeneric<Page>
+      | QueryResultGeneric<Page>
+      | TableGeneric<Page>
+      | CellGeneric<Page>
+  ): void {
+    this._itemsByBlockId[blockId] = item;
+  }
+
+  /**
+   * Fetch a particular parsed `Table` on the page by its index in the Textract result
+   *
+   * (See also `.iterTables()`, `.listTables()`)
+   *
+   * @param ix 0-based index of the Table to fetch
+   * @returns The item at position `ix` in this page's list of tables
+   * @throws If `ix` is less than 0, or gte than the number of tables on the page
+   */
   tableAtIndex(ix: number): TableGeneric<Page> {
     if (ix < 0 || ix >= this._tables.length) {
       throw new Error(`Table index ${ix} must be >=0 and <${this._tables.length}`);
@@ -791,15 +925,32 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
     return this._tables[ix];
   }
 
+  /**
+   * The Textract Forms analysis result container for this page (even if the feature was disabled)
+   *
+   * For details see: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+   */
   get form(): FormGeneric<Page> {
     return this._form;
   }
+  /**
+   * Shape & position of the page relative to the input image.
+   *
+   * This is typically the whole [0,0]-[1,1] box (esp for digital documents e.g. PDFs), or
+   * something close to it (for photographs of receipts, etc).
+   */
   get geometry(): Geometry<ApiPageBlock, Page> {
     return this._geometry;
   }
+  /**
+   * Number of text LINE blocks present in the page
+   */
   get nLines(): number {
     return this._lines.length;
   }
+  /**
+   * Number of TABLEs present in the page (0 if Tables analysis was not enabled)
+   */
   get nTables(): number {
     return this._tables.length;
   }
@@ -815,16 +966,26 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
       return pageIndex + 1;
     }
   }
+  /**
+   * Parsed document object to which this individual page belongs
+   */
   get parentDocument(): TextractDocument {
     return this._parentDocument;
   }
 
   /**
-   * Amazon Textract Queries on this page
+   * The Textract Queries analysis result container for this page (even if the feature was disabled)
+   *
+   * For details see: https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html
    */
   get queries(): QueryInstanceCollectionGeneric<Page> {
     return this._queries;
   }
+  /**
+   * Property to simply extract all text on the page
+   *
+   * This is calculated by concatenating the text of all the page's LINE Blocks.
+   */
   get text(): string {
     return this._lines.map((l) => l.text).join("\n");
   }
@@ -850,17 +1011,13 @@ export class QueryResult extends QueryResultGeneric<Page> {}
 
 // table.ts concrete Page-dependent types:
 export class Cell extends CellGeneric<Page> {}
-export abstract class CellBase<T extends ApiCellBlock | ApiMergedCellBlock> extends CellBaseGeneric<
-  T,
-  Page
-> {}
 export class MergedCell extends MergedCellGeneric<Page> {}
 export class Row extends RowGeneric<Page> {}
 export class Table extends TableGeneric<Page> {}
 
 export class TextractDocument
   extends ApiObjectWrapper<ApiResponsePage & ApiResponseWithContent>
-  implements IDocBlocks
+  implements IDocBlocks, IRenderable
 {
   _blockMap: { [blockId: string]: ApiBlock };
   _form: FormsCompositeGeneric<Page, TextractDocument>;
@@ -1024,16 +1181,58 @@ export class TextractDocument
     };
   }
 
+  /**
+   * The Textract Forms analysis result container for all K-Vs across the document
+   *
+   * This object is still created (but will be empty) if the Textract FORMS analysis was disabled
+   *
+   * For details see: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+   */
   get form(): FormsComposite {
     return this._form;
   }
 
+  /**
+   * The number of pages present in the document
+   */
   get nPages(): number {
     return this._pages.length;
   }
 
+  /**
+   * Property to simply extract the document content as flat text
+   *
+   * Page contents are separated by 4 newlines
+   */
+  get text(): string {
+    return this._pages.map((page) => page.text).join("\n\n\n\n");
+  }
+
   getBlockById(blockId: string): ApiBlock | undefined {
     return this._blockMap && this._blockMap[blockId];
+  }
+
+  /**
+   * Return a parsed TRP.js object corresponding to an API Block
+   *
+   * At the document level, this works by querying each `Page` in turn
+   *
+   * @param blockId Unique ID of the API Block for which a parsed object should be fetched
+   * @param allowBlockTypes Optional restriction on acceptable ApiBlockType(s) to return
+   * @throws If no parsed object exists for the block ID, or it doesn't match `allowBlockTypes`
+   */
+  getItemByBlockId(
+    blockId: string,
+    allowBlockTypes?: ApiBlockType | ApiBlockType[] | null
+  ): IApiBlockWrapper<ApiBlock> {
+    for (const page of this._pages) {
+      try {
+        return page.getItemByBlockId(blockId, allowBlockTypes);
+      } catch {
+        // Throws when no block present - so ignore this and try next page
+      }
+    }
+    throw new Error(`No parser item found on any page, for block ID ${blockId}`);
   }
 
   /**
@@ -1049,14 +1248,29 @@ export class TextractDocument
     return getIterable(() => this._pages);
   }
 
+  /**
+   * Fetch a snapshot of the list of all API `Block` items owned by this PAGE
+   *
+   * @returns (A shallow copy of) the list of raw `Block` objects
+   */
   listBlocks(): ApiBlock[] {
     return this._dict.Blocks.slice();
   }
 
+  /**
+   * Fetch a snapshot of the list of parsed `Page`s in this document object
+   *
+   * @returns (A shallow copy of) the list of parsed `Page` objects
+   */
   listPages(): Page[] {
     return this._pages.slice();
   }
 
+  /**
+   * Fetch a parsed `Page` of the document by 1-based page number
+   * @param pageNum 1-based index of the target page to fetch
+   * @throws If `pageNum` is less than 1, or greater than or equal to `doc.nPages``
+   */
   pageNumber(pageNum: number): Page {
     if (!(pageNum >= 1 && pageNum <= this._pages.length)) {
       throw new Error(`pageNum ${pageNum} must be between 1 and ${this._pages.length}`);

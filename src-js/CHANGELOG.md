@@ -1,9 +1,14 @@
 # Changelog
 
 ## In Development (targeting 0.4.0)
-### Changed
+### Added
 - More complete and systematically structured exposure of sub-module constructs for in-browser IIFE users, who previously couldn't access any constructs that weren't explicitly re-exported at top level. The global `trp` object should now mirror the module file structure e.g. can access `trp.api.content.ApiTextType`.
+### Changed
+- **(BREAKING)** Previously-exposed `CellBase` class is removed, due to refactoring `Cell` and `MergedCell` to depend more on composable mixins and less on fragile hierarchy of (now internal) `CellBaseGeneric`. Use `Cell | MergedCell` instead for typing.
+- `Page`s now explicitly track parsed objects in their scope by block ID, which reduced state tracking requirements for other objects (like `Line`, `Query`) as we work toward supporting more edit/mutation operations. See `IBlockManager.registerParsedItem()` and `.getItemByBlockId()` for details. This may result in some minor warning & error behavior changes when handling invalid or incomplete Textract JSON.
 - Split out `api-models/document` types to better align with library components, and made some minor typing updates.
+### Fixed
+- `Table.nCells` now correctly reflects merged cells (instead of just counting all sub-cells).
 ### Deprecated
 - Several top-level **re-exports** now tagged as deprecated and will be removed in future: Prefer imports from the underlying sub-modules.
 

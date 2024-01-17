@@ -102,10 +102,6 @@ export {
   /**
    * @deprecated Please import direct from `document` submodule (or use `trp.document` in IIFE)
    */
-  CellBase,
-  /**
-   * @deprecated Please import direct from `document` submodule (or use `trp.document` in IIFE)
-   */
   MergedCell,
   /**
    * @deprecated Please import direct from `document` submodule (or use `trp.document` in IIFE)
@@ -115,9 +111,6 @@ export {
    * @deprecated Please import direct from `document` submodule (or use `trp.document` in IIFE)
    */
   Table,
-  /**
-   * @deprecated Please import direct from `document` submodule (or use `trp.document` in IIFE)
-   */
   TextractDocument,
   /**
    * @deprecated Please import direct from `document` submodule (or use `trp.document` in IIFE)
@@ -151,9 +144,6 @@ export {
    * @deprecated Please import direct from `expense` submodule (or use `trp.expense` in IIFE)
    */
   ExpenseDocument,
-  /**
-   * @deprecated Please import direct from `expense` submodule (or use `trp.expense` in IIFE)
-   */
   TextractExpense,
 } from "./expense";
 
@@ -181,9 +171,6 @@ export {
    * @deprecated Please import direct from `id` submodule (or use `trp.id` in IIFE)
    */
   IdDocument,
-  /**
-   * @deprecated Please import direct from `id` submodule (or use `trp.id` in IIFE)
-   */
   TextractIdentity,
 } from "./id";
 

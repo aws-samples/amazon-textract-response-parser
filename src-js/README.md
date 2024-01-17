@@ -26,8 +26,10 @@ const { TextractDocument, TextractIdentity } = require("amazon-textract-response
 <script src="https://unpkg.com/amazon-textract-response-parser@x.y.z"></script>
 
 <script>
-  // Use via global `trp` object:
+  // Use top-level classes via global `trp` object:
   var doc = new trp.TextractDocument(...);
+  // Other components will be under sub-modules:
+  var avg = trp.base.aggregate([1, 2, 3], trp.base.AggregationMethod.Mean);
 </script>
 ```
 
@@ -65,7 +67,7 @@ If you're using TypeScript, you may need to **typecast** your input JSON while l
 > The `ApiResponsePage` input interface exposed and expected by this module is subtly different from - but functionally compatible with - the output types produced by the [AWS SDK for JavaScript Textract Client](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-textract/index.html).
 
 ```typescript
-import { ApiAnalyzeExpenseResponse } from "amazon-textract-response-parser";
+import { ApiAnalyzeExpenseResponse } from "amazon-textract-response-parser/api-models/response";
 import { TextractClient, AnalyzeExpenseCommand } from "@aws-sdk/client-textract";
 const textract = new TextractClient({});
 
@@ -205,7 +207,10 @@ The `Table.confidence`, `Row.getConfidence()` and `Cell.confidence` scores refle
 Use `Table.tableType` and `Cell.hasEntityTypes()` to explore the more advanced [entity types](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html) extracted by Amazon Textract: For example column headers, titles, footers, and summaries:
 
 ```typescript
-import { ApiTableCellEntityType, ApiTableEntityType } from "amazon-textract-response-parser/api-models";
+import {
+  ApiTableCellEntityType,
+  ApiTableEntityType,
+} from "amazon-textract-response-parser/api-models/table";
 
 const isSemiStruct = table.tableType === ApiTableEntityType.SemiStructuredTable;
 const colHeaders = table.rowAt(1).listCells()

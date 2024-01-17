@@ -127,7 +127,7 @@ export interface ApiPageBlock extends ApiBlockBase {
 
 /**
  * Type describing actual 'Block' objects returnable by Textract general document analysis
- * 
+ *
  * See: https://docs.aws.amazon.com/textract/latest/dg/API_Block.html
  */
 export type ApiBlock =

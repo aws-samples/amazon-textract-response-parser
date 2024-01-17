@@ -7,7 +7,7 @@
 // Local Dependencies:
 import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
 import { ApiQueryBlock, ApiQueryResultBlock } from "./api-models/query";
-import { ApiBlockWrapper, argMax, getIterable, WithParentDocBlocks } from "./base";
+import { argMax, getIterable, IBlockManager, IRenderable, PageHostedApiBlockWrapper } from "./base";
 import { Geometry } from "./geometry";
 
 /**
@@ -15,14 +15,15 @@ import { Geometry } from "./geometry";
  *
  * If you're consuming this library, you probably just want to use `document.ts/QueryResult`.
  */
-export class QueryResultGeneric<
-  TPage extends WithParentDocBlocks
-> extends ApiBlockWrapper<ApiQueryResultBlock> {
+export class QueryResultGeneric<TPage extends IBlockManager>
+  extends PageHostedApiBlockWrapper<ApiQueryResultBlock, TPage>
+  implements IRenderable
+{
   _geometry?: Geometry<ApiQueryResultBlock, QueryResultGeneric<TPage>>;
   _parentQuery: QueryInstanceGeneric<TPage>;
 
   constructor(block: ApiQueryResultBlock, parentQuery: QueryInstanceGeneric<TPage>) {
-    super(block);
+    super(block, parentQuery.parentPage);
     this._geometry = block.Geometry ? new Geometry(block.Geometry, this) : undefined;
     this._parentQuery = parentQuery;
   }
@@ -39,9 +40,6 @@ export class QueryResultGeneric<
   get parentQuery(): QueryInstanceGeneric<TPage> {
     return this._parentQuery;
   }
-  get parentPage(): TPage {
-    return this._parentQuery._parentPage;
-  }
   get text(): string {
     return this._dict.Text;
   }
@@ -56,31 +54,28 @@ export class QueryResultGeneric<
  *
  * If you're consuming this library, you probably just want to use `document.ts/QueryResult`.
  */
-export class QueryInstanceGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWrapper<ApiQueryBlock> {
-  _parentPage: TPage;
-  _results: QueryResultGeneric<TPage>[];
-
+export class QueryInstanceGeneric<TPage extends IBlockManager>
+  extends PageHostedApiBlockWrapper<ApiQueryBlock, TPage>
+  implements IRenderable
+{
   constructor(block: ApiQueryBlock, parentPage: TPage) {
-    super(block);
-
-    this._results = [];
+    super(block, parentPage);
     this._parentPage = parentPage;
-    const parentDocument = parentPage.parentDocument;
-    (block.Relationships || []).forEach((rs) => {
-      if (rs.Type == ApiRelationshipType.Answer) {
-        rs.Ids.forEach((id) => {
-          const ansBlock = parentDocument.getBlockById(id);
-          if (!ansBlock) {
-            // Leave missing block warnings up to parent
-            return;
-          } else if (ansBlock.BlockType !== ApiBlockType.QueryResult) {
-            console.warn(
-              `Expected block ${id} to be of type ${ApiBlockType.QueryResult} as referenced by QUERY block ${block.Id}, but got type: ${ansBlock.BlockType}`
-            );
-          } else {
-            this._results.push(new QueryResultGeneric(ansBlock, this));
-          }
-        });
+
+    // Parsing of QUERY_RESULT objects is handled by this QueryInstanceGeneric:
+    this.relatedBlockIdsByRelType(ApiRelationshipType.Answer).forEach((id) => {
+      const ansBlock = parentPage.getBlockById(id);
+      if (!ansBlock) {
+        console.warn(
+          `Answer block ${id} referenced by QUERY block ${block.Id} is missing and will be skipped`
+        );
+      } else if (ansBlock.BlockType !== ApiBlockType.QueryResult) {
+        console.warn(
+          `Expected block ${id} to be of type ${ApiBlockType.QueryResult} as referenced by QUERY block ${block.Id}, but got type: ${ansBlock.BlockType}`
+        );
+      } else {
+        // Automatically self-registers with the parent block manager (page):
+        new QueryResultGeneric(ansBlock, this);
       }
     });
   }
@@ -92,10 +87,7 @@ export class QueryInstanceGeneric<TPage extends WithParentDocBlocks> extends Api
     return this._dict.Query.Alias;
   }
   get nResults(): number {
-    return this._results.length;
-  }
-  get parentPage(): TPage {
-    return this._parentPage;
+    return this._listResults().length;
   }
 
   /**
@@ -109,19 +101,39 @@ export class QueryInstanceGeneric<TPage extends WithParentDocBlocks> extends Api
    * Retrieve the top result by confidence score, if any are available.
    */
   get topResult(): QueryResultGeneric<TPage> | undefined {
-    const top = argMax(this._results.map((r) => r.confidence));
+    const results = this._listResults();
+    const top = argMax(results.map((r) => r.confidence));
     if (top.maxIndex < 0) return undefined;
-    return this._results[top.maxIndex];
+    return results[top.maxIndex];
+  }
+
+  /**
+   * List this query instance's results, in raw Amazon Textract response order
+   *
+   * Any invalid relationship block IDs will be skipped from the list (no logs)
+   */
+  protected _listResults(): QueryResultGeneric<TPage>[] {
+    return this.relatedBlockIdsByRelType(ApiRelationshipType.Answer)
+      .map((id) => {
+        try {
+          return this.parentPage.getItemByBlockId(id, ApiBlockType.QueryResult) as QueryResultGeneric<TPage>;
+        } catch {
+          return null as unknown as QueryResultGeneric<TPage>;
+        }
+      })
+      .filter((obj) => obj);
   }
 
   /**
    * List this query instance's results, sorted from the most to least confident.
    */
   listResultsByConfidence(): QueryResultGeneric<TPage>[] {
-    return this._results.slice().sort(
-      // Negative -> a sorted before b
-      (a, b) => b.confidence - a.confidence
-    );
+    return this._listResults()
+      .slice()
+      .sort(
+        // Negative -> a sorted before b
+        (a, b) => b.confidence - a.confidence
+      );
   }
 
   /**
@@ -149,7 +161,7 @@ export interface IFilterQueryOpts {
  *
  * If you're consuming this library, you probably just want to use `document.ts/QueryInstanceCollection`.
  */
-export class QueryInstanceCollectionGeneric<TPage extends WithParentDocBlocks> {
+export class QueryInstanceCollectionGeneric<TPage extends IBlockManager> implements IRenderable {
   _queries: QueryInstanceGeneric<TPage>[];
   _parentPage: TPage;
 
@@ -167,6 +179,21 @@ export class QueryInstanceCollectionGeneric<TPage extends WithParentDocBlocks> {
   }
   get parentPage(): TPage {
     return this._parentPage;
+  }
+
+  /**
+   * Return the text content of all queries and their results, ordered by confidence score
+   */
+  get text(): string {
+    return this._queries
+      .map(
+        (query) =>
+          `${query.text}\n${query
+            .listResultsByConfidence()
+            .map((r) => r.text)
+            .join("\n")}`
+      )
+      .join("\n\n");
   }
 
   /**

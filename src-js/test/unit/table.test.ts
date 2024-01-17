@@ -15,6 +15,30 @@ const testTableMergedCellsJson: ApiResponsePage = require("../data/table-example
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testResponseJson: ApiResponsePage = require("../data/test-response.json");
 
+describe("MergedCell", () => {
+  it("links through to sub-cells", () => {
+    const doc = new TextractDocument(testTableMergedCellsJson);
+    expect(doc.pageNumber(1).nTables).toStrictEqual(1);
+
+    const table = doc.pageNumber(1).listTables()[0];
+
+    // Horizontal merge:
+    const horzMergedCell = table.cellAt(2, 1) as MergedCellGeneric<Page>;
+    expect(horzMergedCell.blockType).toStrictEqual(ApiBlockType.MergedCell);
+    expect(horzMergedCell.nSubCells).toStrictEqual(4);
+    expect(horzMergedCell.text).toStrictEqual("Previous Balance");
+    const horzSubCells = horzMergedCell.listSubCells();
+    expect(horzSubCells.length).toStrictEqual(horzMergedCell.nSubCells);
+    let nSubCells = 0;
+    for (const subCell of horzMergedCell.iterSubCells()) {
+      expect(subCell).toBe(horzSubCells[nSubCells]);
+      expect("Previous Balance".indexOf(subCell.text)).toBeGreaterThanOrEqual(0);
+      ++nSubCells;
+    }
+    expect(nSubCells).toStrictEqual(horzMergedCell.nSubCells);
+  });
+});
+
 describe("Table", () => {
   it("loads and navigates basic table properties", () => {
     const doc = new TextractDocument(testResponseJson);
@@ -60,7 +84,7 @@ describe("Table", () => {
     }
 
     const consoleWarnMock = jest.spyOn(console, "warn").mockImplementation();
-    let doc = new TextractDocument(responseCopy);
+    const doc = new TextractDocument(responseCopy);
     // Should have warned once per inserted dummy block ID:
     expect(consoleWarnMock).toHaveBeenCalledTimes(nFakeCells + nFakeMergedCells);
     consoleWarnMock.mockRestore();
@@ -75,7 +99,40 @@ describe("Table", () => {
     }).not.toThrow();
   });
 
-  it("gracefully handles table cells with missing referenced content blocks", () => {
+  it("warns on unknown Relationship types in TABLE blocks", () => {
+    // Create a clone to avoid messing up the shared imported object:
+    const responseCopy: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testTableMergedCellsJson));
+    // Prepend a non-existent block ID to every table's list of cells and list of merged_cells:
+    const tableBlocks = responseCopy.Blocks.filter((b) => b.BlockType === "TABLE") as ApiTableBlock[];
+    const dummyRel = {
+      Ids: ["DUMMY-1", "DUMMY-2"],
+      Type: "FAKE_RELATIONSHIP_TYPE" as ApiRelationshipType.Child,
+    };
+    tableBlocks[0].Relationships.push(dummyRel);
+
+    const consoleWarnMock = jest.spyOn(console, "warn").mockImplementation();
+    const doc = new TextractDocument(responseCopy);
+    // Should have warned once per nonexistent cell, plus once for the rel type:
+    expect(consoleWarnMock).toHaveBeenCalledTimes(1 + dummyRel.Ids.length);
+    for (const callArgs of consoleWarnMock.mock.calls) {
+      // Either a warning about the non-existent block ID or the 
+      expect(callArgs[0]).toMatch(/(DUMMY-\d|FAKE_RELATIONSHIP_TYPE)/g);
+    }
+    consoleWarnMock.mockRestore();
+
+    // doc tables should still be functional:
+    expect(() => {
+      for (const page of doc.iterPages()) {
+        for (const table of page.iterTables()) {
+          table.cellAt(1, 1);
+        }
+      }
+    }).not.toThrow();
+  });
+
+  // TODO: Is this the preferred behavior?
+  // At one time it would just gloss over missing content blocks, and e.g.QueryInstance still does
+  it("parses, but errors on content access for table cells with missing referenced content blocks", () => {
     // Create a clone to avoid messing up the shared imported object:
     const responseCopy: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testTableMergedCellsJson));
     // Prepend a non-existent block ID to every table cell's list of content blocks:
@@ -92,7 +149,7 @@ describe("Table", () => {
     }
 
     const consoleWarnMock = jest.spyOn(console, "warn").mockImplementation();
-    let doc = new TextractDocument(responseCopy);
+    const doc = new TextractDocument(responseCopy);
     // Should have warned once per inserted dummy block ID:
     expect(consoleWarnMock).toHaveBeenCalledTimes(nFakeBlocks);
     consoleWarnMock.mockRestore();
@@ -108,7 +165,7 @@ describe("Table", () => {
           }
         }
       }
-    }).not.toThrow();
+    }).toThrow();
   });
 
   it("differentiates structured from semi-structured tables", () => {
@@ -192,6 +249,10 @@ describe("Table", () => {
     expect(table.cellAt(3, 1)?.text).toMatch("2022-01-01");
     expect(table.cellAt(4, 1)?.text).toMatch("2022-01-01");
     expect(table.cellAt(3, 1, {ignoreMerged: true})?.text).toStrictEqual("");
+
+    // Check overall total number of cells reflects the merged cells:
+    expect(table.nCells).toBeLessThan(table.nColumns * table.nRows);
+    expect(table.nCells).toStrictEqual(23);
   });
 
   it("fetches table row cells by index", () => {
@@ -276,7 +337,7 @@ describe("Table", () => {
     const doc = new TextractDocument(testResponseJson);
 
     const table = doc.pageNumber(1).tableAtIndex(0);
-    expect(table.listRows({repeatMultiRowCells: true}).length).toStrictEqual(table.nRows);
+    expect(table.listRows({ repeatMultiRowCells: true }).length).toStrictEqual(table.nRows);
   });
 
   it("navigates table row cells", () => {
@@ -286,7 +347,7 @@ describe("Table", () => {
     let nCellsTotal = 0;
     let nRows = 0;
     let targetCellFound = false;
-    for (const row of table.iterRows({repeatMultiRowCells: false})) {
+    for (const row of table.iterRows({ repeatMultiRowCells: false })) {
       const rowCells = row.listCells();
       expect(rowCells.length).toStrictEqual(expectedRowLengths[nRows]);
       let nCells = 0;
@@ -302,11 +363,17 @@ describe("Table", () => {
         expect(cell.confidence).toBeLessThanOrEqual(100);
         expect(cell.geometry.parentObject).toBe(cell);
         expect(cell.str()).toStrictEqual(cell.text);
+        const cellContent = cell.listContent();
+        expect(cellContent.length).toStrictEqual(cell.nContentItems);
+        const cellContentByIteration = [...cell.iterContent()];
+        expect(cellContent.length).toStrictEqual(cellContentByIteration.length);
+        cellContentByIteration.forEach((item, ixItem) => {
+          expect(item).toBe(cellContent[ixItem]);
+        });
         if (nRows === 4 && nCells === 1) {
           expect(cell.text).toMatch("Payment - Utility");
           expect(
-            cell
-              .listContent()
+            cellContent
               .filter((c) => c.blockType === ApiBlockType.Word)
               .map((w) => (w as Word).text)
               .join(" ")
@@ -462,6 +529,16 @@ describe("Table", () => {
       expect(rowStrLoc).toBeGreaterThanOrEqual(0);
       lastDetectedLoc += rowStrLoc + rowStr.length;
     });
+  });
+
+  it("extracts text content from tables", () => {
+    const doc = new TextractDocument(testTableMergedCellsJson);
+    const table = doc.pageNumber(1).tableAtIndex(0);
+    expect(table.cellAt(6, 1)?.text).toStrictEqual("Ending Balance");
+    expect(table.cellAt(6, 4)?.text).toStrictEqual("Ending Balance");
+    expect(table.cellAt(6, 5)?.text).toStrictEqual("10,960");
+    expect(table.rowAt(6).text).toStrictEqual("Ending Balance\t10,960");
+    expect(table.text).toContain("Ending Balance\t10,960");
   });
 
   it("mutates confidence fields", () => {

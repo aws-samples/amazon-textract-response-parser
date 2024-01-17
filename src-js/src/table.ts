@@ -3,8 +3,8 @@
  */
 
 // Local Dependencies:
-import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
-import { ApiSelectionElementBlock, ApiWordBlock } from "./api-models/content";
+import { ApiRelationship, ApiRelationshipType } from "./api-models/base";
+import { ApiBlock } from "./api-models/document";
 import {
   ApiCellBlock,
   ApiMergedCellBlock,
@@ -12,61 +12,81 @@ import {
   ApiTableCellEntityType,
   ApiTableEntityType,
 } from "./api-models/table";
-import { aggregate, AggregationMethod, ApiBlockWrapper, getIterable, WithParentDocBlocks } from "./base";
-import { SelectionElement, Word } from "./content";
+import {
+  aggregate,
+  AggregationMethod,
+  getIterable,
+  IBlockManager,
+  IRenderable,
+  PageHostedApiBlockWrapper,
+  Constructor,
+  IApiBlockWrapper,
+  IWithParentPage,
+  IWithText,
+} from "./base";
+import { buildWithContent, IWithContent, SelectionElement, WithWords, Word } from "./content";
 import { Geometry } from "./geometry";
 
 /**
  * Generic base class for a table cell, which may be merged or not
  *
- * If you're consuming this library, you probably just want to use `document.ts/CellBase`.
+ * (Because mixins can't implement constructor logic)
  */
-export abstract class CellBaseGeneric<
-  T extends ApiCellBlock | ApiMergedCellBlock,
-  TPage extends WithParentDocBlocks
-> extends ApiBlockWrapper<T> {
-  _geometry: Geometry<T, CellBaseGeneric<T, TPage>>;
+class CellBaseGeneric<TBlock extends ApiCellBlock | ApiMergedCellBlock, TPage extends IBlockManager>
+  extends PageHostedApiBlockWrapper<TBlock, TPage>
+  implements IWithParentPage<TPage>
+{
+  _geometry: Geometry<TBlock, CellBaseGeneric<TBlock, TPage>>;
   _parentTable: TableGeneric<TPage>;
 
-  constructor(block: T, parentTable: TableGeneric<TPage>) {
-    super(block);
+  constructor(block: TBlock, parentTable: TableGeneric<TPage>) {
+    super(block, parentTable.parentPage);
     this._geometry = new Geometry(block.Geometry, this);
     this._parentTable = parentTable;
   }
 
-  get columnIndex(): number {
-    return this._dict.ColumnIndex;
+  /**
+   * Position of the cell on the input image / page
+   */
+  get geometry(): Geometry<TBlock, CellBaseGeneric<TBlock, TPage>> {
+    return this._geometry;
   }
-  get columnSpan(): number {
-    return this._dict.ColumnSpan || 1;
+  /**
+   * Parsed `Table` to which this cell belongs
+   */
+  get parentTable(): TableGeneric<TPage> {
+    return this._parentTable;
   }
+}
 
+/**
+ * Properties that a table cell should implement regardless whether it's merged or classic
+ */
+export interface ICellBaseProps {
+  /**
+   * 1-based index for which column this cell starts at in the table
+   */
+  get columnIndex(): number;
+  /**
+   * How many columns of the table this cell spans (if merged - otherwise always =1)
+   */
+  get columnSpan(): number;
   /**
    * Confidence score of the table cell structure detection
    *
    * This score reflects the confidence of the model detecting the table cell structure itself. For
    * the text OCR confidence, see the `.getOcrConfidence()` method instead.
    */
-  get confidence(): number {
-    return this._dict.Confidence;
-  }
-  set confidence(newVal: number) {
-    this._dict.Confidence = newVal;
-  }
-  get geometry(): Geometry<T, CellBaseGeneric<T, TPage>> {
-    return this._geometry;
-  }
-
-  get parentTable(): TableGeneric<TPage> {
-    return this._parentTable;
-  }
-  get rowIndex(): number {
-    return this._dict.RowIndex;
-  }
-  get rowSpan(): number {
-    return this._dict.RowSpan || 1;
-  }
-
+  get confidence(): number;
+  set confidence(newVal: number);
+  /**
+   * 1-based index for which row this cell starts at in the table
+   */
+  get rowIndex(): number;
+  /**
+   * How many rows of the table this cell spans (if merged - otherwise always =1)
+   */
+  get rowSpan(): number;
   /**
    * Aggregate OCR confidence score of the text (and selection elements) in this cell
    *
@@ -76,13 +96,7 @@ export abstract class CellBaseGeneric<
    * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
    * @returns Aggregated confidence, or null if this cell contains no content/text
    */
-  getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
-    return aggregate(
-      this.listContent().map((c) => c.confidence),
-      aggMethod
-    );
-  }
-
+  getOcrConfidence(aggMethod?: AggregationMethod): number | null;
   /**
    * Check if this cell is tagged with any of the given EntityType(s) e.g. COLUMN_HEADER, etc.
    *
@@ -92,20 +106,89 @@ export abstract class CellBaseGeneric<
    * @param entityType The type to check for, or an array of multiple types to allow.
    * @returns true if the EntityType is set, null if block EntityTypes is undefined, false otherwise.
    */
-  hasEntityTypes(entityType: ApiTableCellEntityType | ApiTableCellEntityType[]): boolean | null {
-    if (!this._dict.EntityTypes) return null;
-    if (Array.isArray(entityType)) {
-      return entityType.some(
-        // (Safe type cast because the block above has already returned null if Entitytypes not set)
-        (eType) => (this._dict.EntityTypes as ApiTableCellEntityType[]).indexOf(eType) >= 0
+  hasEntityTypes(entityType: ApiTableCellEntityType | ApiTableCellEntityType[]): boolean | null;
+}
+
+/**
+ * Mixin to add basic table cell properties to a parent class
+ */
+function WithCellBaseProps<
+  TBlock extends ApiCellBlock | ApiMergedCellBlock,
+  TPage extends IBlockManager,
+  T extends Constructor<
+    IApiBlockWrapper<TBlock> & IWithContent<SelectionElement | Word> & IWithParentPage<TPage> & IWithText
+  >
+>(SuperClass: T) {
+  return class extends SuperClass implements ICellBaseProps, IRenderable {
+    get columnIndex(): number {
+      return this.dict.ColumnIndex;
+    }
+    get columnSpan(): number {
+      return this.dict.ColumnSpan || 1;
+    }
+
+    /**
+     * 0-100 based confidence score of the table cell structure detection
+     *
+     * This score reflects the confidence of the model detecting the table cell structure itself. For
+     * the text OCR confidence, see the `.getOcrConfidence()` method instead.
+     */
+    get confidence(): number {
+      return this.dict.Confidence;
+    }
+    set confidence(newVal: number) {
+      this.dict.Confidence = newVal;
+    }
+    get rowIndex(): number {
+      return this.dict.RowIndex;
+    }
+    get rowSpan(): number {
+      return this.dict.RowSpan || 1;
+    }
+
+    /**
+     * Aggregate OCR confidence score of the text (and selection elements) in this cell
+     *
+     * This score reflects the aggregated OCR confidence of all the text content detected in the
+     * cell. For the model's confidence on the table structure itself, see `.confidence`.
+     *
+     * @param {AggregationMethod} aggMethod How to combine individual word OCR confidences together
+     * @returns Aggregated confidence, or null if this cell contains no content/text
+     */
+    getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
+      return aggregate(
+        this.listContent().map((c) => c.confidence),
+        aggMethod
       );
     }
-    return this._dict.EntityTypes.indexOf(entityType) >= 0;
-  }
 
-  abstract get text(): string;
-  abstract listContent(): Array<SelectionElement | Word>;
-  abstract str(): string;
+    /**
+     * Check if this cell is tagged with any of the given EntityType(s) e.g. COLUMN_HEADER, etc.
+     *
+     * For more information on table cell entity types returnable by Amazon Textract, see:
+     * https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+     *
+     * @param entityType The type to check for, or an array of multiple types to allow.
+     * @returns true if the EntityType is set, null if block EntityTypes is undefined, false otherwise.
+     */
+    hasEntityTypes(entityType: ApiTableCellEntityType | ApiTableCellEntityType[]): boolean | null {
+      if (!this.dict.EntityTypes) return null;
+      if (Array.isArray(entityType)) {
+        return entityType.some(
+          // (Safe type cast because the block above has already returned null if Entitytypes not set)
+          (eType) => (this.dict.EntityTypes as ApiTableCellEntityType[]).indexOf(eType) >= 0
+        );
+      }
+      return this.dict.EntityTypes.indexOf(entityType) >= 0;
+    }
+
+    /**
+     * The basic human-readable `str()` representation for a table cell is just the cell's text.
+     */
+    str(): string {
+      return this.text;
+    }
+  };
 }
 
 /**
@@ -113,50 +196,18 @@ export abstract class CellBaseGeneric<
  *
  * If you're consuming this library, you probably just want to use `document.ts/Cell`.
  */
-export class CellGeneric<TPage extends WithParentDocBlocks> extends CellBaseGeneric<ApiCellBlock, TPage> {
-  _content: Array<SelectionElement | Word>;
-  _text: string;
-
+export class CellGeneric<TPage extends IBlockManager>
+  extends WithCellBaseProps(buildWithContent<SelectionElement | Word>()(CellBaseGeneric))<ApiCellBlock, TPage>
+  implements IWithContent<SelectionElement | Word>
+{
   constructor(block: ApiCellBlock, parentTable: TableGeneric<TPage>) {
     super(block, parentTable);
-    const parentDocument = parentTable.parentPage.parentDocument;
     this._geometry = new Geometry(block.Geometry, this);
-    this._content = [];
-    const texts: string[] = [];
-    (block.Relationships || []).forEach((rs) => {
-      if (rs.Type == ApiRelationshipType.Child) {
-        rs.Ids.forEach((cid) => {
-          const childBlock = parentDocument.getBlockById(cid);
-          if (!childBlock) {
-            console.warn(`Document missing child block ${cid} referenced by table cell ${this.id}`);
-            return;
-          }
-          const blockType = childBlock.BlockType;
-          if (blockType == ApiBlockType.Word) {
-            const w = new Word(childBlock as ApiWordBlock);
-            this._content.push(w);
-            texts.push(w.text);
-          } else if (blockType == ApiBlockType.SelectionElement) {
-            const se = new SelectionElement(childBlock as ApiSelectionElementBlock);
-            this._content.push(se);
-            texts.push(se.selectionStatus + ",");
-          }
-        });
+    this.childBlockIds.forEach((cid) => {
+      if (!this.parentPage.getBlockById(cid)) {
+        console.warn(`Document missing child block ${cid} referenced by table cell ${this.id}`);
       }
     });
-    this._text = texts.join(" ");
-  }
-
-  get text(): string {
-    return this._text;
-  }
-
-  listContent(): Array<SelectionElement | Word> {
-    return this._content.slice();
-  }
-
-  str(): string {
-    return this._text;
   }
 }
 
@@ -165,34 +216,78 @@ export class CellGeneric<TPage extends WithParentDocBlocks> extends CellBaseGene
  *
  * If you're consuming this library, you probably just want to use `document.ts/MergedCell`.
  */
-export class MergedCellGeneric<TPage extends WithParentDocBlocks> extends CellBaseGeneric<
-  ApiMergedCellBlock,
-  TPage
-> {
-  _cells: CellGeneric<TPage>[];
-
+export class MergedCellGeneric<TPage extends IBlockManager> extends WithCellBaseProps(
+  buildWithContent<SelectionElement | Word>()(CellBaseGeneric)
+)<ApiMergedCellBlock, TPage> {
   constructor(block: ApiMergedCellBlock, parentTable: TableGeneric<TPage>) {
     super(block, parentTable);
-
-    let cells: CellGeneric<TPage>[] = [];
-    (block.Relationships || []).forEach((rs) => {
-      if (rs.Type == ApiRelationshipType.Child) {
-        cells = cells.concat(rs.Ids.map((cid) => parentTable._getSplitCellByBlockId(cid)));
-      }
-    });
-    this._cells = cells;
+    this._geometry = new Geometry(block.Geometry, this);
   }
 
-  get text(): string {
-    return this._cells.map((c) => c.text).join(" ");
+  /**
+   * Number of underlying (un-merged) sub-cells spanned by this merged cell
+   */
+  get nSubCells(): number {
+    return this.listSubCells().length;
   }
 
-  listContent(): Array<SelectionElement | Word> {
-    return ([] as Array<SelectionElement | Word>).concat(...this._cells.map((c) => c.listContent()));
+  /**
+   * Fetch a list of the underlying (un-merged) sub-`Cell`s spanned by this merged cell
+   *
+   * The returned list is a shallow-copied snapshot
+   */
+  listSubCells(): CellGeneric<TPage>[] {
+    return this.childBlockIds.map((cid) => this.parentTable._getSplitCellByBlockId(cid));
   }
 
-  str(): string {
-    return this.text;
+  override iterContent(): Iterable<SelectionElement | Word> {
+    // iterContent needs to traverse each child CELL in turn, instead of directly scannning current
+    const getIterator = (): Iterator<SelectionElement | Word> => {
+      const cells = this.listSubCells();
+      const tryListCellContents = (ixCell: number) =>
+        cells.length > ixCell ? cells[ixCell].listContent() : [];
+      let ixCurrCell = 0;
+      let cellContents = tryListCellContents(ixCurrCell);
+      let ixCurrItem = -1;
+      return {
+        next: (): IteratorResult<SelectionElement | Word> => {
+          ++ixCurrItem;
+          while (ixCurrItem >= cellContents.length) {
+            ++ixCurrCell;
+            ixCurrItem = 0;
+            if (ixCurrCell >= cells.length) return { done: true, value: undefined };
+            cellContents = tryListCellContents(ixCurrCell);
+          }
+          return { done: false, value: cellContents[ixCurrItem] };
+        },
+      };
+    };
+    return {
+      [Symbol.iterator]: getIterator,
+    };
+  }
+
+  /**
+   * List the content items in this object
+   *
+   * Concatenates content across all sub-cells
+   */
+  override listContent(): Array<SelectionElement | Word> {
+    // listContent needs to traverse each child CELL in turn, instead of directly scannning current
+    return ([] as Array<SelectionElement | Word>).concat(...this.listSubCells().map((c) => c.listContent()));
+  }
+
+  /**
+   * Iterate through the sub-cells of this merged cell
+   * @example
+   * for (const subCell of merged.iterCells()) {
+   *   console.log(subCell.str());
+   * }
+   * @example
+   * const subCells = [...merged.iterCells()];
+   */
+  iterSubCells(): Iterable<CellGeneric<TPage>> {
+    return getIterable(() => this.listSubCells());
   }
 }
 
@@ -201,7 +296,7 @@ export class MergedCellGeneric<TPage extends WithParentDocBlocks> extends CellBa
  *
  * If you're consuming this library, you probably just want to use `document.ts/Row`.
  */
-export class RowGeneric<TPage extends WithParentDocBlocks> {
+export class RowGeneric<TPage extends IBlockManager> {
   _cells: Array<CellGeneric<TPage> | MergedCellGeneric<TPage>>;
   _parentTable: TableGeneric<TPage>;
 
@@ -213,11 +308,23 @@ export class RowGeneric<TPage extends WithParentDocBlocks> {
     this._parentTable = parentTable;
   }
 
+  /**
+   * Number of cells in this table row
+   */
   get nCells(): number {
     return this._cells.length;
   }
+  /**
+   * Parsed `Table` to which this row belongs
+   */
   get parentTable(): TableGeneric<TPage> {
     return this._parentTable;
+  }
+  /**
+   * Tab-separated text from each cell in this row
+   */
+  get text(): string {
+    return this._cells.map((cell) => cell.text).join("\t");
   }
 
   /**
@@ -267,10 +374,16 @@ export class RowGeneric<TPage extends WithParentDocBlocks> {
     return getIterable(() => this._cells);
   }
 
+  /**
+   * Create a snapshot list of the cells in this row
+   */
   listCells(): Array<CellGeneric<TPage> | MergedCellGeneric<TPage>> {
     return this._cells.slice();
   }
 
+  /**
+   * The human-readable `str()` representation of a table row uses `[]` to wrap each cell's content
+   */
   str(): string {
     return this._cells.map((cell) => `[${cell.str()}]`).join("");
   }
@@ -306,36 +419,45 @@ export interface IGetRowOptions {
  *
  * If you're consuming this library, you probably just want to use `document.ts/Table`.
  */
-export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWrapper<ApiTableBlock> {
+export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBlockWrapper<
+  ApiTableBlock,
+  TPage
+> {
   _cells: CellGeneric<TPage>[];
   _cellsById: { [id: string]: CellGeneric<TPage> };
-  _mergedCells: MergedCellGeneric<TPage>[];
   _geometry: Geometry<ApiTableBlock, TableGeneric<TPage>>;
+  _mergedCells: MergedCellGeneric<TPage>[];
   _nCols: number;
   _nRows: number;
-  _parentPage: TPage;
 
   constructor(block: ApiTableBlock, parentPage: TPage) {
-    super(block);
-    this._parentPage = parentPage;
+    super(block, parentPage);
     this._geometry = new Geometry(block.Geometry, this);
 
-    const parentDocument = parentPage.parentDocument;
-    this._cells = ([] as CellGeneric<TPage>[]).concat(
-      ...(block.Relationships || [])
-        .filter((rs) => rs.Type == ApiRelationshipType.Child)
-        .map(
-          (rs) =>
-            rs.Ids.map((cid) => {
-              const cellBlock = parentDocument.getBlockById(cid);
-              if (!cellBlock) {
-                console.warn(`Document missing child block ${cid} referenced by TABLE ${this.id}`);
-                return;
-              }
-              return new CellGeneric(cellBlock as ApiCellBlock, this);
-            }).filter((cell) => cell) as CellGeneric<TPage>[]
-        )
-    );
+    this._cells = [];
+    for (const rs of block.Relationships) {
+      const itemBlocks = rs.Ids.map((cid) => {
+        const cblk = parentPage.getBlockById(cid);
+        if (!cblk) {
+          console.warn(`Document missing related block ${cid} referenced by TABLE ${this.id}`);
+          return;
+        }
+        return cblk;
+      }).filter((cblk) => cblk) as ApiBlock[];
+
+      if (rs.Type === ApiRelationshipType.Child) {
+        this._cells = this._cells.concat(
+          itemBlocks.map((cblk) => new CellGeneric(cblk as ApiCellBlock, this))
+        );
+      } else if (rs.Type !== ApiRelationshipType.MergedCell) {
+        // MERGED_CELL relationships are handled later - anything else is unexpected:
+        console.warn(
+          `TABLE ${this.id} contained a relationship of unexpected type '${
+            (rs as ApiRelationship).Type
+          }' which will be ignored`
+        );
+      }
+    }
 
     this._sortCellsByLocation(this._cells);
     // This indexing could be moved to a utility function if supporting more mutation operations in future:
@@ -350,9 +472,9 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
         .map(
           (rs) =>
             rs.Ids.map((cid) => {
-              const cellBlock = parentDocument.getBlockById(cid);
+              const cellBlock = parentPage.getBlockById(cid);
               if (!cellBlock) {
-                console.warn(`Document missing merged cell block ${cid} referenced by TABLE ${this.id}`);
+                // No warning needed: We'll already have issued one in the loop above
                 return;
               }
               return new MergedCellGeneric(cellBlock as ApiMergedCellBlock, this);
@@ -453,7 +575,7 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
               (c.columnIndex <= columnIndex && c.columnIndex + c.columnSpan > columnIndex))
         );
     const mergedCellChildIds = mergedCells.reduce((acc, next) => {
-      next._cells.forEach((c) => {
+      next.listSubCells().forEach((c) => {
         acc[c.id] = true;
       });
       return acc;
@@ -559,20 +681,33 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
   set confidence(newVal: number) {
     this._dict.Confidence = newVal;
   }
+  /**
+   * Position of the table on the input image / page
+   */
   get geometry(): Geometry<ApiTableBlock, TableGeneric<TPage>> {
     return this._geometry;
   }
+  /**
+   * Total number of cells in the table
+   *
+   * (For the total number of *sub-cells* ignoring merged cells, just use `nColumns * nRows`)
+   */
   get nCells(): number {
-    return this._cells.length;
+    // Total sub-cells, plus total merged cells, minus the number of sub-cells each merge covers
+    const nMergeTargets = this._mergedCells.map((mc) => mc.nSubCells).reduce((acc, next) => acc + next, 0);
+    return this._cells.length + this._mergedCells.length - nMergeTargets;
   }
+  /**
+   * Number of columns in the table
+   */
   get nColumns(): number {
     return this._nCols;
   }
+  /**
+   * Number of rows in the table
+   */
   get nRows(): number {
     return this._nRows;
-  }
-  get parentPage(): TPage {
-    return this._parentPage;
   }
 
   /**
@@ -599,6 +734,15 @@ export class TableGeneric<TPage extends WithParentDocBlocks> extends ApiBlockWra
     }
     if (isStructured) return ApiTableEntityType.StructuredTable;
     return ApiTableEntityType.SemiStructuredTable;
+  }
+
+  /**
+   * The plain text content of this table, with newlines between rows and tabs between cells
+   */
+  get text(): string {
+    return this.listRows()
+      .map((row) => row.text)
+      .join("\n");
   }
 
   str(): string {
