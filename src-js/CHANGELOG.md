@@ -11,6 +11,7 @@
 - Split out `api-models/document` types to better align with library components, and made some minor typing updates.
 ### Fixed
 - `Table.nCells` now correctly reflects merged cells (instead of just counting all sub-cells).
+- Support alternative `KEY` and `VALUE` blocks for Forms K-V data, observed in place of the typical `KEY_VALUE_SET` blocks for some test data files (Was this a temporary API issue? A change going forward? 🤷‍♂️)
 ### Deprecated
 - Several top-level **re-exports** now tagged as deprecated and will be removed in future: Prefer imports from the underlying sub-modules.
 

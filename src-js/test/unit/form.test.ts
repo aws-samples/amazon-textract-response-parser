@@ -5,6 +5,9 @@ import { Field, FieldKey, TextractDocument } from "../../src/document";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testResponseJson: ApiResponsePage = require("../data/test-response.json");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const separateBlockTypesResponseJson: ApiResponsePage = require("../data/test-query-response.json");
+
 
 describe("FieldGeneric", () => {
   it("hoists properties from FieldKey to behave like an ApiBlockWrapper", () => {
@@ -20,6 +23,60 @@ describe("FieldGeneric", () => {
     expect(field?.relatedBlockIdsByRelType(ApiRelationshipType.Value).length).toStrictEqual(0);
     expect(mock).toHaveBeenCalledTimes(1);
     mock.mockReset();
+  });
+
+  it("exposes field OCR confidences as well as structural detection confidences", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const field = doc.form.getFieldByKey("Phone Number:");
+    if (!field) throw new Error("Test missing expected document field");
+
+    function mean(numberArr: number[]): number {
+      return numberArr.reduce((acc, next) => acc + next) / numberArr.length;
+    }
+
+    const keyWords = field.key.listWords();
+    const keyOcrConf = field.key.getOcrConfidence();
+    expect(keyOcrConf).not.toBeNaN();
+    expect(keyOcrConf).toStrictEqual(mean(keyWords.map((word) => word.confidence)));
+    expect(keyOcrConf).not.toEqual(field.key.confidence);
+
+    if (!field.value) throw new Error("Test missing expected document field value");
+    const valueContent = field.value.listContent();
+    const valueOcrConf = field.value.getOcrConfidence();
+    expect(valueOcrConf).not.toBeNaN();
+    expect(valueOcrConf).toStrictEqual(mean(valueContent.map((c) => c.confidence)));
+    expect(valueOcrConf).not.toEqual(field.value.confidence);
+
+    expect(field.getOcrConfidence()).toStrictEqual(
+      mean(valueContent.map((c) => c.confidence).concat(keyWords.map((w) => w.confidence)))
+    );
+  });
+
+  it("supports alternative field key/value OCR confidence aggregations", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const field = doc.form.getFieldByKey("Phone Number:");
+    if (!field) throw new Error("Test missing expected document field");
+
+    const keyOcrConf = field.key.getOcrConfidence() as number;
+    expect(keyOcrConf).not.toBeNull();
+    expect(field.key.getOcrConfidence(AggregationMethod.Mean)).toStrictEqual(keyOcrConf);
+    expect(field.key.getOcrConfidence(AggregationMethod.Min)).toBeLessThan(keyOcrConf);
+    expect(field.key.getOcrConfidence(AggregationMethod.Max)).toBeGreaterThan(keyOcrConf);
+
+    if (!field.value) throw new Error("Test missing expected document field value");
+    const valueOcrConf = field.value.getOcrConfidence() as number;
+    expect(valueOcrConf).not.toBeNull();
+    expect(field.value.getOcrConfidence(AggregationMethod.Mean)).toStrictEqual(valueOcrConf);
+    // The test doc has exactly one WORD/content in this field value:
+    expect(field.value.listContent().length).toStrictEqual(1);
+    expect(field.value.getOcrConfidence(AggregationMethod.Min)).toStrictEqual(valueOcrConf);
+    expect(field.value.getOcrConfidence(AggregationMethod.Max)).toStrictEqual(valueOcrConf);
+
+    const fieldOcrConf = field.getOcrConfidence() as number;
+    expect(fieldOcrConf).not.toBeNull();
+    expect(field.getOcrConfidence(AggregationMethod.Mean)).toStrictEqual(fieldOcrConf);
+    expect(field.getOcrConfidence(AggregationMethod.Min)).toBeLessThan(fieldOcrConf);
+    expect(field.getOcrConfidence(AggregationMethod.Max)).toBeGreaterThan(fieldOcrConf);
   });
 });
 
@@ -42,6 +99,20 @@ describe("Form", () => {
     expect(field.parentForm).toBe(page.form);
     expect(field.confidence).toBeGreaterThan(1); // (<1% very unlikely)
     expect(field.confidence).toBeLessThanOrEqual(100);
+  });
+
+  it("loads form fields from alternative 'KEY' and 'VALUE' BlockTypes", () => {
+    // Test functionality with KEY and VALUE blocks instead of KEY_VALUE_SET:
+    const doc = new TextractDocument(separateBlockTypesResponseJson);
+    const page = doc.pageNumber(1);
+    expect(page.form.nFields).toStrictEqual(9);
+    const field = page.form.listFields()[0];
+    expect(field.parentForm).toBe(page.form);
+    expect(field.confidence).toBeGreaterThan(1); // (<1% very unlikely)
+    expect(field.confidence).toBeLessThanOrEqual(100);
+    expect(field.key.text).toStrictEqual("First Name");
+    expect(field.value?.text).toStrictEqual("Major");
+    expect(page.form.getFieldByKey("First Name")).toBe(field);
   });
 
   it("loads and navigates form fields at document level", () => {
@@ -172,59 +243,5 @@ describe("Form", () => {
     const doc = new TextractDocument(testResponseJson);
     const field = doc.form.getFieldByKey("Phone Number:");
     expect(field?.parentPage.pageNumber).toStrictEqual(1);
-  });
-
-  it("exposes field OCR confidences as well as structural detection confidences", () => {
-    const doc = new TextractDocument(testResponseJson);
-    const field = doc.form.getFieldByKey("Phone Number:");
-    if (!field) throw new Error("Test missing expected document field");
-
-    function mean(numberArr: number[]): number {
-      return numberArr.reduce((acc, next) => acc + next) / numberArr.length;
-    }
-
-    const keyWords = field.key.listWords();
-    const keyOcrConf = field.key.getOcrConfidence();
-    expect(keyOcrConf).not.toBeNaN();
-    expect(keyOcrConf).toStrictEqual(mean(keyWords.map((word) => word.confidence)));
-    expect(keyOcrConf).not.toEqual(field.key.confidence);
-
-    if (!field.value) throw new Error("Test missing expected document field value");
-    const valueContent = field.value.listContent();
-    const valueOcrConf = field.value.getOcrConfidence();
-    expect(valueOcrConf).not.toBeNaN();
-    expect(valueOcrConf).toStrictEqual(mean(valueContent.map((c) => c.confidence)));
-    expect(valueOcrConf).not.toEqual(field.value.confidence);
-
-    expect(field.getOcrConfidence()).toStrictEqual(
-      mean(valueContent.map((c) => c.confidence).concat(keyWords.map((w) => w.confidence)))
-    );
-  });
-
-  it("supports alternative field key/value OCR confidence aggregations", () => {
-    const doc = new TextractDocument(testResponseJson);
-    const field = doc.form.getFieldByKey("Phone Number:");
-    if (!field) throw new Error("Test missing expected document field");
-
-    const keyOcrConf = field.key.getOcrConfidence() as number;
-    expect(keyOcrConf).not.toBeNull();
-    expect(field.key.getOcrConfidence(AggregationMethod.Mean)).toStrictEqual(keyOcrConf);
-    expect(field.key.getOcrConfidence(AggregationMethod.Min)).toBeLessThan(keyOcrConf);
-    expect(field.key.getOcrConfidence(AggregationMethod.Max)).toBeGreaterThan(keyOcrConf);
-
-    if (!field.value) throw new Error("Test missing expected document field value");
-    const valueOcrConf = field.value.getOcrConfidence() as number;
-    expect(valueOcrConf).not.toBeNull();
-    expect(field.value.getOcrConfidence(AggregationMethod.Mean)).toStrictEqual(valueOcrConf);
-    // The test doc has exactly one WORD/content in this field value:
-    expect(field.value.listContent().length).toStrictEqual(1);
-    expect(field.value.getOcrConfidence(AggregationMethod.Min)).toStrictEqual(valueOcrConf);
-    expect(field.value.getOcrConfidence(AggregationMethod.Max)).toStrictEqual(valueOcrConf);
-
-    const fieldOcrConf = field.getOcrConfidence() as number;
-    expect(fieldOcrConf).not.toBeNull();
-    expect(field.getOcrConfidence(AggregationMethod.Mean)).toStrictEqual(fieldOcrConf);
-    expect(field.getOcrConfidence(AggregationMethod.Min)).toBeLessThan(fieldOcrConf);
-    expect(field.getOcrConfidence(AggregationMethod.Max)).toBeGreaterThan(fieldOcrConf);
   });
 });

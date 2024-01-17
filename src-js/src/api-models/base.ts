@@ -115,6 +115,12 @@ export const enum ApiBlockType {
    */
   Cell = "CELL",
   /**
+   * Key element for a Form Data Key-Value pair (alternative style seen in some test cases)
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+   */
+  Key = "KEY",
+  /**
    * Compound block for Form Key-Value pairs - more recently replaced by KEY and VALUE
    *
    * Textract Form data results used to use this type for both the Key and Value of detected K-V
@@ -184,6 +190,12 @@ export const enum ApiBlockType {
    * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
    */
   TableTitle = "TABLE_TITLE",
+  /**
+   * Value element for a Form Data Key-Value pair (alternative style seen in some test cases)
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+   */
+  Value = "VALUE",
   /**
    * An individual "word" of text (string of characters not separated by whitespace)
    *

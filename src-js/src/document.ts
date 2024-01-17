@@ -6,7 +6,7 @@
 import { ApiBlockType } from "./api-models/base";
 import { ApiLineBlock } from "./api-models/content";
 import { ApiBlock, ApiPageBlock } from "./api-models/document";
-import { ApiKeyValueEntityType, ApiKeyValueSetBlock } from "./api-models/form";
+import { ApiKeyBlock, ApiKeyValueEntityType, ApiKeyValueSetBlock } from "./api-models/form";
 import { ApiQueryBlock } from "./api-models/query";
 import {
   ApiDocumentMetadata,
@@ -166,7 +166,7 @@ export class Page
     this._itemsByBlockId = {};
     this._lines = [];
     this._tables = [];
-    const formKeyBlocks: ApiKeyValueSetBlock[] = [];
+    const formKeyBlocks: Array<ApiKeyBlock | ApiKeyValueSetBlock> = [];
     const queryBlocks: ApiQueryBlock[] = [];
 
     blocks.forEach((item) => {
@@ -175,6 +175,8 @@ export class Page
         this._lines.push(l);
         this._content.push(l);
         this._itemsByBlockId[l.id] = l;
+      } else if (item.BlockType === ApiBlockType.Key) {
+        formKeyBlocks.push(item);
       } else if (item.BlockType === ApiBlockType.KeyValueSet) {
         if (item.EntityTypes.indexOf(ApiKeyValueEntityType.Key) >= 0) {
           formKeyBlocks.push(item);

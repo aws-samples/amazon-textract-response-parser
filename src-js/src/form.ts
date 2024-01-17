@@ -4,7 +4,7 @@
 
 // Local Dependencies:
 import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
-import { ApiKeyValueSetBlock } from "./api-models/form";
+import { ApiKeyBlock, ApiKeyValueSetBlock, ApiValueBlock } from "./api-models/form";
 import {
   aggregate,
   AggregationMethod,
@@ -24,19 +24,19 @@ import { Geometry, IWithGeometry } from "./geometry";
  * If you're consuming this library, you probably just want to use `document.ts/FieldKey`.
  */
 export class FieldKeyGeneric<TPage extends IBlockManager>
-  extends WithWords(PageHostedApiBlockWrapper)<ApiKeyValueSetBlock, TPage>
-  implements IRenderable, IWithGeometry<ApiKeyValueSetBlock, FieldKeyGeneric<TPage>>
+  extends WithWords(PageHostedApiBlockWrapper)<ApiKeyBlock | ApiKeyValueSetBlock, TPage>
+  implements IRenderable, IWithGeometry<ApiKeyBlock | ApiKeyValueSetBlock, FieldKeyGeneric<TPage>>
 {
-  _geometry: Geometry<ApiKeyValueSetBlock, FieldKeyGeneric<TPage>>;
+  _geometry: Geometry<ApiKeyBlock | ApiKeyValueSetBlock, FieldKeyGeneric<TPage>>;
   _parentField: FieldGeneric<TPage>;
 
-  constructor(block: ApiKeyValueSetBlock, parentField: FieldGeneric<TPage>) {
+  constructor(block: ApiKeyBlock | ApiKeyValueSetBlock, parentField: FieldGeneric<TPage>) {
     super(block, parentField.parentPage);
     this._parentField = parentField;
     this._geometry = new Geometry(block.Geometry, this);
   }
 
-  get geometry(): Geometry<ApiKeyValueSetBlock, FieldKeyGeneric<TPage>> {
+  get geometry(): Geometry<ApiKeyBlock | ApiKeyValueSetBlock, FieldKeyGeneric<TPage>> {
     return this._geometry;
   }
   get parentField(): FieldGeneric<TPage> {
@@ -80,18 +80,18 @@ export class FieldKeyGeneric<TPage extends IBlockManager>
  */
 export class FieldValueGeneric<TPage extends IBlockManager>
   extends buildWithContent<SelectionElement | Signature | Word>()(PageHostedApiBlockWrapper)<
-    ApiKeyValueSetBlock,
+    ApiKeyValueSetBlock | ApiValueBlock,
     TPage
   >
   implements
     IRenderable,
     IWithContent<SelectionElement | Signature | Word>,
-    IWithGeometry<ApiKeyValueSetBlock, FieldValueGeneric<TPage>>
+    IWithGeometry<ApiKeyValueSetBlock | ApiValueBlock, FieldValueGeneric<TPage>>
 {
-  _geometry: Geometry<ApiKeyValueSetBlock, FieldValueGeneric<TPage>>;
+  _geometry: Geometry<ApiKeyValueSetBlock | ApiValueBlock, FieldValueGeneric<TPage>>;
   _parentField: FieldGeneric<TPage>;
 
-  constructor(valueBlock: ApiKeyValueSetBlock, parentField: FieldGeneric<TPage>) {
+  constructor(valueBlock: ApiKeyValueSetBlock | ApiValueBlock, parentField: FieldGeneric<TPage>) {
     super(valueBlock, parentField.parentPage);
     this._parentField = parentField;
     this._geometry = new Geometry(valueBlock.Geometry, this);
@@ -106,7 +106,7 @@ export class FieldValueGeneric<TPage extends IBlockManager>
   get confidence(): number {
     return this._dict.Confidence;
   }
-  get geometry(): Geometry<ApiKeyValueSetBlock, FieldValueGeneric<TPage>> {
+  get geometry(): Geometry<ApiKeyValueSetBlock | ApiValueBlock, FieldValueGeneric<TPage>> {
     return this._geometry;
   }
   get parentField(): FieldGeneric<TPage> {
@@ -142,13 +142,13 @@ export class FieldValueGeneric<TPage extends IBlockManager>
  * Then it could directly wrap underlying objects
  */
 export class FieldGeneric<TPage extends IBlockManager>
-  implements IApiBlockWrapper<ApiKeyValueSetBlock>, IRenderable
+  implements IApiBlockWrapper<ApiKeyBlock | ApiKeyValueSetBlock>, IRenderable
 {
   _key: FieldKeyGeneric<TPage>;
   _parentForm: FormGeneric<TPage>;
   _value: FieldValueGeneric<TPage> | null;
 
-  constructor(keyBlock: ApiKeyValueSetBlock, parentForm: FormGeneric<TPage>) {
+  constructor(keyBlock: ApiKeyBlock | ApiKeyValueSetBlock, parentForm: FormGeneric<TPage>) {
     this._parentForm = parentForm;
     this._value = null;
 
@@ -175,7 +175,7 @@ export class FieldGeneric<TPage extends IBlockManager>
           `Document missing child block ${valBlockId} referenced by value for field key ${this.key.id}`
         );
       } else {
-        this._value = new FieldValueGeneric(valBlock as ApiKeyValueSetBlock, this);
+        this._value = new FieldValueGeneric(valBlock as ApiKeyValueSetBlock | ApiValueBlock, this);
       }
     }
   }
@@ -210,7 +210,7 @@ export class FieldGeneric<TPage extends IBlockManager>
     // Hoisting required property from key to implement IApiBlockWrapper
     return this._key.childBlockIds;
   }
-  get dict(): ApiKeyValueSetBlock {
+  get dict(): ApiKeyBlock | ApiKeyValueSetBlock {
     // Hoisting required property from key to implement IApiBlockWrapper
     return this._key.dict;
   }
@@ -275,7 +275,7 @@ export class FormGeneric<TPage extends IBlockManager> implements IRenderable {
   _fieldsMap: { [keyText: string]: FieldGeneric<TPage> };
   _parentPage: TPage;
 
-  constructor(keyBlocks: ApiKeyValueSetBlock[], parentPage: TPage) {
+  constructor(keyBlocks: Array<ApiKeyBlock | ApiKeyValueSetBlock>, parentPage: TPage) {
     this._fields = [];
     this._fieldsMap = {};
     this._parentPage = parentPage;

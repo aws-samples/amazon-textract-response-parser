@@ -9,7 +9,7 @@
 // Local Dependencies:
 import { ApiBlockBase, ApiBlockType, ApiChildRelationship } from "./base";
 import { ApiLineBlock, ApiSelectionElementBlock, ApiSignatureBlock, ApiWordBlock } from "./content";
-import { ApiKeyValueSetBlock } from "./form";
+import { ApiKeyBlock, ApiKeyValueSetBlock, ApiValueBlock } from "./form";
 import { ApiGeometry } from "./geometry";
 import { ApiQueryBlock, ApiQueryResultBlock } from "./query";
 import {
@@ -138,6 +138,7 @@ export interface ApiPageBlock extends ApiBlockBase {
  */
 export type ApiBlock =
   | ApiCellBlock
+  | ApiKeyBlock
   | ApiKeyValueSetBlock
   | ApiLineBlock
   | ApiMergedCellBlock
@@ -149,4 +150,5 @@ export type ApiBlock =
   | ApiTableBlock
   | ApiTableFooterBlock
   | ApiTableTitleBlock
+  | ApiValueBlock
   | ApiWordBlock;
