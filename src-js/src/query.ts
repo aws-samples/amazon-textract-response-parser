@@ -5,7 +5,8 @@
  */
 
 // Local Dependencies:
-import { ApiBlockType, ApiQueryBlock, ApiQueryResultBlock, ApiRelationshipType } from "./api-models/document";
+import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
+import { ApiQueryBlock, ApiQueryResultBlock } from "./api-models/query";
 import { ApiBlockWrapper, argMax, getIterable, WithParentDocBlocks } from "./base";
 import { Geometry } from "./geometry";
 

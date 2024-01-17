@@ -1,5 +1,12 @@
 # Changelog
 
+## In Development (targeting 0.4.0)
+### Changed
+- More complete and systematically structured exposure of sub-module constructs for in-browser IIFE users, who previously couldn't access any constructs that weren't explicitly re-exported at top level. The global `trp` object should now mirror the module file structure e.g. can access `trp.api.content.ApiTextType`.
+- Split out `api-models/document` types to better align with library components, and made some minor typing updates.
+### Deprecated
+- Several top-level **re-exports** now tagged as deprecated and will be removed in future: Prefer imports from the underlying sub-modules.
+
 ## 0.3.1 (2023-08-28)
 ### Fixed
 - Suppress "content may be truncated" warnings when API `NextToken` is present but `null` ([#154](https://github.com/aws-samples/amazon-textract-response-parser/issues/154))

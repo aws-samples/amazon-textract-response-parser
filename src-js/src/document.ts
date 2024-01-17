@@ -3,17 +3,12 @@
  */
 
 // Local Dependencies:
-import {
-  ApiBlock,
-  ApiBlockType,
-  ApiCellBlock,
-  ApiKeyValueEntityType,
-  ApiKeyValueSetBlock,
-  ApiLineBlock,
-  ApiMergedCellBlock,
-  ApiPageBlock,
-  ApiQueryBlock,
-} from "./api-models/document";
+import { ApiBlockType } from "./api-models/base";
+import { ApiLineBlock } from "./api-models/content";
+import { ApiBlock, ApiPageBlock } from "./api-models/document";
+import { ApiKeyValueEntityType, ApiKeyValueSetBlock } from "./api-models/form";
+import { ApiQueryBlock } from "./api-models/query";
+import { ApiCellBlock, ApiMergedCellBlock } from "./api-models/table";
 import {
   ApiDocumentMetadata,
   ApiResponsePage,
@@ -39,7 +34,12 @@ import { CellBaseGeneric, CellGeneric, MergedCellGeneric, RowGeneric, TableGener
 // We don't directly export the *Generic classes here, and instead define concrete alternatives below once
 // Page is defined: Because e.g. using `MergedCell` in user code is much nicer than having to put
 // `MergedCellGeneric<Page>` everywhere.
-export { ApiBlockWrapper } from "./base";
+export {
+  /**
+   * @deprecated Please import direct from `base` submodule (or use `trp.base` in IIFE)
+   */
+  ApiBlockWrapper,
+} from "./base";
 export { SelectionElement, Word } from "./content";
 
 /**

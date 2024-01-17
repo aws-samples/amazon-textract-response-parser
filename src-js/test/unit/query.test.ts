@@ -1,11 +1,6 @@
-import {
-  ApiAnalyzeDocumentResponse,
-  ApiBlockType,
-  ApiQueryBlock,
-  ApiQueryResultBlock,
-  ApiRelationshipType,
-  ApiResponsePage,
-} from "../../src/api-models";
+import { ApiBlockType, ApiRelationshipType } from "../../src/api-models/base";
+import { ApiQueryBlock, ApiQueryResultBlock } from "../../src/api-models/query";
+import { ApiAnalyzeDocumentResponse, ApiResponsePage } from "../../src/api-models/response";
 import { QueryInstance, QueryResult, TextractDocument } from "../../src/document";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires

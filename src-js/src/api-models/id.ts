@@ -1,5 +1,5 @@
 /**
- * Identity document analysis Textract API models used by the Textract response parser.
+ * Identity document analysis Textract API models used by the Textract Response Parser.
  *
  * This file collects types/interfaces specific to Textract's ID analysis APIs
  */

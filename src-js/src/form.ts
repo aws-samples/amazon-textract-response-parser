@@ -3,7 +3,8 @@
  */
 
 // Local Dependencies:
-import { ApiBlockType, ApiKeyValueSetBlock, ApiRelationshipType } from "./api-models/document";
+import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
+import { ApiKeyValueSetBlock } from "./api-models/form";
 import {
   aggregate,
   AggregationMethod,

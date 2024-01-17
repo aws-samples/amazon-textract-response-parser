@@ -1,4 +1,4 @@
-import { ApiAnalyzeExpenseResponse } from "../../src/api-models";
+import { ApiAnalyzeExpenseResponse } from "../../src/api-models/response";
 import { TextractExpense } from "../../src/expense";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires

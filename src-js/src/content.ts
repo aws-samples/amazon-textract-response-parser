@@ -3,15 +3,14 @@
  */
 
 // Local Dependencies:
+import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
 import {
-  ApiBlockType,
   ApiLineBlock,
-  ApiRelationshipType,
   ApiSelectionElementBlock,
   ApiSelectionStatus,
   ApiTextType,
   ApiWordBlock,
-} from "./api-models/document";
+} from "./api-models/content";
 import { ApiBlockWrapper, getIterable, WithParentDocBlocks } from "./base";
 import { Geometry } from "./geometry";
 

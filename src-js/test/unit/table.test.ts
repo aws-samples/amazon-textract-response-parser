@@ -1,13 +1,11 @@
+import { ApiBlockType, ApiRelationshipType } from "../../src/api-models/base";
+import { ApiAnalyzeDocumentResponse, ApiResponsePage } from "../../src/api-models/response";
 import {
-  ApiAnalyzeDocumentResponse,
-  ApiBlockType,
   ApiCellBlock,
-  ApiRelationshipType,
-  ApiResponsePage,
   ApiTableBlock,
   ApiTableCellEntityType,
   ApiTableEntityType,
-} from "../../src/api-models";
+} from "../../src/api-models/table";
 import { AggregationMethod } from "../../src/base";
 import { Page, TextractDocument, Word } from "../../src/document";
 import { CellGeneric, MergedCellGeneric } from "../../src/table";

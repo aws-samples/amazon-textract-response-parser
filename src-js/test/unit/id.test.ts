@@ -1,4 +1,5 @@
-import { ApiAnalyzeIdResponse, ApiIdentityDocument } from "../../src/api-models";
+import { ApiIdentityDocument } from "../../src/api-models/id";
+import { ApiAnalyzeIdResponse } from "../../src/api-models/response";
 import {
   IdDocument,
   IdDocumentField,

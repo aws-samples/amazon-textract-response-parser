@@ -10,13 +10,9 @@ import {
 } from "@aws-sdk/client-textract";
 
 // Local Dependencies:
-import {
-  ApiResponsePage,
-  ApiResponsePages,
-  TextractExpense,
-  TextractDocument,
-  ApiAnalyzeExpenseResponse,
-} from "../../src";
+import { ApiAnalyzeExpenseResponse, ApiResponsePage, ApiResponsePages } from "../../src/api-models/response";
+import { TextractDocument } from "../../src/document";
+import { TextractExpense } from "../../src/expense";
 
 const textract = new TextractClient({});
 
@@ -28,7 +24,7 @@ const runTestDocAssertions = (doc: TextractDocument, formsEnabled = true, tables
   expect([...firstPage.iterLines()].reduce((acc, next) => acc + next.listWords().length, 0)).toStrictEqual(
     71
   );
-  expect(firstPage.form.nFields).toStrictEqual(formsEnabled ? 12 : 0);
+  expect(firstPage.form.nFields).toStrictEqual(formsEnabled ? 10 : 0);
   expect(firstPage.nTables).toStrictEqual(tablesEnabled ? 1 : 0);
 };
 

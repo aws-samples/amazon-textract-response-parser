@@ -1,5 +1,5 @@
 /**
- * Core geometry/shape API models used by the Textract response parser.
+ * Core geometry/shape API models used by the Textract Response Parser.
  */
 
 /**

@@ -3,17 +3,15 @@
  */
 
 // Local Dependencies:
+import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
+import { ApiSelectionElementBlock, ApiWordBlock } from "./api-models/content";
 import {
-  ApiBlockType,
   ApiCellBlock,
   ApiMergedCellBlock,
-  ApiRelationshipType,
-  ApiSelectionElementBlock,
   ApiTableBlock,
   ApiTableCellEntityType,
   ApiTableEntityType,
-  ApiWordBlock,
-} from "./api-models/document";
+} from "./api-models/table";
 import { aggregate, AggregationMethod, ApiBlockWrapper, getIterable, WithParentDocBlocks } from "./base";
 import { SelectionElement, Word } from "./content";
 import { Geometry } from "./geometry";

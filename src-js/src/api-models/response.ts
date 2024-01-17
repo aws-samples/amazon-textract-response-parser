@@ -1,5 +1,5 @@
 /**
- * Top-level API response models used by the Textract response parser.
+ * Top-level API response models used by the Textract Response Parser.
  *
  * These models/interfaces cover the top-level response structures as returned by Textract APIs
  */

@@ -1,4 +1,5 @@
-import { ApiBlockType, ApiResponsePage } from "../../src/api-models";
+import { ApiBlockType } from "../../src/api-models/base";
+import { ApiResponsePage } from "../../src/api-models/response";
 import { AggregationMethod } from "../../src/base";
 import { Field, TextractDocument } from "../../src/document";
 

@@ -1,10 +1,10 @@
+import { ApiBlockType } from "../../src/api-models/base";
 import {
   ApiAsyncDocumentAnalysis,
   ApiAsyncJobOuputSucceded,
-  ApiBlockType,
   ApiResponsePage,
   ApiResponsePages,
-} from "../../src/api-models";
+} from "../../src/api-models/response";
 import { Line, TextractDocument } from "../../src/document";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
