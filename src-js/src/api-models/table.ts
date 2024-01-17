@@ -6,7 +6,14 @@
  * https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
  */
 // Local Dependencies:
-import { ApiBlockBase, ApiBlockType, ApiChildRelationship, ApiMergedCellRelationship } from "./base";
+import {
+  ApiBlockBase,
+  ApiBlockType,
+  ApiChildRelationship,
+  ApiMergedCellRelationship,
+  ApiTableFooterRelationship,
+  ApiTableTitleRelationship,
+} from "./base";
 import { ApiGeometry } from "./geometry";
 
 /**
@@ -36,9 +43,12 @@ export interface ApiTableBlock extends ApiBlockBase {
   /**
    * Links to (merged or underlying) cells, titles, or footers contained within this table
    *
-   * CHILD relationships point to underlying cells; MERGED_CELL to merged cells
+   * CHILD relationships point to underlying cells; MERGED_CELL to merged cells; TABLE_FOOTER and
+   * TABLE_TITLE to footers and titles respectively.
    */
-  Relationships: Array<ApiChildRelationship | ApiMergedCellRelationship>;
+  Relationships: Array<
+    ApiChildRelationship | ApiMergedCellRelationship | ApiTableFooterRelationship | ApiTableTitleRelationship
+  >;
 }
 
 /**
@@ -125,4 +135,36 @@ export interface ApiMergedCellBlock extends ApiBlockBase {
    * Number of underlying table rows this cell covers
    */
   RowSpan: number;
+}
+
+/**
+ * Block representing a trailing/footer caption associated with a table
+ */
+export interface ApiTableFooterBlock extends ApiBlockBase {
+  BlockType: ApiBlockType.TableFooter;
+  /**
+   * 0-100 based confidence of the table structure model (separate from OCR content confidence)
+   */
+  Confidence: number;
+  Geometry: ApiGeometry; // Should always be present for TABLE_FOOTER blocks
+  /**
+   * As far as I can tell, TABLE_FOOTER blocks always link directly to WORD children (not LINE)
+   */
+  readonly Relationships: ApiChildRelationship[];
+}
+
+/**
+ * Block representing a leading/header caption associated with a table
+ */
+export interface ApiTableTitleBlock extends ApiBlockBase {
+  BlockType: ApiBlockType.TableTitle;
+  /**
+   * 0-100 based confidence of the table structure model (separate from OCR content confidence)
+   */
+  Confidence: number;
+  Geometry: ApiGeometry; // Should always be present for TABLE_TITLE blocks
+  /**
+   * As far as I can tell, TABLE_TITLE blocks always link directly to WORD children (not LINE)
+   */
+  readonly Relationships: ApiChildRelationship[];
 }

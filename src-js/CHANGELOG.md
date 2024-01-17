@@ -2,6 +2,7 @@
 
 ## In Development (targeting 0.4.0)
 ### Added
+- Proper support for [table title and footer elements](https://aws.amazon.com/blogs/machine-learning/announcing-enhanced-table-extractions-with-amazon-textract/) (`TABLE_TITLE` and `TABLE_FOOTER`) linked from tables.
 - More complete and systematically structured exposure of sub-module constructs for in-browser IIFE users, who previously couldn't access any constructs that weren't explicitly re-exported at top level. The global `trp` object should now mirror the module file structure e.g. can access `trp.api.content.ApiTextType`.
 ### Changed
 - **(BREAKING)** Previously-exposed `CellBase` class is removed, due to refactoring `Cell` and `MergedCell` to depend more on composable mixins and less on fragile hierarchy of (now internal) `CellBaseGeneric`. Use `Cell | MergedCell` instead for typing.

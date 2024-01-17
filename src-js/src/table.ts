@@ -11,6 +11,8 @@ import {
   ApiTableBlock,
   ApiTableCellEntityType,
   ApiTableEntityType,
+  ApiTableFooterBlock,
+  ApiTableTitleBlock,
 } from "./api-models/table";
 import {
   aggregate,
@@ -415,6 +417,48 @@ export interface IGetRowOptions {
 }
 
 /**
+ * Generic base class for a trailing/footer caption on a table
+ *
+ * If you're consuming this library, you probably just want to use `document.ts/TableFooter`.
+ */
+export class TableFooterGeneric<TPage extends IBlockManager>
+  extends WithWords(PageHostedApiBlockWrapper)<ApiTableFooterBlock, TPage>
+  implements IRenderable
+{
+  /**
+   * 0-100 based confidence of the table structure model (separate from OCR content confidence)
+   */
+  get confidence(): number {
+    return this._dict.Confidence;
+  }
+
+  str(): string {
+    return `==== [Table footer] ====\n${this.text}\n========================`;
+  }
+}
+
+/**
+ * Generic base class for a leading/header caption on a table
+ *
+ * If you're consuming this library, you probably just want to use `document.ts/TableTitle`.
+ */
+export class TableTitleGeneric<TPage extends IBlockManager>
+  extends WithWords(PageHostedApiBlockWrapper)<ApiTableTitleBlock, TPage>
+  implements IRenderable
+{
+  /**
+   * 0-100 based confidence of the table structure model (separate from OCR content confidence)
+   */
+  get confidence(): number {
+    return this._dict.Confidence;
+  }
+
+  str(): string {
+    return `==== [Table header] ====\n${this.text}\n========================`;
+  }
+}
+
+/**
  * Generic base class for a table, since Page is not defined yet here
  *
  * If you're consuming this library, you probably just want to use `document.ts/Table`.
@@ -449,6 +493,12 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
         this._cells = this._cells.concat(
           itemBlocks.map((cblk) => new CellGeneric(cblk as ApiCellBlock, this))
         );
+      } else if (rs.Type === ApiRelationshipType.TableFooter) {
+        // Parsed objects will self-register with the parentPage:
+        itemBlocks.map((cblk) => new TableFooterGeneric(cblk as ApiTableFooterBlock, parentPage));
+      } else if (rs.Type === ApiRelationshipType.TableTitle) {
+        // Parsed objects will self-register with the parentPage:
+        itemBlocks.map((cblk) => new TableTitleGeneric(cblk as ApiTableTitleBlock, parentPage));
       } else if (rs.Type !== ApiRelationshipType.MergedCell) {
         // MERGED_CELL relationships are handled later - anything else is unexpected:
         console.warn(
@@ -608,6 +658,13 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
   }
 
   /**
+   * Iterate through the footers linked to this table
+   */
+  iterFooters(): Iterable<TableFooterGeneric<TPage>> {
+    return getIterable(() => this.listFooters());
+  }
+
+  /**
    * Iterate through the rows of the table
    * @param opts Configuration options for merged and multi-spanning cells
    * @example
@@ -648,11 +705,34 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
   }
 
   /**
+   * Iterate through the titles linked to this table
+   */
+  iterTitles(): Iterable<TableTitleGeneric<TPage>> {
+    return getIterable(() => this.listTitles());
+  }
+
+  /**
+   * List the footer(s) associated with the table
+   */
+  listFooters(): TableFooterGeneric<TPage>[] {
+    return this.relatedBlockIdsByRelType(ApiRelationshipType.TableFooter)
+      .map((id) => this.parentPage.getItemByBlockId(id) as TableFooterGeneric<TPage>);
+  }
+
+  /**
    * List the rows of the table
    * @param opts Configuration options for merged and multi-spanning cells
    */
   listRows(opts: IGetRowOptions = {}): RowGeneric<TPage>[] {
     return [...Array(this._nRows).keys()].map((ixRow) => this.rowAt(ixRow + 1, opts));
+  }
+
+  /**
+   * List the title(s) associated with the table
+   */
+  listTitles(): TableTitleGeneric<TPage>[] {
+    return this.relatedBlockIdsByRelType(ApiRelationshipType.TableTitle)
+      .map((id) => this.parentPage.getItemByBlockId(id) as TableTitleGeneric<TPage>);
   }
 
   /**
@@ -680,6 +760,26 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
   }
   set confidence(newVal: number) {
     this._dict.Confidence = newVal;
+  }
+  /**
+   * Access the first `TableFooter` associated to this table, if any
+   *
+   * This convenience property is provided because as far as we're aware at time of writing,
+   * there's always either 0 or 1 footer linked to a table by the model - no more.
+   */
+  get firstFooter(): TableFooterGeneric<TPage> | undefined {
+    const footers = this.listFooters();
+    return footers.length ? footers[0] : undefined;
+  }
+  /**
+   * Access the first `TableTitle` associated to this table, if any
+   *
+   * This convenience property is provided because as far as we're aware at time of writing,
+   * there's always either 0 or 1 title linked to a table by the model - no more.
+   */
+  get firstTitle(): TableTitleGeneric<TPage> | undefined {
+    const titles = this.listTitles();
+    return titles.length ? titles[0] : undefined;
   }
   /**
    * Position of the table on the input image / page

@@ -204,7 +204,7 @@ const firstColCellFragments = table.cellsAt(null, 1, {ignoreMerged: true});
 
 The `Table.confidence`, `Row.getConfidence()` and `Cell.confidence` scores reflect confidence of the **table structure detection** model. For aggregated OCR confidence of the text contained inside, use `.getOcrConfidence()` instead.
 
-Use `Table.tableType` and `Cell.hasEntityTypes()` to explore the more advanced [entity types](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html) extracted by Amazon Textract: For example column headers, titles, footers, and summaries:
+Use `Table.tableType` and `Cell.hasEntityTypes()` to explore the more advanced [entity types](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html) extracted by Amazon Textract: For example column headers, title cells, footer cells, and summary cells:
 
 ```typescript
 import {
@@ -217,6 +217,7 @@ const colHeaders = table.rowAt(1).listCells()
   .filter((c) => c.hasEntityTypes(ApiTableCellEntityType.ColumnHeader));
 ```
 
+For [overall table-level title and footer captions](https://aws.amazon.com/blogs/machine-learning/announcing-enhanced-table-extractions-with-amazon-textract/), see `table.listTitles()` and `table.listFooters()`, etc.
 
 ## Other generic document analyses
 

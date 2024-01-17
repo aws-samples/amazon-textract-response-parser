@@ -8,12 +8,14 @@ import {
 } from "../../src/api-models/table";
 import { AggregationMethod } from "../../src/base";
 import { Page, TextractDocument, Word } from "../../src/document";
-import { CellGeneric, MergedCellGeneric } from "../../src/table";
+import { CellGeneric, MergedCellGeneric, TableFooterGeneric, TableTitleGeneric } from "../../src/table";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testTableMergedCellsJson: ApiResponsePage = require("../data/table-example-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testResponseJson: ApiResponsePage = require("../data/test-response.json");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const testTitleFootersJson: ApiAnalyzeDocumentResponse = require("../data/financial-document-response.json");
 
 describe("MergedCell", () => {
   it("links through to sub-cells", () => {
@@ -36,6 +38,37 @@ describe("MergedCell", () => {
       ++nSubCells;
     }
     expect(nSubCells).toStrictEqual(horzMergedCell.nSubCells);
+  });
+});
+
+describe("TableFooter", () => {
+  it("exposes table footer properties", () => {
+    const doc = new TextractDocument(testTitleFootersJson);
+    const tableFooter = doc.pageNumber(1).tableAtIndex(0).firstFooter as TableFooterGeneric<Page>;
+    expect(tableFooter).not.toBeUndefined();
+    expect(tableFooter.blockType).toStrictEqual(ApiBlockType.TableFooter);
+    expect(tableFooter.confidence).toBeGreaterThan(1);
+    expect(tableFooter.confidence).toBeLessThan(100);
+    expect(tableFooter.text).toStrictEqual("** Less than US$50,000.");
+    const tableFooterStr = tableFooter.str();
+    expect(tableFooterStr.indexOf("==== [Table footer] ====\n")).toStrictEqual(0);
+    expect(tableFooterStr.indexOf(tableFooter.text)).toStrictEqual("==== [Table footer] ====\n".length);
+  });
+});
+
+describe("TableTitle", () => {
+  it("exposes table title properties", () => {
+    const doc = new TextractDocument(testTitleFootersJson);
+    const tableTitle = doc.pageNumber(1).tableAtIndex(0).firstTitle as TableTitleGeneric<Page>;
+    expect(tableTitle).not.toBeUndefined();
+    expect(tableTitle.blockType).toStrictEqual(ApiBlockType.TableTitle);
+    expect(tableTitle.confidence).toBeGreaterThan(1);
+    expect(tableTitle.confidence).toBeLessThan(100);
+    expect(tableTitle.listWords().length).toBeGreaterThan(0);
+    expect(tableTitle.text).toStrictEqual("The changes in total assets of these accounts were as follows:");
+    const tableTitleStr = tableTitle.str();
+    expect(tableTitleStr.indexOf("==== [Table header] ====\n")).toStrictEqual(0);
+    expect(tableTitleStr.indexOf(tableTitle.text)).toStrictEqual("==== [Table header] ====\n".length);
   });
 });
 
@@ -516,6 +549,46 @@ describe("Table", () => {
     expect(
       firstCell?.hasEntityTypes([ApiTableCellEntityType.Summary, ApiTableCellEntityType.Footer])
     ).toStrictEqual(false);
+  });
+
+  it("navigates table titles", () => {
+    const doc = new TextractDocument(testTitleFootersJson);
+    const table = doc.pageNumber(1).tableAtIndex(0);
+    const tableTitles = table.listTitles();
+    expect(tableTitles.length).toBeGreaterThan(0);
+    let ixTitle = 0;
+    for (const title of table.iterTitles()) {
+      expect(title).toBe(tableTitles[ixTitle]);
+      ++ixTitle;
+    }
+    expect(ixTitle).toStrictEqual(tableTitles.length);
+    expect(table.firstTitle).toBe(tableTitles[0]);
+
+    // Perform as expected when no titles present:
+    const noTitlesDoc = new TextractDocument(testTableMergedCellsJson);
+    const noTitlesTable = noTitlesDoc.pageNumber(1).tableAtIndex(0);
+    expect(noTitlesTable.listTitles().length).toStrictEqual(0);
+    expect(noTitlesTable.firstTitle).toBeUndefined();
+  });
+
+  it("navigates table footers", () => {
+    const doc = new TextractDocument(testTitleFootersJson);
+    const table = doc.pageNumber(1).tableAtIndex(0);
+    const tableFooters = table.listFooters();
+    expect(tableFooters.length).toBeGreaterThan(0);
+    let ixFooter = 0;
+    for (const footer of table.iterFooters()) {
+      expect(footer).toBe(tableFooters[ixFooter]);
+      ++ixFooter;
+    }
+    expect(ixFooter).toStrictEqual(tableFooters.length);
+    expect(table.firstFooter).toBe(tableFooters[0]);
+
+    // Perform as expected when no footers present:
+    const noFootersDoc = new TextractDocument(testResponseJson);
+    const noFootersTable = noFootersDoc.pageNumber(1).tableAtIndex(0);
+    expect(noFootersTable.listFooters().length).toStrictEqual(0);
+    expect(noFootersTable.firstFooter).toBeUndefined();
   });
 
   it("stringifies tables to contain each row's representation", () => {

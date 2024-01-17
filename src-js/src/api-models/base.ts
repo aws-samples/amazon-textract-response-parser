@@ -31,6 +31,14 @@ export const enum ApiRelationshipType {
    */
   MergedCell = "MERGED_CELL",
   /**
+   * Used to link from a TABLE to its associated TABLE_FOOTER, if present
+   */
+  TableFooter = "TABLE_FOOTER",
+  /**
+   * Used to link from a TABLE to its associated TABLE_TITLE, if present
+   */
+  TableTitle = "TABLE_TITLE",
+  /**
    * Used to link from a forms/K-V KEY block to its associated VALUE block
    */
   Value = "VALUE",
@@ -68,6 +76,14 @@ export interface ApiMergedCellRelationship extends IRelationshipBase {
   Type: ApiRelationshipType.MergedCell;
 }
 
+export interface ApiTableFooterRelationship extends IRelationshipBase {
+  Type: ApiRelationshipType.TableFooter;
+}
+
+export interface ApiTableTitleRelationship extends IRelationshipBase {
+  Type: ApiRelationshipType.TableTitle;
+}
+
 export interface ApiValueRelationship extends IRelationshipBase {
   Type: ApiRelationshipType.Value;
 }
@@ -82,6 +98,8 @@ export type ApiRelationship =
   | ApiChildRelationship
   | ApiComplexFeaturesRelationship
   | ApiMergedCellRelationship
+  | ApiTableFooterRelationship
+  | ApiTableTitleRelationship
   | ApiValueRelationship;
 
 /**
@@ -148,6 +166,18 @@ export const enum ApiBlockType {
    * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
    */
   Table = "TABLE",
+  /**
+   * A trailing/footer caption associated with a TABLE
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+   */
+  TableFooter = "TABLE_FOOTER",
+  /**
+   * A leading/header caption associated with a TABLE
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+   */
+  TableTitle = "TABLE_TITLE",
   /**
    * An individual "word" of text (string of characters not separated by whitespace)
    *

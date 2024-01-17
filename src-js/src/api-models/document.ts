@@ -12,7 +12,13 @@ import { ApiLineBlock, ApiSelectionElementBlock, ApiWordBlock } from "./content"
 import { ApiKeyValueSetBlock } from "./form";
 import { ApiGeometry } from "./geometry";
 import { ApiQueryBlock, ApiQueryResultBlock } from "./query";
-import { ApiCellBlock, ApiMergedCellBlock, ApiTableBlock } from "./table";
+import {
+  ApiCellBlock,
+  ApiMergedCellBlock,
+  ApiTableBlock,
+  ApiTableFooterBlock,
+  ApiTableTitleBlock,
+} from "./table";
 
 // Temporary re-exports for consistency with old all-top-level API:
 export {
@@ -140,4 +146,6 @@ export type ApiBlock =
   | ApiQueryResultBlock
   | ApiSelectionElementBlock
   | ApiTableBlock
+  | ApiTableFooterBlock
+  | ApiTableTitleBlock
   | ApiWordBlock;

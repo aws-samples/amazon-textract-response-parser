@@ -35,7 +35,14 @@ import {
 } from "./form";
 import { BoundingBox, Geometry } from "./geometry";
 import { QueryInstanceCollectionGeneric, QueryInstanceGeneric, QueryResultGeneric } from "./query";
-import { CellGeneric, MergedCellGeneric, RowGeneric, TableGeneric } from "./table";
+import {
+  CellGeneric,
+  MergedCellGeneric,
+  RowGeneric,
+  TableFooterGeneric,
+  TableGeneric,
+  TableTitleGeneric,
+} from "./table";
 
 // Direct Exports:
 // We don't directly export the *Generic classes here, and instead define concrete alternatives below once
@@ -1014,6 +1021,8 @@ export class Cell extends CellGeneric<Page> {}
 export class MergedCell extends MergedCellGeneric<Page> {}
 export class Row extends RowGeneric<Page> {}
 export class Table extends TableGeneric<Page> {}
+export class TableFooter extends TableFooterGeneric<Page> {}
+export class TableTitle extends TableTitleGeneric<Page> {}
 
 export class TextractDocument
   extends ApiObjectWrapper<ApiResponsePage & ApiResponseWithContent>
