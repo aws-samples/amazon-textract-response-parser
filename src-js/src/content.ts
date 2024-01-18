@@ -16,6 +16,7 @@ import { ApiBlock } from "./api-models/document";
 import {
   ApiBlockWrapper,
   Constructor,
+  escapeHtml,
   IApiBlockWrapper,
   IBlockManager,
   IRenderable,
@@ -70,6 +71,13 @@ export class Word
   }
   set textType(newVal: ApiTextType) {
     this._dict.TextType = newVal;
+  }
+
+  /**
+   * The semantic `html()` representation of a `Word` is just the (HTML-escaped) text
+   */
+  html(): string {
+    return escapeHtml(this.text);
   }
 
   /**
@@ -384,6 +392,13 @@ export class LineGeneric<TPage extends IBlockManager>
     return this._dict.Text;
   }
 
+  /**
+   * The semantic `html()` representation of a `Line` is just the (HTML-escaped) text
+   */
+  html(): string {
+    return escapeHtml(this.text);
+  }
+
   str(): string {
     return `Line\n==========\n${this._dict.Text}\nWords\n----------\n${this.listWords()
       .map((word) => `[${word.str()}]`)
@@ -433,6 +448,17 @@ export class SelectionElement
   }
 
   /**
+   * The semantic `html()` representation of a `SelectionElement` uses an `<input>` element
+   *
+   * We render a checkbox, but `disable` it to prevent accidental edits when viewing reports
+   */
+  html(): string {
+    return `<input type="checkbox" disabled ${
+      this.selectionStatus === ApiSelectionStatus.Selected ? "checked " : ""
+    }/>`;
+  }
+
+  /**
    * The human-readable `str()` representation of a sel. element is just the `.selectionStatus`
    */
   str(): string {
@@ -477,6 +503,15 @@ export class Signature
    */
   get geometry(): Geometry<ApiSignatureBlock, Signature> {
     return this._geometry;
+  }
+
+  /**
+   * The semantic `html()` representation of a `SelectionElement` uses an `<input>` element
+   *
+   * We render a checkbox, but `disable` it to prevent accidental edits when viewirg reports
+   */
+  html(): string {
+    return `<input class="signature" type="text" disabled value="[SIGNATURE]"/>`;
   }
 
   /**

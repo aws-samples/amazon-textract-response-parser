@@ -7,7 +7,15 @@
 // Local Dependencies:
 import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
 import { ApiQueryBlock, ApiQueryResultBlock } from "./api-models/query";
-import { argMax, getIterable, IBlockManager, IRenderable, PageHostedApiBlockWrapper } from "./base";
+import {
+  argMax,
+  escapeHtml,
+  getIterable,
+  indent,
+  IBlockManager,
+  IRenderable,
+  PageHostedApiBlockWrapper,
+} from "./base";
 import { Geometry } from "./geometry";
 
 /**
@@ -42,6 +50,13 @@ export class QueryResultGeneric<TPage extends IBlockManager>
   }
   get text(): string {
     return this._dict.Text;
+  }
+
+  /**
+   * The semantic `html()` representation of a query result is just its (HTML-escaped) text
+   */
+  html(): string {
+    return escapeHtml(this.text);
   }
 
   str(): string {
@@ -137,6 +152,23 @@ export class QueryInstanceGeneric<TPage extends IBlockManager>
   }
 
   /**
+   * The HTML for a `QueryInstance` uses a `<div>` of class "query"
+   *
+   * The question itself is presented within `<p>` tags, and then a bulleted list of the answers /
+   * results in order of descending confidence.
+   */
+  html(): string {
+    const resultsByConf = this.listResultsByConfidence();
+    const resultsHtml = resultsByConf.map((res) => `<li>${res.html()}</li>`).join("\n");
+    return [
+      '<div class="query">',
+      indent(`<p>${escapeHtml(this.text)}</p>`),
+      indent(resultsByConf.length ? ["<ul>", indent(resultsHtml), "</ul>"].join("\n") : "<ul></ul>"),
+      "</div>",
+    ].join("\n");
+  }
+
+  /**
    * Generate a human-readable representation of this query instance
    */
   str(): string {
@@ -214,6 +246,15 @@ export class QueryInstanceCollectionGeneric<TPage extends IBlockManager> impleme
   getQueryByQuestion(question: string): QueryInstanceGeneric<TPage> | undefined {
     if (!question) return;
     return this._queries.find((q) => q.text === question);
+  }
+
+  /**
+   * The `html()` for a QueryCollection lists all queries within a `<div>` of class "queries"
+   */
+  html(): string {
+    return ['<div class="queries">', indent(this._queries.map((q) => q.html()).join("\n")), "</div>"].join(
+      "\n"
+    );
   }
 
   /**

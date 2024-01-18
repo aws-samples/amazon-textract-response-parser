@@ -11,6 +11,7 @@ import { ApiBlockBase, ApiBlockType, ApiChildRelationship } from "./base";
 import { ApiLineBlock, ApiSelectionElementBlock, ApiSignatureBlock, ApiWordBlock } from "./content";
 import { ApiKeyBlock, ApiKeyValueSetBlock, ApiValueBlock } from "./form";
 import { ApiGeometry } from "./geometry";
+import { ApiLayoutBlock } from "./layout";
 import { ApiQueryBlock, ApiQueryResultBlock } from "./query";
 import {
   ApiCellBlock,
@@ -140,6 +141,7 @@ export type ApiBlock =
   | ApiCellBlock
   | ApiKeyBlock
   | ApiKeyValueSetBlock
+  | ApiLayoutBlock
   | ApiLineBlock
   | ApiMergedCellBlock
   | ApiPageBlock

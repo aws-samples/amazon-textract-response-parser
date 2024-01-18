@@ -24,7 +24,7 @@ export const enum ApiKeyValueEntityType {
 
 /**
  * Alternative style for Key (label) item in a Forms key-value pair
- * 
+ *
  * Conventionally, forms results appear to use KEY_VALUE_SET blocks for both key and value.
  * However, distinct 'KEY' and 'VALUE' blocks were observed in some responses.
  */
@@ -75,7 +75,7 @@ export interface ApiKeyValueSetBlock extends ApiBlockBase {
 
 /**
  * Alternative style for Value (data) item in a Forms key-value pair
- * 
+ *
  * Conventionally, forms results appear to use KEY_VALUE_SET blocks for both key and value.
  * However, distinct 'KEY' and 'VALUE' blocks were observed in some responses.
  */

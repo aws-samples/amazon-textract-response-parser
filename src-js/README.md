@@ -116,7 +116,7 @@ for (const page of doc.iterPages()) {
 const linesArrsByPage = doc.listPages().map((p) => p.listLines());
 ```
 
-These arrays are in the raw order returned by Amazon Textract, which is not necessarily a logical human reading order especially for multi-column documents. See the *Other generic document analyses* section below for extra content sorting utilities.
+These arrays are in the raw order returned by Amazon Textract, which is not necessarily a logical human reading order especially for multi-column documents. See the *Layout analysis* and *List text in approximate reading order* sections below for extra content sorting utilities.
 
 
 ## Queries
@@ -142,7 +142,7 @@ doc.listPages().forEach((page) => {
 ```
 
 
-## Forms
+## Forms (Key-Value pairs)
 
 As well as looping through the [form data key-value pairs](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html) in the document, you can query fields by key:
 
@@ -219,32 +219,64 @@ const colHeaders = table.rowAt(1).listCells()
 
 For [overall table-level title and footer captions](https://aws.amazon.com/blogs/machine-learning/announcing-enhanced-table-extractions-with-amazon-textract/), see `table.listTitles()` and `table.listFooters()`, etc.
 
-## Signatures
 
-If you enabled [signature detection in Amazon Textract](https://aws.amazon.com/blogs/machine-learning/detect-signatures-on-documents-or-images-using-the-signatures-feature-in-amazon-textract/), you can check for signatures at the page level:
+## Layout analysis
+
+[Layout analysis in Amazon Textract](https://aws.amazon.com/blogs/machine-learning/amazon-textracts-new-layout-feature-introduces-efficiencies-in-general-purpose-and-generative-ai-document-processing-tasks/) detects higher-level semantic components than the core text Lines & Words - like paragraphs and headings. If you enabled this analysis, you can access the results through the `page.layout` collection:
 
 ```typescript
-// e.g. print number of signatures detected by page:
-doc.listPages()
-      .forEach((page, ix) => { console.log(`${page.nSignatures} signatures on page ${ix+1}`); });
-// ...Or get the position of the first signature on the first page:
-const bbox = doc.pageNumber(1).listSignatures()[0].geometry.boundingBox;
+// Loop through content in implied reading order (from Layout API):
+page.layout.listItems().forEach((layItem) => {
+  console.log(layItem.blockType);  // There are different kinds of Layout Item
+  const textLines = layItem.listTextLines();  // All Layout* items can be queried for text LINEs
+  const children = layItem.listContent();  // Usually text LINEs, but sometimes other Layout* items
+  console.log(layItem.text + "\n");  // ...Or you can just pull up the text
+});
 ```
 
-## Other generic document analyses
-
-Some tools are built in to the library for other common but complex analyses you might want to tackle.
-
-These analyses tackle challenging problems by way of imperfect, heuristic, rule-based methods. There are some configuration parameters exposed to help you tune the results for your particular domain (and test harnesses in the [tests/unit/corpus folder](tests/unit/corpus) to help you experiment via `npm run test:unit`). However, in certain challenging cases it might be more effective to explore different algorithms or even custom ML models.
-
-
-### List text in approximate human reading order
-
-To list `LINE`s of text in **approximate human reading order**, grouped into pseudo-**paragraphs**:
+If Forms and/or Tables analyses were also enabled, you'll be able to traverse from the relevant Layout object types to these more detailed representations. **However,** because these are separate analyses the correspondence may not be 1-to-1 and TRP is having to do some reconciliation under the hood:
 
 ```typescript
-const inReadingOrder = page.getLineClustersInReadingOrder();
-for (const pseudoParagraph of inReadingOrder) {
+import { ApiBlockType } from "amazon-textract-response-parser/api-models/base";
+import { LayoutKeyValue, LayoutTable } from "amazon-textract-response-parser/document";
+
+page.layout.listItems().forEach((layItem) => {
+  if (layItem.blockType === ApiBlockType.LayoutKeyValue) {
+    const fields = (layItem as LayoutKeyValue).listFields(); // Probably multiple
+    fields.forEach((field) => console.log(field.key.text));
+  } else if (layItem.blockType === ApiBlockType.LayoutTable) {
+    const tables = (layItem as LayoutTable).listTables(); // Probably just 1
+    tables.forEach((table) => console.log(table.nCells));
+  }
+});
+```
+
+
+### List text in approximate reading order (with or without `Layout`)
+
+Particularly for multi-column documents, the default output sequence for Amazon Textract `LINE`/`WORD` OCR results will likely not be the overall reading order you'd like. For best performance, enable and use the `Layout` analysis because **layout items are returned in implied reading order** as estimated by the AI service.
+
+Alternatively, TRP.js provides a **client-side heuristic algorithm** that can attempt to sort results without Layout. There are even some configuration parameters exposed to help you tune the results for your particular domain, and test harnesses in the [tests/unit/corpus folder](tests/unit/corpus) to help you experiment via `npm run test:unit`:
+
+```typescript
+import { ReadingOrderLayoutMode } from "amazon-textract-response-parser/document";
+
+// By default, we automatically use `Layout` when it's available and heuristics when it's not:
+let textInReadingOrder: string = page.getTextInReadingOrder();  // Just generate text
+let pseudoParas = page.getLineClustersInReadingOrder();
+
+// You can force use of `Layout` (throwing an error if none available):
+let layText = page.getTextInReadingOrder({ useLayout: ReadingOrderLayoutMode.RequireLayout });
+// Or fine-tune heuristic parameters:
+let layParas = page.getLineClustersInReadingOrder({
+  colHOverlapThresh = 0.75,
+  paraVDistTol = 0.8,
+  // ...
+  useLayout: ReadingOrderLayoutMode.IgnoreLayout,
+});
+
+// Lines are clustered by "paragraph"/layout element:
+for (const pseudoParagraph of pseudoParas) {
   for (const line of pseudoParagraph) {
     console.log(line.text);
   }
@@ -252,10 +284,37 @@ for (const pseudoParagraph of inReadingOrder) {
 }
 ```
 
+When configured to use Layout analysis results, these functions should be equivalent to just looping through your `page.layout.iterItems()` to get the text from each one in order.
+
+
+### Render documents to semantic markup/markdown
+
+If you'd like to use AI/ML models to further post-process your Amazon Textract results, you have a choice between those that take text-only inputs - and "multi-modal" models that can also ingest structural information (see for example [this Amazon Comprehend feature](https://aws.amazon.com/about-aws/whats-new/2021/09/amazon-comprehend-extract-entities-native-format/) and [this Amazon SageMaker sample](https://github.com/aws-samples/amazon-textract-transformer-pipeline/tree/main)). While multi-modal models work well on complex structured documents, the pace of research on text-only Large Language Models has historically been faster (perhaps because plain text data is easier to come by and work with).
+
+**Semantic markup like HTML** provides somewhat of a middle ground where we can try to preserve the layout/form/table/etc structure Amazon Textract extracted, but still provide plain text. This may be particularly useful for working with **Generative Large Language Models** (GenAI/LLMs) like those on [Amazon Bedrock](https://aws.amazon.com/bedrock/).
+
+```typescript
+// Render HTML for individual components:
+console.log(page.listTables[0].html());
+
+// ...Or for whole pages/documents:
+const docHtml = doc.html();
+fs.writeFile("./my-doc.html", docHtml, (err) => {});
+```
+
+Some caveats to be aware of:
+
+- Top-level `Page.html()` and `TextractDocument.html()` currently depend on Layout analysis being enabled, because the Layout results are used to sequence all the elements together.
+- Only HTML is supported currently, but we're keen to add `.markdown()` if there's interest
+
+If either of these affects your planned use-cases, please let us know in the GitHub issues to help prioritise!
+
 
 ### Segment headers and footers from main content
 
-To split headers and footers out from main content:
+This is another task for which you might find [Textract Layout analysis](https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html) useful - by looping through layout items and excluding those of type 'header', 'footer', and 'page number'.
+
+However, TRP.js also provides a heuristic function you can try instead:
 
 ```typescript
 const segmented = page.getLinesByLayoutArea(
@@ -270,6 +329,8 @@ console.log("\n---- FOOTER:")
 console.log(segmented.footer.map((l) => l.text).join("\n"));
 ```
 
+**Note:** Unlike the `*inReadingOrder` APIs, this utility has not yet been updated to use Textract Layout analysis when it's available. That behavior might change in future.
+
 
 ### Calculate average skew of page text
 
@@ -281,6 +342,19 @@ const skew = page.getModalWordOrientationDegrees();
 ```
 
 This method aggregates the skew to find the most common angle across all content on the page.
+
+
+## Signatures
+
+If you enabled [signature detection in Amazon Textract](https://aws.amazon.com/blogs/machine-learning/detect-signatures-on-documents-or-images-using-the-signatures-feature-in-amazon-textract/), you can check for signatures at the page level:
+
+```typescript
+// e.g. print number of signatures detected by page:
+doc.listPages()
+      .forEach((page, ix) => { console.log(`${page.nSignatures} signatures on page ${ix+1}`); });
+// ...Or get the position of the first signature on the first page:
+const bbox = doc.pageNumber(1).listSignatures()[0].geometry.boundingBox;
+```
 
 
 ## Expense (invoice and receipt) objects
@@ -368,6 +442,7 @@ In general:
 
 - Where the library classes (`TextractDocument`, `Page`, `Word`, etc) offer mutation operations, these should modify the source API JSON object **in-place** and ensure self-consistency.
 - For library classes that are backed by a specific object in the source API JSON, you can access it via the `.dict` property (`word.dict`, `table.dict`, etc) but are responsible for updating any required references in other objects if making changes there.
+- Any individual-block-level changes you make to the underlying API JSON should be dynamically reflected in the parsed TRP objects (e.g. overriding word text, coordinates, etc)... But changes that affect inter-block relationships are more likely to cause staleness issues.
 
 In particular for **array properties**, you'll note that TRP generally exposes getters and iterators (such as `table.nRows`, `table.iterRows()`, `table.listRows()`, `table.cellsAt()`) rather than direct access to lists - to avoid implying that arbitrary array mutations (such as `table.rows.pop()`) are properly supported.
 

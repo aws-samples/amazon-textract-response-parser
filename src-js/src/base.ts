@@ -74,6 +74,13 @@ export interface IWithText {
 
 export interface IRenderable extends IWithText {
   /**
+   * Return a best-effort semantic HTML representation of this element and its content
+   */
+  html(): string;
+
+  // TODO: Add Markdown options in future?
+
+  /**
    * Return a text representation of this element and its content
    *
    * Unlike `.text`, this may include additional characters to try and communicate the type of the
@@ -155,6 +162,79 @@ export function getIterable<T>(collectionFetcher: () => T[]): Iterable<T> {
   return {
     [Symbol.iterator]: getIterator,
   };
+}
+
+/**
+ * Configuration options for escaping text for HTML
+ */
+export interface IEscapeHtmlOpts {
+  /**
+   * Set true if escaping within an element attribute <el attr="...">
+   *
+   * For standard text nodes, there's no need to escape single or double quotes
+   * @default false;
+   */
+  forAttr?: boolean;
+}
+
+/**
+ * Escape a document text string for use in HTML (TextNodes only by default)
+ * @param str Raw text to be escaped
+ * @returns Escaped string ready to be used in a HTML document
+ */
+export function escapeHtml(str: string, { forAttr = false }: IEscapeHtmlOpts = {}): string {
+  return str.replace(
+    forAttr ? /[&<>'"]/g : /[&<>]/g,
+    (entity) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "'": "&#39;",
+        '"': "&quot;",
+      }[entity] as string)
+  );
+}
+
+/**
+ * Configuration options for indenting text
+ */
+export interface IIndentOpts {
+  /**
+   * The character/string that should be used to indent text.
+   * @default " "
+   */
+  character?: string;
+  /**
+   * The number of times the indent `character` should be repeated.
+   * @default 2
+   */
+  count?: number;
+  /**
+   * Whether indentation should also be applied to empty & whitespace-only lines.
+   * @default false
+   */
+  includeEmptyLines?: boolean;
+  /**
+   * Set true to skip the first line of text when applying indentation
+   * @default false
+   */
+  skipFirstLine?: boolean;
+}
+
+/**
+ * Indent all lines of `text` by a certain amount
+ */
+export function indent(
+  text: string,
+  { character = " ", count = 2, includeEmptyLines = false, skipFirstLine = false }: IIndentOpts = {}
+): string {
+  const result = text.replace(includeEmptyLines ? /^/gm : /^(?!\s*$)/gm, character.repeat(count));
+  if (skipFirstLine) {
+    return result.substring(count * character.length);
+  } else {
+    return result;
+  }
 }
 
 /**

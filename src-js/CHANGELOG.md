@@ -2,7 +2,9 @@
 
 ## In Development (targeting 0.4.0)
 ### Added
-- Proper support for [table title and footer elements](https://aws.amazon.com/blogs/machine-learning/announcing-enhanced-table-extractions-with-amazon-textract/) (`TABLE_TITLE` and `TABLE_FOOTER`) linked from tables.
+- Load and navigate [Amazon Textract Layout analysis](https://aws.amazon.com/blogs/machine-learning/amazon-textracts-new-layout-feature-introduces-efficiencies-in-general-purpose-and-generative-ai-document-processing-tasks/) data. ([#164](https://github.com/aws-samples/amazon-textract-response-parser/issues/164))
+- Serialize individual elements, pages and documents to semantic markup with `.html()` (for page and document level, currently depends on `Layout` being enabled).
+- Proper support for [table title and footer elements](https://aws.amazon.com/blogs/machine-learning/announcing-enhanced-table-extractions-with-amazon-textract/) (`TABLE_TITLE` and `TABLE_FOOTER`) linked from tables. ([#171](https://github.com/aws-samples/amazon-textract-response-parser/issues/171))
 - Support [signature detection results](https://aws.amazon.com/blogs/machine-learning/detect-signatures-on-documents-or-images-using-the-signatures-feature-in-amazon-textract/) (`SIGNATURE` blocks)
 - More complete and systematically structured exposure of sub-module constructs for in-browser IIFE users, who previously couldn't access any constructs that weren't explicitly re-exported at top level. The global `trp` object should now mirror the module file structure e.g. can access `trp.api.content.ApiTextType`.
 ### Changed

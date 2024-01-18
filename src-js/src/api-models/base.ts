@@ -131,6 +131,66 @@ export const enum ApiBlockType {
    */
   KeyValueSet = "KEY_VALUE_SET",
   /**
+   * Layout analysis result for a diagram / image / figure
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  LayoutFigure = "LAYOUT_FIGURE",
+  /**
+   * Layout analysis result segmenting page footer from other content
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  LayoutFooter = "LAYOUT_FOOTER",
+  /**
+   * Layout analysis result segmenting page header from other content
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  LayoutHeader = "LAYOUT_HEADER",
+  /**
+   * Layout analysis result for a Forms Key-Value pair
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  LayoutKeyValue = "LAYOUT_KEY_VALUE",
+  /**
+   * Layout analysis result for a list (e.g. bullet points or numbered paragraphs)
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  LayoutList = "LAYOUT_LIST",
+  /**
+   * Layout analysis result for a page number annotation
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  LayoutPageNumber = "LAYOUT_PAGE_NUMBER",
+  /**
+   * Layout analysis result for a section-level heading
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  LayoutSectionHeader = "LAYOUT_SECTION_HEADER",
+  /**
+   * Layout analysis result for a table
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  LayoutTable = "LAYOUT_TABLE",
+  /**
+   * Layout analysis result for a paragraph of text
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  LayoutText = "LAYOUT_TEXT",
+  /**
+   * Layout analysis result for the main title of the document
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  LayoutTitle = "LAYOUT_TITLE",
+  /**
    * A contiguous string of non-breaking-whitespace separated `WORD`s
    *
    * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-lines-words.html
@@ -202,6 +262,26 @@ export const enum ApiBlockType {
    * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-lines-words.html
    */
   Word = "WORD",
+}
+
+const LAYOUT_BLOCK_TYPES = new Set([
+  ApiBlockType.LayoutFigure,
+  ApiBlockType.LayoutFooter,
+  ApiBlockType.LayoutHeader,
+  ApiBlockType.LayoutKeyValue,
+  ApiBlockType.LayoutList,
+  ApiBlockType.LayoutPageNumber,
+  ApiBlockType.LayoutSectionHeader,
+  ApiBlockType.LayoutTable,
+  ApiBlockType.LayoutText,
+  ApiBlockType.LayoutTitle,
+]);
+
+/**
+ * Check if an API Block.BlockType corresponds to a Layout* element.
+ */
+export function isLayoutBlockType(blockType: ApiBlockType): boolean {
+  return LAYOUT_BLOCK_TYPES.has(blockType);
 }
 
 /**

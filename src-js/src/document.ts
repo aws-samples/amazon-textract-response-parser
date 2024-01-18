@@ -3,10 +3,11 @@
  */
 
 // Local Dependencies:
-import { ApiBlockType } from "./api-models/base";
+import { ApiBlockType, isLayoutBlockType } from "./api-models/base";
 import { ApiLineBlock } from "./api-models/content";
 import { ApiBlock, ApiPageBlock } from "./api-models/document";
 import { ApiKeyBlock, ApiKeyValueEntityType, ApiKeyValueSetBlock } from "./api-models/form";
+import { ApiLayoutBlock } from "./api-models/layout";
 import { ApiQueryBlock } from "./api-models/query";
 import {
   ApiDocumentMetadata,
@@ -20,6 +21,7 @@ import {
   ApiObjectWrapper,
   getIterable,
   IDocBlocks,
+  indent,
   modalAvg,
   IBlockManager,
   IRenderable,
@@ -32,11 +34,27 @@ import {
   FieldValueGeneric,
   FormsCompositeGeneric,
   FormGeneric,
+  IWithForm,
 } from "./form";
 import { BoundingBox, Geometry } from "./geometry";
+import {
+  LayoutFigureGeneric,
+  LayoutFooterGeneric,
+  LayoutGeneric,
+  LayoutHeaderGeneric,
+  LayoutItemGeneric,
+  LayoutKeyValueGeneric,
+  LayoutListGeneric,
+  LayoutPageNumberGeneric,
+  LayoutSectionHeaderGeneric,
+  LayoutTableGeneric,
+  LayoutTextGeneric,
+  LayoutTitleGeneric,
+} from "./layout";
 import { QueryInstanceCollectionGeneric, QueryInstanceGeneric, QueryResultGeneric } from "./query";
 import {
   CellGeneric,
+  IWithTables,
   MergedCellGeneric,
   RowGeneric,
   TableFooterGeneric,
@@ -55,6 +73,33 @@ export {
   ApiBlockWrapper,
 } from "./base";
 export { SelectionElement, Word } from "./content";
+
+/**
+ * How heuristic reading order methods should react to the presence of Textract Layout results
+ *
+ * When the `Layout` analysis is enabled in Amazon Textract, additional `LAYOUT_*` blocks are
+ * generated using ML to infer the structural layout and reference reading order of the page. This
+ * carries additional API charges, but is likely to produce more accurate results than our simple
+ * TRP.js heuristics.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ *
+ * @experimental
+ */
+export const enum ReadingOrderLayoutMode {
+  /**
+   * Use Textract Layout results for reading order when present, heuristics otherwise
+   */
+  Auto = "AUTO",
+  /**
+   * Use heuristics for reading order, even if Textract Layout results are present
+   */
+  IgnoreLayout = "IGNORE_LAYOUT",
+  /**
+   * Use Textract Layout results for reading order, throw an error if they're not available
+   */
+  RequireLayout = "REQUIRE_LAYOUT",
+}
 
 /**
  * @experimental
@@ -94,6 +139,11 @@ export interface HeuristicReadingOrderModelParams {
    * specify paragraph indentation in terms of a multiplier on text line-height. Default 0.
    */
   paraIndentThresh?: number;
+  /**
+   * Whether to use Textract Layout results *instead* of heuristics for improved reading order when
+   * available; or always use heuristics; or insist on Layout and throw an error if not present.
+   */
+  useLayout?: ReadingOrderLayoutMode;
 }
 
 /**
@@ -120,7 +170,7 @@ export interface HeaderFooterSegmentModelParams {
 
 export class Page
   extends ApiBlockWrapper<ApiPageBlock>
-  implements IBlockManager, IRenderable
+  implements IBlockManager, IRenderable, IWithForm<Page>, IWithTables<Page>
 {
   _blocks: ApiBlock[];
   _content: Array<LineGeneric<Page> | TableGeneric<Page> | FieldGeneric<Page>>;
@@ -134,11 +184,13 @@ export class Page
       | Word
       | FieldGeneric<Page>
       | FieldValueGeneric<Page>
+      | LayoutItemGeneric<Page>
       | QueryInstanceGeneric<Page>
       | QueryResultGeneric<Page>
       | TableGeneric<Page>
       | CellGeneric<Page>;
   };
+  _layout: LayoutGeneric<Page>;
   _lines: LineGeneric<Page>[];
   _parentDocument: TextractDocument;
   _queries: QueryInstanceCollectionGeneric<Page>;
@@ -156,6 +208,7 @@ export class Page
     this._tables = [];
     this._form = new FormGeneric<Page>([], this);
     this._itemsByBlockId = {};
+    this._layout = new LayoutGeneric<Page>([], this);
     this._queries = new QueryInstanceCollectionGeneric<Page>([], this);
     // Parse the content:
     this._parse(blocks);
@@ -167,6 +220,7 @@ export class Page
     this._lines = [];
     this._tables = [];
     const formKeyBlocks: Array<ApiKeyBlock | ApiKeyValueSetBlock> = [];
+    const layoutBlocks: ApiLayoutBlock[] = [];
     const queryBlocks: ApiQueryBlock[] = [];
 
     blocks.forEach((item) => {
@@ -181,6 +235,8 @@ export class Page
         if (item.EntityTypes.indexOf(ApiKeyValueEntityType.Key) >= 0) {
           formKeyBlocks.push(item);
         }
+      } else if (isLayoutBlockType(item.BlockType)) {
+        layoutBlocks.push(item as ApiLayoutBlock);
       } else if (item.BlockType === ApiBlockType.Query) {
         queryBlocks.push(item);
       } else if (item.BlockType === ApiBlockType.SelectionElement) {
@@ -201,17 +257,8 @@ export class Page
     });
 
     this._form = new FormGeneric<Page>(formKeyBlocks, this);
-    this._form.listFields().forEach((field) => {
-      this._itemsByBlockId[field.key.id] = field;
-      if (field.value) this._itemsByBlockId[field.value.id] = field.value;
-    });
     this._queries = new QueryInstanceCollectionGeneric<Page>(queryBlocks, this);
-    this._queries.listQueries().forEach((query) => {
-      this._itemsByBlockId[query.id] = query;
-      query.listResultsByConfidence().forEach((result) => {
-        this._itemsByBlockId[result.id] = result;
-      });
-    });
+    this._layout = new LayoutGeneric<Page>(layoutBlocks, this);
   }
 
   getBlockById(blockId: string): ApiBlock | undefined {
@@ -229,6 +276,7 @@ export class Page
     | Word
     | FieldGeneric<Page>
     | FieldValueGeneric<Page>
+    | LayoutItemGeneric<Page>
     | QueryInstanceGeneric<Page>
     | QueryResultGeneric<Page>
     | TableGeneric<Page>
@@ -460,12 +508,21 @@ export class Page
   /**
    * List lines in reading order, grouped by 'cluster' (somewhat like a paragraph)
    *
-   * This method works by applying local heuristics to group text together into paragraphs, and then sorting
-   * paragraphs into "columns" in reading order. Although parameters are exposed to customize the behaviour,
-   * note that this customization API is experimental and subject to change. For complex requirements,
-   * consider implementing your own more robust approach - perhaps using expected global page structure.
+   * By default if Amazon Textract Layout analysis was enabled for the document, this method will
+   * use those results to infer separate clusters (e.g. paragraphs, headings) and arrange them in
+   * expected reading order. If Layout was not analyzed service-side, this method applies local
+   * heuristics to group text together into paragraphs, and then sorts paragraphs into "columns" in
+   * reading order. Although parameters are exposed to customize the heuristic model, note that
+   * this customization API is experimental and subject to change.
    *
-   * @returns Nested array of text lines by paragraph, line
+   * Textract's ML-powered Layout functionality should generally work better than local heuristics,
+   * but carries extra cost and in edge cases it's difficult for any method to define one "correct"
+   * reading order for rich content: So can set the `useLayout` mode to ignore (or force)
+   * Layout-based calculation if you need.
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   *
+   * @returns Nested array of text lines by "paragraph"/element, line
    */
   getLineClustersInReadingOrder({
     colHOverlapThresh = 0.8,
@@ -473,7 +530,17 @@ export class Page
     paraVDistTol = 0.7,
     paraLineHeightTol = 0.3,
     paraIndentThresh = 0,
+    useLayout = ReadingOrderLayoutMode.Auto,
   }: HeuristicReadingOrderModelParams = {}): LineGeneric<Page>[][] {
+    if (this.hasLayout) {
+      if (useLayout !== ReadingOrderLayoutMode.IgnoreLayout) {
+        return this.layout.listItems().map((item) => item.listTextLines());
+      }
+    } else if (useLayout === ReadingOrderLayoutMode.RequireLayout) {
+      throw new Error(
+        `Configured with useLayout=${useLayout}, but Amazon Textract Layout analysis results not found on page ${this.id}`
+      );
+    }
     // Pass through to the private function, but flatten the result to simplify out the "columns":
     return ([] as LineGeneric<Page>[][]).concat(
       ...this._getLineClustersByColumn({
@@ -486,12 +553,32 @@ export class Page
     );
   }
 
+  /**
+   * Extract all page text in approximate reading order
+   *
+   * By default if Amazon Textract Layout analysis was enabled for the document, this method will
+   * use those results to infer separate clusters (e.g. paragraphs, headings) and arrange them in
+   * expected reading order. If Layout was not analyzed service-side, this method applies local
+   * heuristics to group text together into paragraphs, and then sorts paragraphs into "columns" in
+   * reading order. Although parameters are exposed to customize the heuristic model, note that
+   * this customization API is experimental and subject to change.
+   *
+   * Textract's ML-powered Layout functionality should generally work better than local heuristics,
+   * but carries extra cost and in edge cases it's difficult for any method to define one "correct"
+   * reading order for rich content: So can set the `useLayout` mode to ignore (or force)
+   * Layout-based calculation if you need.
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   *
+   * @returns Nested array of text lines by "paragraph"/element, line
+   */
   getTextInReadingOrder({
     colHOverlapThresh = 0.8,
     colHMultilineUnionThresh = 0.7,
     paraVDistTol = 0.7,
     paraLineHeightTol = 0.3,
     paraIndentThresh = 0,
+    useLayout = ReadingOrderLayoutMode.Auto,
   }: HeuristicReadingOrderModelParams = {}): string {
     return this.getLineClustersInReadingOrder({
       colHOverlapThresh,
@@ -499,6 +586,7 @@ export class Page
       paraVDistTol,
       paraLineHeightTol,
       paraIndentThresh,
+      useLayout,
     })
       .map((lines) => lines.map((l) => l.text).join("\n"))
       .join("\n\n");
@@ -742,6 +830,8 @@ export class Page
    * Output lines are not guaranteed to be sorted either in reading order or strictly in the
    * default Amazon Textract output order. See also getLinesByLayoutArea() for this.
    *
+   * TODO: Consider updating for Textract Layout where available
+   *
    * @param {HeaderFooterSegmentModelParams} [config] (Experimental) heuristic configurations.
    * @param {Line[]} [fromLines] Optional array of Line objects to group. By default, the full list
    *      of lines on the page will be analyzed.
@@ -760,6 +850,8 @@ export class Page
    * Output lines are not guaranteed to be sorted either in reading order or strictly in the
    * default Amazon Textract output order. See also getLinesByLayoutArea() for this.
    *
+   * TODO: Consider updating for Textract Layout where available
+   *
    * @param {HeaderFooterSegmentModelParams} [config] (Experimental) heuristic configurations.
    * @param {Line[]} [fromLines] Optional array of Line objects to group. By default, the full list
    *      of lines on the page will be analyzed.
@@ -774,6 +866,8 @@ export class Page
 
   /**
    * Segment page text into header, content, and footer - optionally in (approximate) reading order
+   *
+   * TODO: Consider updating for Textract Layout where available
    *
    * @param {boolean|HeuristicReadingOrderModelParams} [inReadingOrder=false] Set true to sort text
    *      in reading order, or leave false (the default) to use the standard Textract ouput order
@@ -942,6 +1036,7 @@ export class Page
       | Word
       | FieldGeneric<Page>
       | FieldValueGeneric<Page>
+      | LayoutItemGeneric<Page>
       | QueryInstanceGeneric<Page>
       | QueryResultGeneric<Page>
       | TableGeneric<Page>
@@ -982,6 +1077,22 @@ export class Page
    */
   get geometry(): Geometry<ApiPageBlock, Page> {
     return this._geometry;
+  }
+  /**
+   * Whether this page includes results from a Textract Layout analysis
+   *
+   * For details see: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  get hasLayout(): boolean {
+    return this._layout.nItems > 0;
+  }
+  /**
+   * The Textract Layout analysis result container for this page (even if the feature was disabled)
+   *
+   * For details see: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  get layout(): LayoutGeneric<Page> {
+    return this._layout;
   }
   /**
    * Number of text LINE blocks present in the page
@@ -1037,6 +1148,35 @@ export class Page
     return this._lines.map((l) => l.text).join("\n");
   }
 
+  /**
+   * Return a best-effort semantic HTML representation of the page and its content
+   *
+   * This is useful for ingesting the document into tools like search engines or Generative Large
+   * Language Models (LLMs) that might be capable of understanding semantic structure such as
+   * paragraphs or headings, but cannot consume fully multi-modal (image/text coordinate) data.
+   *
+   * If the Textract LAYOUT feature was enabled, this function uses its results to assemble and
+   * sequence paragraphs, headings, and other features.
+   *
+   * TODO: Support more basic .html() on Textract results for which LAYOUT analysis was not enabled
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   *
+   * @throws If Textract Layout analysis was not enabled in the API request.
+   */
+  html(): string {
+    if (this.hasLayout) {
+      // Since the Textract LAYOUT feature was enabled, we can use it to render semantic HTML
+      return this._layout.html();
+    } else {
+      // To render semantic HTML for non-Layout-analysed documents, we'd want to collect the
+      // various components (plain text lines, fields, tables, etc) in approximate reading order
+      // and intersperse them. It seems possible, but not straightforward - don't have a solution
+      // yet.
+      throw new Error("Page.html() is not yet implemented for results where Textract LAYOUT was not enabled");
+    }
+  }
+
   str(): string {
     return `Page\n==========\n${this._content.join("\n")}\n`;
   }
@@ -1050,6 +1190,19 @@ export class Field extends FieldGeneric<Page> {}
 export class FieldKey extends FieldKeyGeneric<Page> {}
 export class FieldValue extends FieldValueGeneric<Page> {}
 export class Form extends FormGeneric<Page> {}
+
+// layout.ts concrete Page-dependent types:
+export class LayoutFigure extends LayoutFigureGeneric<Page> {}
+export class LayoutFooter extends LayoutFooterGeneric<Page> {}
+export class LayoutHeader extends LayoutHeaderGeneric<Page> {}
+export class LayoutKeyValue extends LayoutKeyValueGeneric<Page> {}
+export class LayoutPageNumber extends LayoutPageNumberGeneric<Page> {}
+export class LayoutSectionHeader extends LayoutSectionHeaderGeneric<Page> {}
+export class LayoutTable extends LayoutTableGeneric<Page> {}
+export class LayoutText extends LayoutTextGeneric<Page> {}
+export class LayoutTitle extends LayoutTitleGeneric<Page> {}
+export class LayoutList extends LayoutListGeneric<Page> {}
+export class Layout extends LayoutGeneric<Page> {}
 
 // query.ts concrete Page-dependent types:
 export class QueryInstance extends QueryInstanceGeneric<Page> {}
@@ -1325,6 +1478,26 @@ export class TextractDocument
       throw new Error(`pageNum ${pageNum} must be between 1 and ${this._pages.length}`);
     }
     return this._pages[pageNum - 1];
+  }
+
+  /**
+   * Return a best-effort semantic HTML representation of the document
+   *
+   * This is useful for ingesting the document into tools like search engines or Generative Large
+   * Language Models (LLMs) that might be capable of understanding semantic structure such as
+   * paragraphs or headings, but cannot consume fully multi-modal (image/text coordinate) data.
+   *
+   * As per `Page.html()`, this currently depends on the Textract LAYOUT feature being enabled in
+   * the underlying API request.
+   *
+   * TODO: Support more basic .html() on Textract results for which LAYOUT analysis was not enabled
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   *
+   * @throws If Textract Layout analysis was not enabled in the API request.
+   */
+  html(): string {
+    return this._pages.map((page) => `<div class="page">\n${indent(page.html())}\n</div>`).join("\n");
   }
 
   str(): string {

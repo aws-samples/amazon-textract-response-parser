@@ -6,7 +6,7 @@ import {
   ApiResponsePage,
   ApiResponsePages,
 } from "../../src/api-models/response";
-import { Line, TextractDocument } from "../../src/document";
+import { Line, ReadingOrderLayoutMode, TextractDocument } from "../../src/document";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testFailedJson: ApiResponsePage = require("../data/test-failed-response.json");
@@ -14,6 +14,10 @@ const testFailedJson: ApiResponsePage = require("../data/test-failed-response.js
 const testInProgressJson: ApiResponsePage = require("../data/test-inprogress-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testResponseJson: ApiAnalyzeDocumentResponse = require("../data/test-response.json");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const finDocResponseJson: ApiAnalyzeDocumentResponse = require("../data/financial-document-response.json");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const payStubResponseJson: ApiAnalyzeDocumentResponse = require("../data/paystub-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const taxFormResponseJson: ApiAnalyzeDocumentResponse = require("../data/form1005-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -102,9 +106,10 @@ describe("Basic TextractDocument parsing", () => {
 
   it("logs a warning when single-page input content has a NextToken", () => {
     // Load a new copy of the response JSON so we can edit it:
-    const testJson1: ApiAsyncDocumentAnalysis &
-      ApiAsyncJobOuputSucceded = JSON.parse(JSON.stringify(testResponseJson));
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const testJson1: ApiAsyncDocumentAnalysis & ApiAsyncJobOuputSucceded = JSON.parse(
+      JSON.stringify(testResponseJson)
+    );
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
 
     // Single page response should not have a truthy NextToken:
     delete testJson1.NextToken; // Should NOT log a warning
@@ -120,12 +125,14 @@ describe("Basic TextractDocument parsing", () => {
 
   it("logs a warning when multi-page input content has a NextToken in the final page", () => {
     // Load a new copies of the response JSON so we can edit them:
-    const testJson1: ApiAsyncDocumentAnalysis &
-      ApiAsyncJobOuputSucceded = JSON.parse(JSON.stringify(testResponseJson));
-    const testJson2: ApiAsyncDocumentAnalysis &
-      ApiAsyncJobOuputSucceded = JSON.parse(JSON.stringify(testResponseJson));
+    const testJson1: ApiAsyncDocumentAnalysis & ApiAsyncJobOuputSucceded = JSON.parse(
+      JSON.stringify(testResponseJson)
+    );
+    const testJson2: ApiAsyncDocumentAnalysis & ApiAsyncJobOuputSucceded = JSON.parse(
+      JSON.stringify(testResponseJson)
+    );
 
-    let warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
 
     testJson1.NextToken = "DUMMY";
     delete testJson2.NextToken;
@@ -140,13 +147,34 @@ describe("Basic TextractDocument parsing", () => {
 
   it("registers parsed items for all Blocks in the document", () => {
     const baseDoc = new TextractDocument(testResponseJson);
-    expect(
-      () => testResponseJson.Blocks.forEach((block) => {
-        expect(baseDoc.getItemByBlockId(block.Id)).toBeTruthy()
+    expect(() =>
+      testResponseJson.Blocks.forEach((block) => {
+        expect(baseDoc.getItemByBlockId(block.Id)).toBeTruthy();
+      })
+    ).not.toThrow();
+
+    const finDoc = new TextractDocument(finDocResponseJson);
+    expect(() =>
+      finDocResponseJson.Blocks.forEach((block) => {
+        expect(finDoc.getItemByBlockId(block.Id)).toBeTruthy();
+      })
+    ).not.toThrow();
+
+    const payStubDoc = new TextractDocument(payStubResponseJson);
+    expect(() =>
+      payStubResponseJson.Blocks.forEach((block) => {
+        expect(payStubDoc.getItemByBlockId(block.Id)).toBeTruthy();
+      })
+    ).not.toThrow();
+
+    const taxDoc = new TextractDocument(taxFormResponseJson);
+    expect(() =>
+      taxFormResponseJson.Blocks.forEach((block) => {
+        expect(taxDoc.getItemByBlockId(block.Id)).toBeTruthy();
       })
     ).not.toThrow();
   });
-})
+});
 
 describe("Page", () => {
   it("exposes and navigates through results from Textract Signature Detection", () => {
@@ -290,6 +318,60 @@ describe("TextractDocument", () => {
 
   it("sorts lines correctly for multi-column documents (case 2)", () => {
     checkMultiColReadingOrder(testMultiColumnJson2, EXPECTED_MULTILINE_SEQ_2_LOWER);
+  });
+
+  it("auto-selects Layout vs heuristic reading order by default", () => {
+    // Use heuristics when no Layout available:
+    const noLayoutPage = new TextractDocument(testMultiColumnJson).pageNumber(1);
+    expect(noLayoutPage.hasLayout).toStrictEqual(false);
+    const heuristicModel = jest.spyOn(noLayoutPage, "_getLineClustersByColumn");
+    noLayoutPage.getLineClustersInReadingOrder();
+    noLayoutPage.getTextInReadingOrder();
+    expect(heuristicModel).toHaveBeenCalledTimes(2);
+    heuristicModel.mockReset();
+
+    // Use Layout when it's there:
+    const pageWithLayout = new TextractDocument(payStubResponseJson).pageNumber(1);
+    expect(pageWithLayout.hasLayout).toStrictEqual(true);
+    const heuristicModel2 = jest.spyOn(pageWithLayout, "_getLineClustersByColumn");
+    const clusters = pageWithLayout.getLineClustersInReadingOrder();
+    const readingText = pageWithLayout.getTextInReadingOrder();
+    expect(heuristicModel2).not.toHaveBeenCalled();
+    heuristicModel2.mockReset();
+
+    // Check the Layout-based results are as expected:
+    const linesPerLayout = pageWithLayout.layout.listItems().map((item) => item.listTextLines());
+    expect(clusters.length).toStrictEqual(linesPerLayout.length);
+    linesPerLayout.forEach((cluster, ixCluster) => {
+      expect(cluster.length).toStrictEqual(linesPerLayout[ixCluster].length);
+      cluster.forEach((line, ixLine) => {
+        expect(line).toBe(linesPerLayout[ixCluster][ixLine]);
+      });
+    });
+    expect(readingText).toStrictEqual(
+      clusters.map((cluster) => cluster.map((c) => c.text).join("\n")).join("\n\n")
+    );
+  });
+
+  it("can enforce Textract Layout be present for reading order", () => {
+    const page = new TextractDocument(testMultiColumnJson).pageNumber(1);
+    expect(page.hasLayout).toStrictEqual(false);
+    expect(() =>
+      page.getLineClustersInReadingOrder({ useLayout: ReadingOrderLayoutMode.RequireLayout })
+    ).toThrow(/Layout/);
+    expect(() => page.getTextInReadingOrder({ useLayout: ReadingOrderLayoutMode.RequireLayout })).toThrow(
+      /Layout/
+    );
+  });
+
+  it("can ignore Textract Layout for reading order if requested", () => {
+    const pageWithLayout = new TextractDocument(payStubResponseJson).pageNumber(1);
+    expect(pageWithLayout.hasLayout).toStrictEqual(true);
+    const heuristicModel = jest.spyOn(pageWithLayout, "_getLineClustersByColumn");
+    pageWithLayout.getLineClustersInReadingOrder({ useLayout: ReadingOrderLayoutMode.IgnoreLayout });
+    pageWithLayout.getTextInReadingOrder({ useLayout: ReadingOrderLayoutMode.IgnoreLayout });
+    expect(heuristicModel).toHaveBeenCalledTimes(2);
+    heuristicModel.mockReset();
   });
 
   it("outputs text correctly for multi-column documents", () => {

@@ -1,13 +1,66 @@
 import { ApiBlockType, ApiRelationshipType } from "../../src/api-models/base";
 import { ApiResponsePage } from "../../src/api-models/response";
 import { AggregationMethod } from "../../src/base";
-import { Field, FieldKey, TextractDocument } from "../../src/document";
+import { Field, FieldKey, FieldValue, TextractDocument, Word } from "../../src/document";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testResponseJson: ApiResponsePage = require("../data/test-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const separateBlockTypesResponseJson: ApiResponsePage = require("../data/test-query-response.json");
 
+const REFERENCE_FIELD_STR = `
+Field
+==========
+Key: Phone Number:
+Value: 555-0100`;
+
+describe("FieldKey", () => {
+  it("renders plain key text for HTML and str representations", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const key = doc.form.getFieldByKey("Phone Number:")?.key as FieldKey;
+    expect(key).toBeTruthy();
+    expect(key.text).toStrictEqual("Phone Number:");
+    expect(key.html()).toStrictEqual(key.text);
+    expect(key.str()).toStrictEqual(key.text);
+  });
+
+  it("escapes forbidden entities in key text for html()", () => {
+    const responseCopy = JSON.parse(JSON.stringify(testResponseJson));
+    const doc = new TextractDocument(responseCopy);
+    const key = doc.form.getFieldByKey("Phone Number:")?.key as FieldKey;
+
+    // Manipulate the underlying dict to insert non-HTML-safe text:
+    const word = key.listWords()[0];
+    const origText = word.dict.Text;
+    word.dict.Text = `<!DOCTYPE><html>'woof"${origText}`;
+    // Check the content gets escaped:
+    expect(key.html()).toContain(`&lt;!DOCTYPE&gt;&lt;html&gt;'woof"${origText}`);
+  });
+});
+
+describe("FieldValue", () => {
+  it("renders plain value text for HTML and str representations", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const value = doc.form.getFieldByKey("Phone Number:")?.value as FieldValue;
+    expect(value).toBeTruthy();
+    expect(value.text).toStrictEqual("555-0100");
+    expect(value.html()).toStrictEqual(value.text);
+    expect(value.str()).toStrictEqual(value.text);
+  });
+
+  it("escapes forbidden entities in value text for html()", () => {
+    const responseCopy = JSON.parse(JSON.stringify(testResponseJson));
+    const doc = new TextractDocument(responseCopy);
+    const value = doc.form.getFieldByKey("Phone Number:")?.value as FieldValue;
+
+    // Manipulate the underlying dict to insert non-HTML-safe text:
+    const word = value.listContent()[0] as Word;
+    const origText = word.dict.Text;
+    word.dict.Text = `<!DOCTYPE><html>'woof"${origText}`;
+    // Check the content gets escaped:
+    expect(value.html()).toContain(`&lt;!DOCTYPE&gt;&lt;html&gt;'woof"${origText}`);
+  });
+});
 
 describe("FieldGeneric", () => {
   it("hoists properties from FieldKey to behave like an ApiBlockWrapper", () => {
@@ -77,6 +130,37 @@ describe("FieldGeneric", () => {
     expect(field.getOcrConfidence(AggregationMethod.Mean)).toStrictEqual(fieldOcrConf);
     expect(field.getOcrConfidence(AggregationMethod.Min)).toBeLessThan(fieldOcrConf);
     expect(field.getOcrConfidence(AggregationMethod.Max)).toBeGreaterThan(fieldOcrConf);
+  });
+
+  it("renders semantic HTML and str representations", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const field = doc.form.getFieldByKey("Phone Number:") as Field;
+    expect(field).toBeTruthy();
+    expect(field.str()).toStrictEqual(REFERENCE_FIELD_STR);
+    expect(field.html()).toStrictEqual(
+      '<input label="Phone Number:" type="text" disabled value="555-0100" />'
+    );
+  });
+
+  it("escapes forbidden entities in word text for html()", () => {
+    const responseCopy = JSON.parse(JSON.stringify(testResponseJson));
+    const doc = new TextractDocument(responseCopy);
+    const field = doc.form.getFieldByKey("Phone Number:") as Field;
+    const value = field.value as FieldValue;
+    expect(field).toBeTruthy();
+    expect(value).toBeTruthy();
+
+    // Manipulate the underlying dicts to insert non-HTML-safe text:
+    const keyWord = field.key.listWords()[0];
+    const origKeyText = keyWord.dict.Text;
+    keyWord.dict.Text = `<div id="q">'${origKeyText}`;
+    const valWord = value.listContent()[0] as Word;
+    const origValText = valWord.dict.Text;
+    valWord.dict.Text = `${origValText}'</div>`;
+    // Check the content gets escaped:
+    const fieldHtml = field.html();
+    expect(fieldHtml).toContain(`&lt;div id=&quot;q&quot;&gt;&#39;${origKeyText}`);
+    expect(fieldHtml).toContain(`${origValText}&#39;&lt;/div&gt;`);
   });
 });
 
@@ -229,6 +313,18 @@ describe("Form", () => {
     expect(docFormStr).toBeTruthy();
     const pageFormStrs = doc.listPages().map((p) => p.form.str());
     expect(docFormStr).toStrictEqual(pageFormStrs.join("\n"));
+  });
+
+  it("renders semantic HTML for the collection of all fields", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const page = doc.listPages()[0];
+    // TODO: Could probably add some more checks here, but would ideally have a smaller ref JSON.
+    expect(page.form.html()).toMatch(
+      /^<form>\n(?: {2}<input label=".*" type="text" disabled value=".*" \/>\n)*<\/form>$/g
+    );
+    expect(doc.form.html()).toMatch(
+      /^<form>\n(?: {2}<div class="form-page" id="form-page-\d+">\n(?: {4}<input label=".*" type="text" disabled value=".*" \/>\n)* {2}<\/div>\n)*<\/form>$/g
+    );
   });
 
   it("exposes raw form dicts with traversal up and down the tree", () => {

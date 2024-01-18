@@ -6,6 +6,112 @@ import { QueryInstance, QueryResult, TextractDocument } from "../../src/document
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testResponseJson: ApiResponsePage = require("../data/test-query-response.json");
 
+const REFERENCE_QUERY_HTML = `<div class="query">
+  <p>What is the patient name?</p>
+  <ul>
+    <li>Mary Major</li>
+  </ul>
+</div>`;
+
+const REFERENCE_QUERY_STR = `Query
+==========
+Question: What is the patient name?
+Answers:
+ - Mary Major`;
+
+const REFERENCE_QUERIES_HTML = `<div class="queries">
+  <div class="query">
+    <p>What's the patient's date of birth</p>
+    <ul></ul>
+  </div>
+  <div class="query">
+    <p>What is the patient name?</p>
+    <ul>
+      <li>Mary Major</li>
+    </ul>
+  </div>
+  <div class="query">
+    <p>What is the lot number of the 1st dose?</p>
+    <ul>
+      <li>AA1234</li>
+    </ul>
+  </div>
+  <div class="query">
+    <p>Who is the manufacturer of the 2nd dose?</p>
+    <ul>
+      <li>Pfizer</li>
+    </ul>
+  </div>
+</div>`;
+
+describe("QueryResult", () => {
+  it("renders plain word text for HTML and str", () => {
+    const page = new TextractDocument(testResponseJson).pageNumber(1);
+    const topResult = page.queries.getQueryByAlias("name")?.topResult as QueryResult;
+    expect(topResult).toBeTruthy();
+
+    expect(topResult.text).toStrictEqual("Mary Major");
+    expect(topResult.html()).toStrictEqual(topResult.text);
+    expect(topResult.str()).toStrictEqual(topResult.text);
+  });
+
+  it("escapes forbidden entities in word text for html()", () => {
+    const responseCopy = JSON.parse(JSON.stringify(testResponseJson));
+    const page = new TextractDocument(responseCopy).pageNumber(1);
+    const topResult = page.queries.getQueryByAlias("name")?.topResult as QueryResult;
+    expect(topResult).toBeTruthy();
+
+    topResult.dict.Text = `Text-with-<html>-&-'quote-marks"`;
+    const customHtml = topResult.html();
+    expect(customHtml).toContain("&lt;");
+    expect(customHtml).toContain("&gt;");
+    expect(customHtml).not.toContain("<html>");
+    expect(customHtml).toContain("-&amp;-");
+    expect(customHtml).not.toContain("-&-");
+    expect(customHtml).toContain(`'quote-marks"`);
+  });
+});
+
+describe("QueryInstance", () => {
+  it("renders an informational str() representation", () => {
+    const page = new TextractDocument(testResponseJson).pageNumber(1);
+    const query = page.queries.getQueryByAlias("name") as QueryInstance;
+    expect(query).toBeTruthy();
+
+    expect(query.text).toStrictEqual("What is the patient name?");
+    expect(query.topResult?.text).toStrictEqual("Mary Major");
+    expect(query.str()).toStrictEqual(REFERENCE_QUERY_STR);
+  });
+
+  it("renders semantic HTML", () => {
+    const page = new TextractDocument(testResponseJson).pageNumber(1);
+    const query = page.queries.getQueryByAlias("name") as QueryInstance;
+    expect(query).toBeTruthy();
+
+    expect(query.text).toStrictEqual("What is the patient name?");
+    expect(query.topResult?.text).toStrictEqual("Mary Major");
+    expect(query.html()).toStrictEqual(REFERENCE_QUERY_HTML);
+  });
+
+  it("escapes forbidden entities in query+response text for html()", () => {
+    const responseCopy = JSON.parse(JSON.stringify(testResponseJson));
+    const page = new TextractDocument(responseCopy).pageNumber(1);
+    const query = page.queries.getQueryByAlias("name") as QueryInstance;
+    expect(query).toBeTruthy();
+    const topResult = page.queries.getQueryByAlias("name")?.topResult as QueryResult;
+    expect(topResult).toBeTruthy();
+
+    const origQueryText = query.dict.Query.Text;
+    query.dict.Query.Text = `<p class="injected"> & ${origQueryText}`;
+    const origAnsText = topResult.dict.Text;
+    topResult.dict.Text = `'hello'&</html> ${origAnsText}`;
+
+    const queryHtml = query.html();
+    expect(queryHtml).toContain(`&lt;p class="injected"&gt; &amp; ${origQueryText}`);
+    expect(queryHtml).toContain(`'hello'&amp;&lt;/html&gt; ${origAnsText}`);
+  });
+});
+
 describe("QueryCollection", () => {
   it("loads and navigates queries at page level", () => {
     const page = new TextractDocument(testResponseJson).pageNumber(1);
@@ -226,23 +332,30 @@ describe("QueryCollection", () => {
     // Load (a new copy of) the response JSON:
     const response: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testResponseJson));
     // Add a dummy answer to one of the queries:
-    const queryBlocks = response.Blocks.filter((b) => (b.BlockType === "QUERY" && b.Relationships && b.Relationships.filter((r) => r.Type === ApiRelationshipType.Answer).length)) as ApiQueryBlock[];
-    const modifiedRel = queryBlocks[0].Relationships?.filter((r) => r.Type === ApiRelationshipType.Answer)[0] as ApiAnswerRelationship;
+    const queryBlocks = response.Blocks.filter(
+      (b) =>
+        b.BlockType === "QUERY" &&
+        b.Relationships &&
+        b.Relationships.filter((r) => r.Type === ApiRelationshipType.Answer).length
+    ) as ApiQueryBlock[];
+    const modifiedRel = queryBlocks[0].Relationships?.filter(
+      (r) => r.Type === ApiRelationshipType.Answer
+    )[0] as ApiAnswerRelationship;
     modifiedRel.Ids.push("DUMMY-BLOCK-1");
-    
+
     const consoleWarnMock = jest.spyOn(console, "warn").mockImplementation();
     // Check the TRP omits the unanswered query from results when instructed:
     const page = new TextractDocument(response).pageNumber(1);
-    expect(consoleWarnMock).toHaveBeenCalledTimes(1);  // Warn on create
+    expect(consoleWarnMock).toHaveBeenCalledTimes(1); // Warn on create
 
     // No errors when iterating through results:
     for (const query of page.queries.iterQueries()) {
       for (const res of query.listResultsByConfidence()) {
-        expect(typeof res.text).toStrictEqual("string");  // No dummy answer entries
+        expect(typeof res.text).toStrictEqual("string"); // No dummy answer entries
       }
     }
-    
-    expect(consoleWarnMock).toHaveBeenCalledTimes(1);  // No extra warnings on iteration
+
+    expect(consoleWarnMock).toHaveBeenCalledTimes(1); // No extra warnings on iteration
     consoleWarnMock.mockRestore();
   });
 
@@ -251,23 +364,30 @@ describe("QueryCollection", () => {
     const response: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testResponseJson));
     // Add a block of unexpected type to a query's ANSWER relationship:
     const altBlocks = response.Blocks.filter((b) => b.BlockType === "QUERY") as ApiQueryBlock[];
-    const queryBlocks = response.Blocks.filter((b) => (b.BlockType === "QUERY" && b.Relationships && b.Relationships.filter((r) => r.Type === ApiRelationshipType.Answer).length)) as ApiQueryBlock[];
-    const modifiedRel = queryBlocks[0].Relationships?.filter((r) => r.Type === ApiRelationshipType.Answer)[0] as ApiAnswerRelationship;
+    const queryBlocks = response.Blocks.filter(
+      (b) =>
+        b.BlockType === "QUERY" &&
+        b.Relationships &&
+        b.Relationships.filter((r) => r.Type === ApiRelationshipType.Answer).length
+    ) as ApiQueryBlock[];
+    const modifiedRel = queryBlocks[0].Relationships?.filter(
+      (r) => r.Type === ApiRelationshipType.Answer
+    )[0] as ApiAnswerRelationship;
     modifiedRel.Ids.push(altBlocks[0].Id);
-    
+
     const consoleWarnMock = jest.spyOn(console, "warn").mockImplementation();
     // Check the TRP omits the unanswered query from results when instructed:
     const page = new TextractDocument(response).pageNumber(1);
-    expect(consoleWarnMock).toHaveBeenCalledTimes(1);  // Warn on create
+    expect(consoleWarnMock).toHaveBeenCalledTimes(1); // Warn on create
 
     // No errors when iterating through results:
     for (const query of page.queries.iterQueries()) {
       for (const res of query.listResultsByConfidence()) {
-        expect(res.blockType).toStrictEqual(ApiBlockType.QueryResult);  // No dummy answer entries
+        expect(res.blockType).toStrictEqual(ApiBlockType.QueryResult); // No dummy answer entries
       }
     }
-    
-    expect(consoleWarnMock).toHaveBeenCalledTimes(1);  // No extra warnings on iteration
+
+    expect(consoleWarnMock).toHaveBeenCalledTimes(1); // No extra warnings on iteration
     consoleWarnMock.mockRestore();
   });
 
@@ -281,5 +401,18 @@ describe("QueryCollection", () => {
         expect(pageQueriesText).toContain(res.text);
       }
     }
+  });
+
+  it("renders all queries to combined semantic HTML", () => {
+    // Load (a new copy of) the response JSON:
+    const response: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testResponseJson));
+    // Remove answers from one question to ensure there's an unanswered query in the example:
+    const queryBlocks = response.Blocks.filter(
+      (b) => b.BlockType === "QUERY" && b.Query.Text === "What's the patient's date of birth"
+    ) as ApiQueryBlock[];
+    queryBlocks[0].Relationships = [];
+
+    const page = new TextractDocument(response).pageNumber(1);
+    expect(page.queries.html()).toStrictEqual(REFERENCE_QUERIES_HTML);
   });
 });

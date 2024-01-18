@@ -17,7 +17,9 @@ import {
 import {
   aggregate,
   AggregationMethod,
+  escapeHtml,
   getIterable,
+  indent,
   IBlockManager,
   IRenderable,
   PageHostedApiBlockWrapper,
@@ -185,6 +187,31 @@ function WithCellBaseProps<
         );
       }
       return this.dict.EntityTypes.indexOf(entityType) >= 0;
+    }
+
+    /**
+     * Get semantic HTML of the cell as a `<th>` (if header/title EntityType) or `<td>` element
+     */
+    html(): string {
+      const tagName = this.hasEntityTypes([
+        ApiTableCellEntityType.ColumnHeader,
+        ApiTableCellEntityType.SectionTitle,
+        ApiTableCellEntityType.Title,
+      ])
+        ? "th"
+        : "td";
+      return indent(
+        [
+          "<",
+          tagName,
+          this.columnSpan > 1 ? ` colspan="${this.columnSpan}"` : "",
+          this.rowSpan > 1 ? ` rowspan="${this.rowSpan}"` : "",
+          ">",
+          escapeHtml(this.text),
+          `</${tagName}>`,
+        ].join(""),
+        { skipFirstLine: true }
+      );
     }
 
     /**
@@ -440,6 +467,16 @@ export class TableFooterGeneric<TPage extends IBlockManager>
     return this._dict.Confidence;
   }
 
+  /**
+   * Semantic `html()` for a table footer is just the inner (HTML-escaped) text content
+   *
+   * The presence of header and/or footer will affect what element it gets wrapped in when rendering
+   * an overall `Table` object.
+   */
+  html(): string {
+    return escapeHtml(this.text);
+  }
+
   str(): string {
     return `==== [Table footer] ====\n${this.text}\n========================`;
   }
@@ -459,6 +496,16 @@ export class TableTitleGeneric<TPage extends IBlockManager>
    */
   get confidence(): number {
     return this._dict.Confidence;
+  }
+
+  /**
+   * Semantic `html()` for a table title is just the inner (HTML-escaped) text content
+   *
+   * The presence of header and/or footer will affect what element it gets wrapped in when rendering
+   * an overall `Table` object.
+   */
+  html(): string {
+    return escapeHtml(this.text);
   }
 
   str(): string {
@@ -855,6 +902,72 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
       .join("\n");
   }
 
+  /**
+   * Generate semantic HTML representation for this table
+   *
+   * The outer element will be a `<table>` *unless both* table title and footer elements are
+   * present - because an HTML table can only have one `<caption>` child. In those cases, you'll
+   * see an outer `<div class="table-wrapper">`.
+   */
+  html(): string {
+    const rowHtmls = this.listRows().map((row) =>
+      [
+        "<tr>",
+        indent(
+          row
+            .listCells()
+            .map((cell) => cell.html())
+            .join("\n")
+        ),
+        "</tr>",
+      ].join("\n")
+    );
+    const titleTexts = this.listTitles().map((item) => item.html());
+    const footerTexts = this.listFooters().map((item) => item.html());
+    if (titleTexts.length && footerTexts.length) {
+      // Need to accommodate both a title and a footer -> Use <div>s
+      const titleInnerHtml =
+        titleTexts.length > 1 ? titleTexts.map((text) => `<p>${text}</p>`).join("\n") : titleTexts[0];
+      const footerInnerHtml =
+        titleTexts.length > 1 ? titleTexts.map((text) => `<p>${text}</p>`).join("\n") : titleTexts[0];
+      return [
+        '<div class="table-wrapper">',
+        indent(
+          [
+            '<div class="table-title">',
+            indent(titleInnerHtml),
+            "</div>",
+            "<table>",
+            indent(rowHtmls.join("\n")),
+            "</table>",
+            '<div class="table-footer">',
+            indent(footerInnerHtml),
+            "</div>",
+          ].join("\n")
+        ),
+        "</div>",
+      ].join("\n");
+    } else if (!(titleTexts.length || footerTexts.length)) {
+      // No title or footer - just render table with content
+      return `<table>\n${indent(rowHtmls.join("\n"))}\n</table>`;
+    } else {
+      // Only one of titles or footers is present
+      const isTitle = titleTexts.length != 0;
+      const captionTexts = isTitle ? titleTexts : footerTexts;
+      // Only wrap caption elements in paragraph tags if there's more than one:
+      const captionHtml =
+        captionTexts.length > 1 ? captionTexts.map((text) => `<p>${text}</p>`).join("\n") : captionTexts[0];
+      const innerHtml = [
+        `<caption style="caption-side: ${isTitle ? "top" : "bottom"}">`,
+        indent(captionHtml),
+        "</caption>",
+      ]
+        .concat(rowHtmls)
+        .join("\n");
+      return `<table>\n${indent(innerHtml)}\n</table>`;
+    }
+  }
+
   str(): string {
     return (
       "Table\n==========\n" +
@@ -863,4 +976,26 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
         .join("\n")
     );
   }
+}
+
+/**
+ * Interface for a (`Page`-like) object that exposes a collection of tables
+ */
+export interface IWithTables<TPage extends IBlockManager> {
+  /**
+   * Iterate through the available `Table`s
+   */
+  iterTables(): Iterable<TableGeneric<TPage>>;
+  /**
+   * Fetch a snapshot of the list of `Table`s
+   */
+  listTables(): TableGeneric<TPage>[];
+  /**
+   * Fetch a particular parsed `Table` by its index
+   */
+  tableAtIndex(ix: number): TableGeneric<TPage>;
+  /**
+   * Number of `Table`s present
+   */
+  get nTables(): number;
 }

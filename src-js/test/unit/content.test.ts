@@ -217,9 +217,23 @@ describe("Word", () => {
     expect(word.textType).toStrictEqual(EXAMPLE_WORD_BLOCK.TextType);
   });
 
-  it("renders plain word text for str", () => {
+  it("renders plain word text for HTML and str", () => {
     const word = new Word(EXAMPLE_WORD_BLOCK);
+    expect(word.html()).toStrictEqual(word.text);
     expect(word.str()).toStrictEqual(word.text);
+  });
+
+  it("escapes forbidden entities in word text for html()", () => {
+    const customBlock = JSON.parse(JSON.stringify(EXAMPLE_WORD_BLOCK));
+    const word = new Word(customBlock);
+    customBlock.Text = `Text-with-<html>-&-'quote-marks"`;
+    const customHtml = word.html();
+    expect(customHtml).toContain("&lt;");
+    expect(customHtml).toContain("&gt;");
+    expect(customHtml).not.toContain("<html>");
+    expect(customHtml).toContain("-&amp;-");
+    expect(customHtml).not.toContain("-&-");
+    expect(customHtml).toContain(`'quote-marks"`);
   });
 
   it("propagates confidence updates to underlying dict", () => {
@@ -260,6 +274,15 @@ describe("SelectionElement", () => {
     expect(selEl.id).toStrictEqual(EXAMPLE_SELECT_BLOCK.Id);
     expect(selEl.selectionStatus).toStrictEqual(EXAMPLE_SELECT_BLOCK.SelectionStatus);
     expect(selEl.text).toStrictEqual(EXAMPLE_SELECT_BLOCK.SelectionStatus);
+  });
+
+  it("renders semantic HTML", () => {
+    const selEl = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    expect(selEl.html()).toStrictEqual('<input type="checkbox" disabled checked />');
+    const selBlockCopy: ApiSelectionElementBlock = JSON.parse(JSON.stringify(EXAMPLE_SELECT_BLOCK));
+    selBlockCopy.SelectionStatus = ApiSelectionStatus.NotSelected;
+    const unselEl = new SelectionElement(selBlockCopy);
+    expect(unselEl.html()).toStrictEqual('<input type="checkbox" disabled />');
   });
 
   it("uses selection status for str()", () => {
@@ -310,6 +333,11 @@ describe("Signature", () => {
     expect(sigEl.text).toStrictEqual("");
   });
 
+  it("renders semantic HTML", () => {
+    const sigEl = new Signature(EXAMPLE_SIG_BLOCK);
+    expect(sigEl.html()).toStrictEqual('<input class="signature" type="text" disabled value="[SIGNATURE]"/>');
+  });
+
   it("renders an informational str() representation", () => {
     const sigEl = new Signature(EXAMPLE_SIG_BLOCK);
     expect(sigEl.str()).toStrictEqual("/-------------\\\n| [SIGNATURE] |\n\\-------------/");
@@ -348,6 +376,28 @@ describe("LineGeneric", () => {
     expect(line.nWords).toStrictEqual(1);
     expect(line.parentPage).toBe(dummyPage);
     expect(line.text).toStrictEqual(EXAMPLE_LINE_BLOCK.Text);
+  });
+
+  it("renders plain line text for HTML", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummyPage = new DummyPage([EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK], [dummyWord]);
+    const line = new LineGeneric(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(line.html()).toStrictEqual(line.text);
+  });
+
+  it("escapes forbidden entities in line text for html()", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummyPage = new DummyPage([EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK], [dummyWord]);
+    const customBlock = JSON.parse(JSON.stringify(EXAMPLE_WORD_BLOCK));
+    const line = new LineGeneric(customBlock, dummyPage);
+    customBlock.Text = `Text-with-<html>-&-'quote-marks"`;
+    const customHtml = line.html();
+    expect(customHtml).toContain("&lt;");
+    expect(customHtml).toContain("&gt;");
+    expect(customHtml).not.toContain("<html>");
+    expect(customHtml).toContain("-&amp;-");
+    expect(customHtml).not.toContain("-&-");
+    expect(customHtml).toContain(`'quote-marks"`);
   });
 
   it("renders debug info for str()", () => {

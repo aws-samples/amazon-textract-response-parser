@@ -8,10 +8,12 @@ import { ApiKeyBlock, ApiKeyValueSetBlock, ApiValueBlock } from "./api-models/fo
 import {
   aggregate,
   AggregationMethod,
+  escapeHtml,
   getIterable,
   IApiBlockWrapper,
   IBlockManager,
   IDocBlocks,
+  indent,
   IRenderable,
   PageHostedApiBlockWrapper,
 } from "./base";
@@ -68,6 +70,15 @@ export class FieldKeyGeneric<TPage extends IBlockManager>
       aggMethod
     );
   }
+  /**
+   * The semantic `html()` representation of a field key is just the (HTML-escaped) text
+   */
+  html(): string {
+    return escapeHtml(this.text);
+  }
+  /**
+   * The `str()` representation of a field key is just the contained text
+   */
   str(): string {
     return this.text;
   }
@@ -128,6 +139,15 @@ export class FieldValueGeneric<TPage extends IBlockManager>
       aggMethod
     );
   }
+  /**
+   * The semantic `html()` representation of a field value is just the (HTML-escaped) text
+   */
+  html(): string {
+    return escapeHtml(this.text);
+  }
+  /**
+   * The `str()` representation of a field value is just the contained text
+   */
   str(): string {
     return this.text;
   }
@@ -257,6 +277,17 @@ export class FieldGeneric<TPage extends IBlockManager>
     return this._key.relatedBlockIdsByRelType(relType);
   }
 
+  /**
+   * The semantic `html()` representation of a form field uses an `<input>` element
+   *
+   * We render a text field, but `disable` it to prevent accidental edits when viewing reports
+   */
+  html(): string {
+    return `<input label="${escapeHtml(this._key.text, {
+      forAttr: true,
+    })}" type="text" disabled value="${escapeHtml(this._value?.text || "", { forAttr: true })}" />`;
+  }
+
   str(): string {
     // TODO: Probably we can do away with `._key?` checks as it should always be set per type moel?
     return `\nField\n==========\nKey: ${this._key ? this._key.str() : ""}\nValue: ${
@@ -310,6 +341,19 @@ export class FormGeneric<TPage extends IBlockManager> implements IRenderable {
 
   getFieldByKey(key: string): FieldGeneric<TPage> | null {
     return this._fieldsMap[key] || null;
+  }
+
+  /**
+   * The semantic `html()` representation of a Form field collection uses a `<form>` element
+   *
+   * Within the `<form>`, we list out all the individual fields
+   */
+  html(): string {
+    return `<form>\n${indent(
+      this.listFields()
+        .map((f) => f.html())
+        .join("\n")
+    )}\n</form>`;
   }
 
   /**
@@ -387,6 +431,24 @@ export class FormsCompositeGeneric<TPage extends IBlockManager, TDocument extend
   }
 
   /**
+   * The semantic `html()` for a composite form uses a `<div>` of class "form-page"
+   *
+   * Within the container, we render the representation of each page's separate `<form>`.
+   */
+  html(): string {
+    const pageHtmls = this._forms.map(
+      (form, ixForm) =>
+        `<div class="form-page" id="form-page-${ixForm}">\n${indent(
+          form
+            .listFields()
+            .map((f) => `${f.html()}\n`) // Ensure a trailing newline
+            .join("")
+        )}</div>\n` // Ensure a trailing newline
+    );
+    return `<form>\n${indent(pageHtmls.join(""))}</form>`;
+  }
+
+  /**
    * Iterate through the Fields in all Forms.
    * @param skipFieldsWithoutKey Set `true` to skip fields with no field.key (Included by default)
    * @example
@@ -424,4 +486,24 @@ export class FormsCompositeGeneric<TPage extends IBlockManager, TDocument extend
   str(): string {
     return this._forms.map((f) => f.str()).join("\n");
   }
+}
+
+/**
+ * Interface for a (`Page`-like) object that exposes page-level form data
+ */
+export interface IWithForm<TPage extends IBlockManager> {
+  /**
+   * Parsed Forms (key-value pairs) data
+   */
+  form: FormGeneric<TPage>;
+}
+
+/**
+ * Interface for a (`TextractDocument`-like) object that exposes document-level composite form data
+ */
+export interface IWithFormsComposite<TPage extends IBlockManager, TDocument extends IDocBlocks> {
+  /**
+   * Parsed Forms (key-value pairs) data
+   */
+  form: FormsCompositeGeneric<TPage, TDocument>;
 }

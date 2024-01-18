@@ -17,6 +17,78 @@ const testResponseJson: ApiResponsePage = require("../data/test-response.json");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testTitleFootersJson: ApiAnalyzeDocumentResponse = require("../data/financial-document-response.json");
 
+const REFERENCE_TABLE_NO_CAPTION_HTML = `<table>
+  <tr>
+    <th>Date</th>
+    <th>Description</th>
+    <th>Credit</th>
+    <th>Debit</th>
+    <th>Balance</th>
+  </tr>
+  <tr>
+    <td colspan="4">Previous Balance</td>
+    <td>11,000</td>
+  </tr>
+  <tr>
+    <td rowspan="2">2022-01-01</td>
+    <td>Payment - Credit Card</td>
+    <td></td>
+    <td>1,000</td>
+    <td>10,000</td>
+  </tr>
+  <tr>
+    <td>Payment - Utility</td>
+    <td></td>
+    <td>40</td>
+    <td>9,960</td>
+  </tr>
+  <tr>
+    <td>2022-01-02</td>
+    <td>Deposit</td>
+    <td>1,000</td>
+    <td></td>
+    <td>10,960</td>
+  </tr>
+  <tr>
+    <td colspan="4">Ending Balance</td>
+    <td>10,960</td>
+  </tr>
+</table>`;
+
+const REFERENCE_TABLE_WITH_HEADER_HTML = `<table>
+  <caption style="caption-side: top">
+    Previous Employment History
+  </caption>
+  <tr>
+    <th>Start Date</th>
+    <th>End Date</th>
+    <th>Employer Name</th>
+    <th>Position Held</th>
+    <th>Reason for leaving</th>
+  </tr>
+  <tr>
+    <td>1/15/2009</td>
+    <td>6/30/2011</td>
+    <td>Any Company</td>
+    <td>Assistant baker</td>
+    <td>relocated</td>
+  </tr>
+  <tr>
+    <td>7/1/2011</td>
+    <td>8/10/2013</td>
+    <td>Example Corp.</td>
+    <td>Baker</td>
+    <td>better opp.</td>
+  </tr>
+  <tr>
+    <td>8/15/2013</td>
+    <td>Present</td>
+    <td>AnyCompany</td>
+    <td>head baker</td>
+    <td>N/A, current</td>
+  </tr>
+</table>`;
+
 describe("MergedCell", () => {
   it("links through to sub-cells", () => {
     const doc = new TextractDocument(testTableMergedCellsJson);
@@ -39,6 +111,39 @@ describe("MergedCell", () => {
     }
     expect(nSubCells).toStrictEqual(horzMergedCell.nSubCells);
   });
+
+  it("renders semantic HTML", () => {
+    // With colspans and rowspans:
+    const doc = new TextractDocument(testTableMergedCellsJson);
+    const table = doc.pageNumber(1).tableAtIndex(0);
+    expect(table).toBeTruthy();
+    const hMergedCell = table.cellAt(2, 1) as MergedCellGeneric<Page>;
+    expect(hMergedCell.html()).toStrictEqual('<td colspan="4">Previous Balance</td>');
+    const vMergedCell = table.cellAt(3, 1) as MergedCellGeneric<Page>;
+    expect(vMergedCell.html()).toStrictEqual('<td rowspan="2">2022-01-01</td>');
+
+    // Using <th> for header cells:
+    const docWithEntityTypes = new TextractDocument(testResponseJson);
+    const tableWithHeader = docWithEntityTypes.pageNumber(1).tableAtIndex(0);
+    expect(tableWithHeader).toBeTruthy();
+    const headerCell = table.cellAt(1, 1);
+    if (!headerCell) throw new Error("Expected table cell not to be undefined");
+    expect(headerCell.html()).toStrictEqual("<th>Date</th>");
+  });
+
+  it("escapes forbidden entities in cell text for html()", () => {
+    const responseCopy = JSON.parse(JSON.stringify(testTableMergedCellsJson));
+    const doc = new TextractDocument(responseCopy);
+    const table = doc.pageNumber(1).tableAtIndex(0);
+    expect(table).toBeTruthy();
+    const cell = table.cellAt(2, 1) as MergedCellGeneric<Page>;
+    expect(cell).toBeTruthy();
+    const word = cell.listContent().filter((c) => c.blockType === ApiBlockType.Word)[0] as Word;
+    const origText = word.dict.Text;
+    word.dict.Text = `<!DOCTYPE><html>'woof"${origText}`;
+    // Check the content gets escaped:
+    expect(cell.html()).toContain(`&lt;!DOCTYPE&gt;&lt;html&gt;'woof"${origText}`);
+  });
 });
 
 describe("TableFooter", () => {
@@ -50,9 +155,24 @@ describe("TableFooter", () => {
     expect(tableFooter.confidence).toBeGreaterThan(1);
     expect(tableFooter.confidence).toBeLessThan(100);
     expect(tableFooter.text).toStrictEqual("** Less than US$50,000.");
+    expect(tableFooter.html()).toStrictEqual(tableFooter.text);
     const tableFooterStr = tableFooter.str();
     expect(tableFooterStr.indexOf("==== [Table footer] ====\n")).toStrictEqual(0);
     expect(tableFooterStr.indexOf(tableFooter.text)).toStrictEqual("==== [Table footer] ====\n".length);
+  });
+
+  it("escapes forbidden entities in footer text for html()", () => {
+    const responseCopy = JSON.parse(JSON.stringify(testTitleFootersJson));
+    const doc = new TextractDocument(responseCopy);
+    const tableFooter = doc.pageNumber(1).tableAtIndex(0).firstFooter as TableFooterGeneric<Page>;
+    expect(tableFooter).not.toBeUndefined();
+
+    // Manipulate the underlying dict to insert non-HTML-safe text:
+    const word = tableFooter.listWords()[0];
+    const origText = word.dict.Text;
+    word.dict.Text = `<!DOCTYPE><html>'woof"${origText}`;
+    // Check the content gets escaped:
+    expect(tableFooter.html()).toContain(`&lt;!DOCTYPE&gt;&lt;html&gt;'woof"${origText}`);
   });
 });
 
@@ -66,9 +186,24 @@ describe("TableTitle", () => {
     expect(tableTitle.confidence).toBeLessThan(100);
     expect(tableTitle.listWords().length).toBeGreaterThan(0);
     expect(tableTitle.text).toStrictEqual("The changes in total assets of these accounts were as follows:");
+    expect(tableTitle.html()).toStrictEqual(tableTitle.text);
     const tableTitleStr = tableTitle.str();
     expect(tableTitleStr.indexOf("==== [Table header] ====\n")).toStrictEqual(0);
     expect(tableTitleStr.indexOf(tableTitle.text)).toStrictEqual("==== [Table header] ====\n".length);
+  });
+
+  it("escapes forbidden entities in title text for html()", () => {
+    const responseCopy = JSON.parse(JSON.stringify(testTitleFootersJson));
+    const doc = new TextractDocument(responseCopy);
+    const tableTitle = doc.pageNumber(1).tableAtIndex(0).firstTitle as TableTitleGeneric<Page>;
+    expect(tableTitle).not.toBeUndefined();
+
+    // Manipulate the underlying dict to insert non-HTML-safe text:
+    const word = tableTitle.listWords()[0];
+    const origText = word.dict.Text;
+    word.dict.Text = `<!DOCTYPE><html>'woof"${origText}`;
+    // Check the content gets escaped:
+    expect(tableTitle.html()).toContain(`&lt;!DOCTYPE&gt;&lt;html&gt;'woof"${origText}`);
   });
 });
 
@@ -148,7 +283,7 @@ describe("Table", () => {
     // Should have warned once per nonexistent cell, plus once for the rel type:
     expect(consoleWarnMock).toHaveBeenCalledTimes(1 + dummyRel.Ids.length);
     for (const callArgs of consoleWarnMock.mock.calls) {
-      // Either a warning about the non-existent block ID or the 
+      // Either a warning about the non-existent block ID or the fake relationship
       expect(callArgs[0]).toMatch(/(DUMMY-\d|FAKE_RELATIONSHIP_TYPE)/g);
     }
     consoleWarnMock.mockRestore();
@@ -206,8 +341,8 @@ describe("Table", () => {
     const responseCopy: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testResponseJson));
 
     // Check correct behaviour on the response object as-is:
-    let doc = new TextractDocument(responseCopy);
-    let table = doc.pageNumber(1).tableAtIndex(0);
+    const doc = new TextractDocument(responseCopy);
+    const table = doc.pageNumber(1).tableAtIndex(0);
     expect(table.tableType).toStrictEqual(ApiTableEntityType.StructuredTable);
 
     // Find and manipulate the TABLE block, and check the parser responds correctly:
@@ -256,10 +391,10 @@ describe("Table", () => {
     const table = [...doc.pageNumber(1).iterTables()][0];
 
     expect(table.cellAt(1, 2)?.text).toMatch("End Date");
-    expect(table.cellAt(2, 2, {ignoreMerged: false})?.text).toMatch("6/30/2011");
+    expect(table.cellAt(2, 2, { ignoreMerged: false })?.text).toMatch("6/30/2011");
     // Explicitly ignoring merged cells:
-    expect(table.cellAt(1, 2, {ignoreMerged: true})?.text).toMatch("End Date");
-    expect(table.cellAt(2, 2, {ignoreMerged: true})?.text).toMatch("6/30/2011");
+    expect(table.cellAt(1, 2, { ignoreMerged: true })?.text).toMatch("End Date");
+    expect(table.cellAt(2, 2, { ignoreMerged: true })?.text).toMatch("6/30/2011");
   });
 
   it("indexes merged cells by row and column", () => {
@@ -271,17 +406,17 @@ describe("Table", () => {
     // Horizontal merge:
     expect(table.cellAt(2, 1)?.text).toMatch("Previous Balance");
     expect(table.cellAt(2, 4)?.text).toMatch("Previous Balance");
-    expect(table.cellAt(2, 4, {ignoreMerged: true})?.text).toStrictEqual("");
+    expect(table.cellAt(2, 4, { ignoreMerged: true })?.text).toStrictEqual("");
     // Merged cell contents equals sum of split cell contents:
     const mergedContents = table.cellAt(2, 1)?.listContent() || [];
     const splitContents = [1, 2, 3, 4]
-      .map((ixCol) => table.cellAt(2, ixCol, {ignoreMerged: true})?.listContent() || [])
+      .map((ixCol) => table.cellAt(2, ixCol, { ignoreMerged: true })?.listContent() || [])
       .flat();
     expect(mergedContents.map((c) => c.id)).toStrictEqual(splitContents.map((c) => c.id));
     // Vertical merge:
     expect(table.cellAt(3, 1)?.text).toMatch("2022-01-01");
     expect(table.cellAt(4, 1)?.text).toMatch("2022-01-01");
-    expect(table.cellAt(3, 1, {ignoreMerged: true})?.text).toStrictEqual("");
+    expect(table.cellAt(3, 1, { ignoreMerged: true })?.text).toStrictEqual("");
 
     // Check overall total number of cells reflects the merged cells:
     expect(table.nCells).toBeLessThan(table.nColumns * table.nRows);
@@ -294,13 +429,13 @@ describe("Table", () => {
 
     // No merges:
     expect(table.cellsAt(1, null).length).toStrictEqual(5);
-    expect(table.cellsAt(1, null, {ignoreMerged: true}).length).toStrictEqual(5);
+    expect(table.cellsAt(1, null, { ignoreMerged: true }).length).toStrictEqual(5);
     // Merges in row, no merges across rows:
     expect(table.cellsAt(2, null).length).toStrictEqual(2);
-    expect(table.cellsAt(2, null, {ignoreMerged: true}).length).toStrictEqual(5);
+    expect(table.cellsAt(2, null, { ignoreMerged: true }).length).toStrictEqual(5);
     // Includes cells merged across rows:
     expect(table.cellsAt(3, null).length).toStrictEqual(5);
-    expect(table.cellsAt(3, null, {ignoreMerged: true}).length).toStrictEqual(5);
+    expect(table.cellsAt(3, null, { ignoreMerged: true }).length).toStrictEqual(5);
   });
 
   it("fetches table column cells by index", () => {
@@ -309,13 +444,13 @@ describe("Table", () => {
 
     // No merges:
     expect(table.cellsAt(null, 5).length).toStrictEqual(6);
-    expect(table.cellsAt(null, 5, {ignoreMerged: true}).length).toStrictEqual(6);
+    expect(table.cellsAt(null, 5, { ignoreMerged: true }).length).toStrictEqual(6);
     // Cross-column merges:
     expect(table.cellsAt(null, 4).length).toStrictEqual(6);
-    expect(table.cellsAt(null, 4, {ignoreMerged: true}).length).toStrictEqual(6);
+    expect(table.cellsAt(null, 4, { ignoreMerged: true }).length).toStrictEqual(6);
     // Cross-column and in-column merges:
     expect(table.cellsAt(null, 1).length).toStrictEqual(5);
-    expect(table.cellsAt(null, 1, {ignoreMerged: true}).length).toStrictEqual(6);
+    expect(table.cellsAt(null, 1, { ignoreMerged: true }).length).toStrictEqual(6);
   });
 
   it("iterates table rows", () => {
@@ -342,7 +477,7 @@ describe("Table", () => {
     const tableRows = table.listRows();
     expect(tableRows.length).toStrictEqual(table.nRows);
     let nRows = 0;
-    for (const row of table.iterRows({repeatMultiRowCells: true})) {
+    for (const row of table.iterRows({ repeatMultiRowCells: true })) {
       expect(row.nCells).toStrictEqual(expectedCellsPerRow[nRows]);
       ++nRows;
     }
@@ -358,7 +493,7 @@ describe("Table", () => {
     const tableRows = table.listRows();
     expect(tableRows.length).toStrictEqual(table.nRows);
     let nRows = 0;
-    for (const row of table.iterRows({ignoreMerged: true, repeatMultiRowCells: true})) {
+    for (const row of table.iterRows({ ignoreMerged: true, repeatMultiRowCells: true })) {
       expect(row.nCells).toStrictEqual(expectedCellsPerRow[nRows]);
       ++nRows;
     }
@@ -472,7 +607,7 @@ describe("Table", () => {
     const page = doc.pageNumber(1);
     const table = page.tableAtIndex(0);
     const firstRow = table.rowAt(1);
-    let cellConfs: number[] = firstRow.listCells().map((c) => c.confidence);
+    const cellConfs: number[] = firstRow.listCells().map((c) => c.confidence);
 
     // Check the row contains multiple content to ensure the different aggs are well tested:
     expect(cellConfs.length).toBeGreaterThan(1);
@@ -614,12 +749,24 @@ describe("Table", () => {
     expect(table.text).toContain("Ending Balance\t10,960");
   });
 
+  it("stringifies tables to semantic HTML", () => {
+    const docTableNoCaption = new TextractDocument(testTableMergedCellsJson);
+    const tableNoCaption = docTableNoCaption.pageNumber(1).tableAtIndex(0);
+    expect(tableNoCaption.html()).toStrictEqual(REFERENCE_TABLE_NO_CAPTION_HTML);
+
+    const docTableWithHeader = new TextractDocument(testResponseJson);
+    const tableWithHeader = docTableWithHeader.pageNumber(1).tableAtIndex(0);
+    expect(tableWithHeader.html()).toStrictEqual(REFERENCE_TABLE_WITH_HEADER_HTML);
+
+    // TODO: Ideally could add tests for footer-only and having both?
+  });
+
   it("mutates confidence fields", () => {
     const NEW_CONFIDENCE = 42.42;
-    const response: ApiAnalyzeDocumentResponse = require("../data/test-response.json");
+    const response: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testResponseJson));
     const doc = new TextractDocument(response);
     const table = doc.pageNumber(1).tableAtIndex(0);
-    const tableBlock = response.Blocks.find((b) => (b.Id === table.id)) as ApiTableBlock;
+    const tableBlock = response.Blocks.find((b) => b.Id === table.id) as ApiTableBlock;
     expect(table.confidence).not.toEqual(NEW_CONFIDENCE);
     table.confidence = NEW_CONFIDENCE;
     expect(table.confidence).toEqual(NEW_CONFIDENCE);
@@ -627,7 +774,7 @@ describe("Table", () => {
 
     const cell = table.cellAt(1, 1);
     if (typeof cell === "undefined") throw new Error("Expected table cell not found");
-    const cellBlock = response.Blocks.find((b) => (b.Id === cell.id)) as ApiCellBlock;
+    const cellBlock = response.Blocks.find((b) => b.Id === cell.id) as ApiCellBlock;
     expect(cell.confidence).not.toEqual(NEW_CONFIDENCE);
     cell.confidence = NEW_CONFIDENCE;
     expect(cell.confidence).toEqual(NEW_CONFIDENCE);

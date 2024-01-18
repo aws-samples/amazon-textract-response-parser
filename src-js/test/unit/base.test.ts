@@ -7,7 +7,9 @@ import {
   DocumentMetadata,
   aggregate,
   argMax,
+  escapeHtml,
   getIterable,
+  indent,
   modalAvg,
 } from "../../src/base";
 
@@ -129,6 +131,52 @@ describe("documentMetadata", () => {
     expect(new DocumentMetadata({} as ApiDocumentMetadata).nPages).toStrictEqual(0);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(new DocumentMetadata(undefined as any).nPages).toStrictEqual(0);
+  });
+});
+
+describe("escapeHtml", () => {
+  it("escapes only [&<>] by default for use in general text nodes", () => {
+    expect(escapeHtml(`A "fun" example & a 'great' function >_< !?`)).toStrictEqual(
+      `A "fun" example &amp; a 'great' function &gt;_&lt; !?`
+    );
+  });
+
+  it(`escapes [&<>'"] when configured for use in node attributes`, () => {
+    expect(escapeHtml(`A "fun" example & a 'great' function >_< !?`, { forAttr: true })).toStrictEqual(
+      `A &quot;fun&quot; example &amp; a &#39;great&#39; function &gt;_&lt; !?`
+    );
+  });
+});
+
+describe("indent", () => {
+  it("indents text with 2 spaces by default", () => {
+    expect(indent("I'm a\nbasic kind of\nstring you know")).toStrictEqual(
+      "  I'm a\n  basic kind of\n  string you know"
+    );
+  });
+
+  it("can customize level of indentation", () => {
+    expect(indent("I'm a\nbasic kind of\nstring you know", { count: 3 })).toStrictEqual(
+      "   I'm a\n   basic kind of\n   string you know"
+    );
+  });
+
+  it("can customize indentation prefix", () => {
+    expect(indent("I'm a\nbasic kind of\nstring you know", { character: "dog", count: 3 })).toStrictEqual(
+      "dogdogdogI'm a\ndogdogdogbasic kind of\ndogdogdogstring you know"
+    );
+  });
+
+  it("can omit first line indentation", () => {
+    expect(indent("I'm a\nbasic kind of\nstring you know", { skipFirstLine: true })).toStrictEqual(
+      "I'm a\n  basic kind of\n  string you know"
+    );
+  });
+
+  it("can indent empty lines (but doesn't by default)", () => {
+    const rawStr = "I'm a\n\nstring you know";
+    expect(indent(rawStr)).toStrictEqual("  I'm a\n\n  string you know");
+    expect(indent(rawStr, { includeEmptyLines: true })).toStrictEqual("  I'm a\n  \n  string you know");
   });
 });
 
