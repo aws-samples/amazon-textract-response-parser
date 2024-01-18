@@ -227,8 +227,8 @@ describe("Geometry", () => {
     const blockCopy = JSON.parse(JSON.stringify(EXAMPLE_WORD_BLOCK)) as ApiWordBlock;
 
     blockCopy.Geometry.Polygon = [blockCopy.Geometry.Polygon[0]];
-    let host = new ApiObjectWrapper(blockCopy);
-    let geometry = new Geometry(blockCopy.Geometry, host);
+    const host = new ApiObjectWrapper(blockCopy);
+    const geometry = new Geometry(blockCopy.Geometry, host);
     expect(geometry.orientationDegrees()).toBeNull();
     expect(geometry.orientationRadians()).toBeNull();
   });

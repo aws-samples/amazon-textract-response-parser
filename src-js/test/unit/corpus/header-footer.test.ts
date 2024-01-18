@@ -23,7 +23,7 @@ interface HeaderFooterTest {
     pageNum: number;
     headerLinesLike: string[];
     footerLinesLike: string[];
-  }>
+  }>;
 }
 
 // Define your tests in a .ts file in the corpus folder alongside your documents:

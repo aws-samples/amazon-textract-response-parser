@@ -5,9 +5,8 @@ import { TextractExpense } from "../../src/expense";
 const testFailedJson = {} as ApiAnalyzeExpenseResponse;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testExpenseJson: ApiAnalyzeExpenseResponse = require("../data/invoice-expense-response.json");
-const testExpenseMissingGeomsJson: ApiAnalyzeExpenseResponse = require(
-  "../data/expense-missing-geoms-response.json"
-);
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const testExpenseMissingGeomsJson: ApiAnalyzeExpenseResponse = require("../data/expense-missing-geoms-response.json");
 
 describe("Expense", () => {
   it("throws status error on failed job JSON", () => {
