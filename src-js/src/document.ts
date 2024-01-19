@@ -267,7 +267,7 @@ export class Page
 
   getItemByBlockId(
     blockId: string,
-    allowBlockTypes?: ApiBlockType | ApiBlockType[] | null
+    allowBlockTypes?: ApiBlockType | ApiBlockType[] | null,
   ):
     | Page
     | LineGeneric<Page>
@@ -292,7 +292,7 @@ export class Page
         : allowBlockTypes === result.blockType;
       if (!typeMatch) {
         throw new Error(
-          `Parser item for block ID ${blockId} had BlockType ${result.blockType} (expected ${allowBlockTypes})`
+          `Parser item for block ID ${blockId} had BlockType ${result.blockType} (expected ${allowBlockTypes})`,
         );
       }
     }
@@ -306,7 +306,7 @@ export class Page
    */
   getModalWordOrientationDegrees(): number | null {
     const wordDegreesByLine = this.listLines().map((line) =>
-      line.listWords().map((word) => word.geometry.orientationDegrees())
+      line.listWords().map((word) => word.geometry.orientationDegrees()),
     );
 
     const wordDegrees = ([] as Array<number | null>)
@@ -353,7 +353,7 @@ export class Page
             Height: lineBox.height * 2.5,
             Width: lineBox.width,
           },
-          null
+          null,
         );
       } else if (!/[^-–—=~\s]/.test(line.text)) {
         // All low punctuation marks (e.g. just a dash?) - line height is really a guess
@@ -365,7 +365,7 @@ export class Page
             Height: lineBox.height * 2.5,
             Width: lineBox.width,
           },
-          null
+          null,
         );
       } else if (!/[^'"`^\s]/.test(line.text)) {
         // All high punctuation marks - line height is really a guess
@@ -377,7 +377,7 @@ export class Page
             Height: lineBox.height * 2.5,
             Width: lineBox.width,
           },
-          null
+          null,
         );
       } else if (!/[^-–—=~.,_acemnorsuvwxz+<>:;\s]/.test(line.text)) {
         // All low/mid punctuation and x-height letters - adjust line height up slightly
@@ -389,7 +389,7 @@ export class Page
             Height: lineBox.height * 1.25,
             Width: lineBox.width,
           },
-          null
+          null,
         );
       } else {
         // Keep box as-is
@@ -538,7 +538,7 @@ export class Page
       }
     } else if (useLayout === ReadingOrderLayoutMode.RequireLayout) {
       throw new Error(
-        `Configured with useLayout=${useLayout}, but Amazon Textract Layout analysis results not found on page ${this.id}`
+        `Configured with useLayout=${useLayout}, but Amazon Textract Layout analysis results not found on page ${this.id}`,
       );
     }
     // Pass through to the private function, but flatten the result to simplify out the "columns":
@@ -549,7 +549,7 @@ export class Page
         paraVDistTol,
         paraLineHeightTol,
         paraIndentThresh,
-      })
+      }),
     );
   }
 
@@ -613,7 +613,7 @@ export class Page
   _groupLinesByVerticalGaps(
     focusTop: number,
     focusHeight: number,
-    lines?: LineGeneric<Page>[]
+    lines?: LineGeneric<Page>[],
   ): { vGaps: BoundingBox<unknown, ApiObjectWrapper<unknown>>[]; lines: LineGeneric<Page>[][] } {
     // Start with one big "gap" covering the entire focus region, and iteratively split/refine it
     // from the lines of text:
@@ -625,7 +625,7 @@ export class Page
           Height: focusHeight,
           Width: this._geometry.boundingBox.width,
         },
-        null
+        null,
       ),
     ];
     let preGapLineLists: LineGeneric<Page>[][] = [[]];
@@ -671,8 +671,8 @@ export class Page
                 Height: isect.top - gap.top,
                 Width: gap.width,
               },
-              null
-            )
+              null,
+            ),
           );
           nextPreGapLineLists.push(orphanedLines.concat(preGapLineList));
           orphanedLines = [];
@@ -684,8 +684,8 @@ export class Page
                 Height: gap.bottom - isect.bottom,
                 Width: gap.width,
               },
-              null
-            )
+              null,
+            ),
           );
           nextPreGapLineLists.push([line]);
           lineAssigned = true;
@@ -705,8 +705,8 @@ export class Page
                   Height: gap.height - isect.height,
                   Width: gap.width,
                 },
-                null
-              )
+                null,
+              ),
             );
           } else {
             nextGaps.push(
@@ -717,8 +717,8 @@ export class Page
                   Height: isect.top - gap.top,
                   Width: gap.width,
                 },
-                null
-              )
+                null,
+              ),
             );
           }
           nextPreGapLineLists.push(preGapLines);
@@ -762,20 +762,20 @@ export class Page
   _getHeaderOrFooterLines(
     isHeader: boolean,
     { maxMargin = 0.16, minGap = 0.8 }: HeaderFooterSegmentModelParams = {},
-    fromLines?: LineGeneric<Page>[]
+    fromLines?: LineGeneric<Page>[],
   ): LineGeneric<Page>[] {
     // Find contiguous vertical gaps (spaces with no LINEs) in the defined area of the page:
     const { vGaps, lines: linesByGap } = this._groupLinesByVerticalGaps(
       isHeader ? this._geometry.boundingBox.top : this._geometry.boundingBox.bottom - maxMargin,
       maxMargin,
-      fromLines
+      fromLines,
     );
 
     // We'll look at gaps relative to text line height, rather than absolute page size:
     // ...But need to be careful as some linesByGap (e.g. at the very edge of the page) may have
     // no text.
     const lineGroupAvgHeights: Array<number | null> = linesByGap.map((lines) =>
-      lines.length ? lines.reduce((acc, l) => acc + l.geometry.boundingBox.height, 0) / lines.length : null
+      lines.length ? lines.reduce((acc, l) => acc + l.geometry.boundingBox.height, 0) / lines.length : null,
     );
     const nonNullLineGroupAvgHeights = lineGroupAvgHeights.filter((h) => h) as number[];
     const defaultLineHeight =
@@ -804,7 +804,7 @@ export class Page
       // - Is bigger than the minGap threshold
       const ixSplit = vGaps.findIndex(
         (gap, ixGap) =>
-          (ixGap > 0 || linesByGap[ixGap].length) && gap.height >= gapAvgLineHeights[ixGap] * minGap
+          (ixGap > 0 || linesByGap[ixGap].length) && gap.height >= gapAvgLineHeights[ixGap] * minGap,
       );
       return ixSplit < 0 ? [] : ([] as LineGeneric<Page>[]).concat(...linesByGap.slice(0, ixSplit + 1));
     } else {
@@ -816,7 +816,7 @@ export class Page
         .reverse()
         .findIndex(
           (gap, ixGap) =>
-            (ixGap > 0 || revLinesBygap[ixGap].length) && gap.height >= revGapAvgLineHeights[ixGap] * minGap
+            (ixGap > 0 || revLinesBygap[ixGap].length) && gap.height >= revGapAvgLineHeights[ixGap] * minGap,
         );
       return ixRevSplit < 0
         ? []
@@ -839,7 +839,7 @@ export class Page
    */
   getFooterLines(
     config: HeaderFooterSegmentModelParams = {},
-    fromLines?: LineGeneric<Page>[]
+    fromLines?: LineGeneric<Page>[],
   ): LineGeneric<Page>[] {
     return this._getHeaderOrFooterLines(false, config, fromLines);
   }
@@ -859,7 +859,7 @@ export class Page
    */
   getHeaderLines(
     config: HeaderFooterSegmentModelParams = {},
-    fromLines?: LineGeneric<Page>[]
+    fromLines?: LineGeneric<Page>[],
   ): LineGeneric<Page>[] {
     return this._getHeaderOrFooterLines(true, config, fromLines);
   }
@@ -882,33 +882,39 @@ export class Page
   getLinesByLayoutArea(
     inReadingOrder: boolean | HeuristicReadingOrderModelParams = false,
     headerConfig: HeaderFooterSegmentModelParams = {},
-    footerConfig: HeaderFooterSegmentModelParams = {}
+    footerConfig: HeaderFooterSegmentModelParams = {},
   ): { header: LineGeneric<Page>[]; content: LineGeneric<Page>[]; footer: LineGeneric<Page>[] } {
     const sourceLines = inReadingOrder
       ? ([] as LineGeneric<Page>[]).concat(
           ...(inReadingOrder === true
             ? this.getLineClustersInReadingOrder()
-            : this.getLineClustersInReadingOrder(inReadingOrder))
+            : this.getLineClustersInReadingOrder(inReadingOrder)),
         )
       : this._lines;
 
-    const sourceLineSortOrder = sourceLines.reduce((acc, next, ix) => {
-      acc[next.id] = ix;
-      return acc;
-    }, {} as { [id: string]: number });
+    const sourceLineSortOrder = sourceLines.reduce(
+      (acc, next, ix) => {
+        acc[next.id] = ix;
+        return acc;
+      },
+      {} as { [id: string]: number },
+    );
 
     const header = this._getHeaderOrFooterLines(true, headerConfig, sourceLines).sort(
-      (a, b) => sourceLineSortOrder[a.id] - sourceLineSortOrder[b.id]
+      (a, b) => sourceLineSortOrder[a.id] - sourceLineSortOrder[b.id],
     );
-    let usedIds = header.reduce((acc, next) => {
-      acc[next.id] = true;
-      return acc;
-    }, {} as { [key: string]: true });
+    let usedIds = header.reduce(
+      (acc, next) => {
+        acc[next.id] = true;
+        return acc;
+      },
+      {} as { [key: string]: true },
+    );
 
     const footer = this._getHeaderOrFooterLines(
       false,
       footerConfig,
-      sourceLines.filter((l) => !(l.id in usedIds))
+      sourceLines.filter((l) => !(l.id in usedIds)),
     ).sort((a, b) => sourceLineSortOrder[a.id] - sourceLineSortOrder[b.id]);
     usedIds = footer.reduce((acc, next) => {
       acc[next.id] = true;
@@ -1040,7 +1046,7 @@ export class Page
       | QueryInstanceGeneric<Page>
       | QueryResultGeneric<Page>
       | TableGeneric<Page>
-      | CellGeneric<Page>
+      | CellGeneric<Page>,
   ): void {
     this._itemsByBlockId[blockId] = item;
   }
@@ -1251,10 +1257,13 @@ export class TextractDocument
   }
 
   _parse(): void {
-    this._blockMap = this._dict.Blocks.reduce((acc, next) => {
-      acc[next.Id] = next;
-      return acc;
-    }, {} as { [blockId: string]: ApiBlock });
+    this._blockMap = this._dict.Blocks.reduce(
+      (acc, next) => {
+        acc[next.Id] = next;
+        return acc;
+      },
+      {} as { [blockId: string]: ApiBlock },
+    );
 
     let currentPageBlock: ApiPageBlock | null = null;
     let currentPageContent: ApiBlock[] = [];
@@ -1276,12 +1285,12 @@ export class TextractDocument
 
     this._form = new FormsCompositeGeneric(
       this._pages.map((p) => p.form),
-      this
+      this,
     );
   }
 
   static _consolidateMultipleResponses(
-    textractResultArray: ApiResponsePages
+    textractResultArray: ApiResponsePages,
   ): ApiResponsePage & ApiResponseWithContent {
     if (!textractResultArray?.length) throw new Error(`Input Textract Results list empty!`);
     let nPages = 0;
@@ -1309,7 +1318,7 @@ export class TextractDocument
         analysisType = "AnalyzeDocument";
         if (modelVersion && modelVersion !== textractResult.AnalyzeDocumentModelVersion) {
           console.warn(
-            `Inconsistent Textract model versions ${modelVersion} and ${textractResult.AnalyzeDocumentModelVersion}: Ignoring latter`
+            `Inconsistent Textract model versions ${modelVersion} and ${textractResult.AnalyzeDocumentModelVersion}: Ignoring latter`,
           );
         } else {
           modelVersion = textractResult.AnalyzeDocumentModelVersion;
@@ -1322,7 +1331,7 @@ export class TextractDocument
         analysisType = "DetectText";
         if (modelVersion && modelVersion !== textractResult.DetectDocumentTextModelVersion) {
           console.warn(
-            `Inconsistent Textract model versions ${modelVersion} and ${textractResult.DetectDocumentTextModelVersion}: Ignoring latter`
+            `Inconsistent Textract model versions ${modelVersion} and ${textractResult.DetectDocumentTextModelVersion}: Ignoring latter`,
           );
         } else {
           modelVersion = textractResult.DetectDocumentTextModelVersion;
@@ -1336,7 +1345,7 @@ export class TextractDocument
           throw new Error(`Textract results contain failed job of status ${textractResult.JobStatus}`);
         } else if (jobStatus && jobStatus !== textractResult.JobStatus) {
           throw new Error(
-            `Textract results inconsistent JobStatus values ${jobStatus}, ${textractResult.JobStatus}`
+            `Textract results inconsistent JobStatus values ${jobStatus}, ${textractResult.JobStatus}`,
           );
         }
         jobStatus = textractResult.JobStatus;
@@ -1364,8 +1373,8 @@ export class TextractDocument
       analysisType == "AnalyzeDocument"
         ? { AnalyzeDocumentModelVersion: modelVersion }
         : analysisType == "DetectText"
-        ? { DetectDocumentTextModelVersion: modelVersion }
-        : { AnalyzeDocumentModelVersion: modelVersion || "Unknown" };
+          ? { DetectDocumentTextModelVersion: modelVersion }
+          : { AnalyzeDocumentModelVersion: modelVersion || "Unknown" };
     const jobStatusFields = jobStatus ? { JobStatus: jobStatus } : {};
     const statusMessageFields = jobStatusMessage ? { StatusMessage: jobStatusMessage } : {};
     const warningFields = warnings ? { ArfBarf: warnings } : {};
@@ -1425,7 +1434,7 @@ export class TextractDocument
    */
   getItemByBlockId(
     blockId: string,
-    allowBlockTypes?: ApiBlockType | ApiBlockType[] | null
+    allowBlockTypes?: ApiBlockType | ApiBlockType[] | null,
   ): IApiBlockWrapper<ApiBlock> {
     for (const page of this._pages) {
       try {

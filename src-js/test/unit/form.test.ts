@@ -70,9 +70,10 @@ describe("FieldGeneric", () => {
     expect(field?.childBlockIds).toStrictEqual(field?.key.childBlockIds);
     expect(field?.dict).toBe(field?.key.dict);
     expect(field?.id).toStrictEqual(field?.key.id);
-    const mock = jest
-      .spyOn(field?.key as FieldKey, "relatedBlockIdsByRelType")
-      .mockImplementation((relType: ApiRelationshipType | ApiRelationshipType[]) => [] as string[]);
+    const mock = jest.spyOn(field?.key as FieldKey, "relatedBlockIdsByRelType").mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      (relType: ApiRelationshipType | ApiRelationshipType[]) => [] as string[],
+    );
     expect(field?.relatedBlockIdsByRelType(ApiRelationshipType.Value).length).toStrictEqual(0);
     expect(mock).toHaveBeenCalledTimes(1);
     mock.mockReset();
@@ -101,7 +102,7 @@ describe("FieldGeneric", () => {
     expect(valueOcrConf).not.toEqual(field.value.confidence);
 
     expect(field.getOcrConfidence()).toStrictEqual(
-      mean(valueContent.map((c) => c.confidence).concat(keyWords.map((w) => w.confidence)))
+      mean(valueContent.map((c) => c.confidence).concat(keyWords.map((w) => w.confidence))),
     );
   });
 
@@ -138,7 +139,7 @@ describe("FieldGeneric", () => {
     expect(field).toBeTruthy();
     expect(field.str()).toStrictEqual(REFERENCE_FIELD_STR);
     expect(field.html()).toStrictEqual(
-      '<input label="Phone Number:" type="text" disabled value="555-0100" />'
+      '<input label="Phone Number:" type="text" disabled value="555-0100" />',
     );
   });
 
@@ -320,10 +321,10 @@ describe("Form", () => {
     const page = doc.listPages()[0];
     // TODO: Could probably add some more checks here, but would ideally have a smaller ref JSON.
     expect(page.form.html()).toMatch(
-      /^<form>\n(?: {2}<input label=".*" type="text" disabled value=".*" \/>\n)*<\/form>$/g
+      /^<form>\n(?: {2}<input label=".*" type="text" disabled value=".*" \/>\n)*<\/form>$/g,
     );
     expect(doc.form.html()).toMatch(
-      /^<form>\n(?: {2}<div class="form-page" id="form-page-\d+">\n(?: {4}<input label=".*" type="text" disabled value=".*" \/>\n)* {2}<\/div>\n)*<\/form>$/g
+      /^<form>\n(?: {2}<div class="form-page" id="form-page-\d+">\n(?: {4}<input label=".*" type="text" disabled value=".*" \/>\n)* {2}<\/div>\n)*<\/form>$/g,
     );
   });
 

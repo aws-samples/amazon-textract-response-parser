@@ -58,7 +58,7 @@ const EXPECTED_MULTILINE_SEQ_2_LOWER = [
 function checkMultiColReadingOrder(
   docJson: ApiResponsePage | ApiResponsePages,
   expectedSeq: string[],
-  pageNum = 1
+  pageNum = 1,
 ) {
   const doc = new TextractDocument(docJson);
 
@@ -107,7 +107,7 @@ describe("Basic TextractDocument parsing", () => {
   it("logs a warning when single-page input content has a NextToken", () => {
     // Load a new copy of the response JSON so we can edit it:
     const testJson1: ApiAsyncDocumentAnalysis & ApiAsyncJobOuputSucceded = JSON.parse(
-      JSON.stringify(testResponseJson)
+      JSON.stringify(testResponseJson),
     );
     const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
 
@@ -126,10 +126,10 @@ describe("Basic TextractDocument parsing", () => {
   it("logs a warning when multi-page input content has a NextToken in the final page", () => {
     // Load a new copies of the response JSON so we can edit them:
     const testJson1: ApiAsyncDocumentAnalysis & ApiAsyncJobOuputSucceded = JSON.parse(
-      JSON.stringify(testResponseJson)
+      JSON.stringify(testResponseJson),
     );
     const testJson2: ApiAsyncDocumentAnalysis & ApiAsyncJobOuputSucceded = JSON.parse(
-      JSON.stringify(testResponseJson)
+      JSON.stringify(testResponseJson),
     );
 
     const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
@@ -150,28 +150,28 @@ describe("Basic TextractDocument parsing", () => {
     expect(() =>
       testResponseJson.Blocks.forEach((block) => {
         expect(baseDoc.getItemByBlockId(block.Id)).toBeTruthy();
-      })
+      }),
     ).not.toThrow();
 
     const finDoc = new TextractDocument(finDocResponseJson);
     expect(() =>
       finDocResponseJson.Blocks.forEach((block) => {
         expect(finDoc.getItemByBlockId(block.Id)).toBeTruthy();
-      })
+      }),
     ).not.toThrow();
 
     const payStubDoc = new TextractDocument(payStubResponseJson);
     expect(() =>
       payStubResponseJson.Blocks.forEach((block) => {
         expect(payStubDoc.getItemByBlockId(block.Id)).toBeTruthy();
-      })
+      }),
     ).not.toThrow();
 
     const taxDoc = new TextractDocument(taxFormResponseJson);
     expect(() =>
       taxFormResponseJson.Blocks.forEach((block) => {
         expect(taxDoc.getItemByBlockId(block.Id)).toBeTruthy();
-      })
+      }),
     ).not.toThrow();
   });
 });
@@ -296,7 +296,7 @@ describe("TextractDocument", () => {
     expect(line.geometry.boundingBox.top).toBeLessThanOrEqual(word.geometry.boundingBox.top);
     expect(line.geometry.boundingBox.bottom).toBeGreaterThanOrEqual(word.geometry.boundingBox.bottom);
     expect(line.geometry.boundingBox.left.toFixed(5)).toStrictEqual(
-      word.geometry.boundingBox.left.toFixed(5)
+      word.geometry.boundingBox.left.toFixed(5),
     );
     expect(line.geometry.boundingBox.right).toBeGreaterThan(word.geometry.boundingBox.right);
   });
@@ -349,7 +349,7 @@ describe("TextractDocument", () => {
       });
     });
     expect(readingText).toStrictEqual(
-      clusters.map((cluster) => cluster.map((c) => c.text).join("\n")).join("\n\n")
+      clusters.map((cluster) => cluster.map((c) => c.text).join("\n")).join("\n\n"),
     );
   });
 
@@ -357,10 +357,10 @@ describe("TextractDocument", () => {
     const page = new TextractDocument(testMultiColumnJson).pageNumber(1);
     expect(page.hasLayout).toStrictEqual(false);
     expect(() =>
-      page.getLineClustersInReadingOrder({ useLayout: ReadingOrderLayoutMode.RequireLayout })
+      page.getLineClustersInReadingOrder({ useLayout: ReadingOrderLayoutMode.RequireLayout }),
     ).toThrow(/Layout/);
     expect(() => page.getTextInReadingOrder({ useLayout: ReadingOrderLayoutMode.RequireLayout })).toThrow(
-      /Layout/
+      /Layout/,
     );
   });
 
@@ -455,13 +455,13 @@ describe("TextractDocument", () => {
     });
 
     const ixLeftColBottomLine = segmented.content.findIndex((l) =>
-      l.text.startsWith("ML model-based approaches may be")
+      l.text.startsWith("ML model-based approaches may be"),
     );
     if (ixLeftColBottomLine < 0) {
       throw new Error("Couldn't find multi-column left col test line in segmented content");
     }
     const ixRightColMidLine = segmented.content.findIndex((l) =>
-      l.text.startsWith("This means it cannot solve")
+      l.text.startsWith("This means it cannot solve"),
     );
     if (ixRightColMidLine < 0) {
       throw new Error("Couldn't find multi-column right col test line in segmented content");

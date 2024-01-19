@@ -352,7 +352,7 @@ describe("Table", () => {
 
     tableBlock.EntityTypes = ["SEMI_STRUCTURED_TABLE" as ApiTableEntityType];
     expect(new TextractDocument(responseCopy).pageNumber(1).tableAtIndex(0).tableType).toStrictEqual(
-      ApiTableEntityType.SemiStructuredTable
+      ApiTableEntityType.SemiStructuredTable,
     );
 
     tableBlock.EntityTypes = [
@@ -360,7 +360,7 @@ describe("Table", () => {
       "SEMI_STRUCTURED_TABLE" as ApiTableEntityType,
     ];
     expect(() => new TextractDocument(responseCopy).pageNumber(1).tableAtIndex(0).tableType).toThrow(
-      "multiple conflicting table types"
+      "multiple conflicting table types",
     );
 
     delete tableBlock.EntityTypes;
@@ -544,7 +544,7 @@ describe("Table", () => {
             cellContent
               .filter((c) => c.blockType === ApiBlockType.Word)
               .map((w) => (w as Word).text)
-              .join(" ")
+              .join(" "),
           ).toMatch("Payment - Utility");
           targetCellFound = true;
         }
@@ -574,7 +574,7 @@ describe("Table", () => {
     const avgOcrConf = firstCell?.getOcrConfidence();
     expect(firstCell?.getOcrConfidence(AggregationMethod.Mean)).toStrictEqual(avgOcrConf);
     expect(avgOcrConf).toStrictEqual(
-      cellContent.reduce((acc, next) => acc + next.confidence, 0) / cellContent.length
+      cellContent.reduce((acc, next) => acc + next.confidence, 0) / cellContent.length,
     );
   });
 
@@ -598,7 +598,7 @@ describe("Table", () => {
     expect(firstRow.getOcrConfidence(AggregationMethod.Max)).toStrictEqual(Math.max(...contentConfs));
     expect(firstRow.getOcrConfidence(AggregationMethod.Min)).toStrictEqual(Math.min(...contentConfs));
     expect(firstRow.getOcrConfidence()).toStrictEqual(
-      contentConfs.reduce((acc, next) => acc + next, 0) / contentConfs.length
+      contentConfs.reduce((acc, next) => acc + next, 0) / contentConfs.length,
     );
   });
 
@@ -616,7 +616,7 @@ describe("Table", () => {
     expect(firstRow.getConfidence(AggregationMethod.Max)).toStrictEqual(Math.max(...cellConfs));
     expect(firstRow.getConfidence(AggregationMethod.Min)).toStrictEqual(Math.min(...cellConfs));
     expect(firstRow.getConfidence()).toStrictEqual(
-      cellConfs.reduce((acc, next) => acc + next, 0) / cellConfs.length
+      cellConfs.reduce((acc, next) => acc + next, 0) / cellConfs.length,
     );
   });
 
@@ -625,7 +625,7 @@ describe("Table", () => {
     const page = doc.pageNumber(1);
     const table = page.tableAtIndex(0);
     const cells = ([] as Array<CellGeneric<Page> | MergedCellGeneric<Page>>).concat(
-      ...table.listRows().map((row) => row.listCells())
+      ...table.listRows().map((row) => row.listCells()),
     );
 
     // List the OCR confidence scores of all content in this row:
@@ -641,7 +641,7 @@ describe("Table", () => {
     expect(table.getOcrConfidence(AggregationMethod.Max)).toStrictEqual(Math.max(...contentConfs));
     expect(table.getOcrConfidence(AggregationMethod.Min)).toStrictEqual(Math.min(...contentConfs));
     expect(table.getOcrConfidence()).toStrictEqual(
-      contentConfs.reduce((acc, next) => acc + next, 0) / contentConfs.length
+      contentConfs.reduce((acc, next) => acc + next, 0) / contentConfs.length,
     );
   });
 
@@ -662,7 +662,7 @@ describe("Table", () => {
       table
         .rowAt(1)
         .listCells()
-        .filter((c) => c.hasEntityTypes(ApiTableCellEntityType.ColumnHeader)).length
+        .filter((c) => c.hasEntityTypes(ApiTableCellEntityType.ColumnHeader)).length,
     ).toStrictEqual(5);
 
     // Query one type at a time:
@@ -679,10 +679,10 @@ describe("Table", () => {
     // Query multiple types at once:
     const firstCell = table.cellAt(1, 1);
     expect(
-      firstCell?.hasEntityTypes([ApiTableCellEntityType.ColumnHeader, ApiTableCellEntityType.Footer])
+      firstCell?.hasEntityTypes([ApiTableCellEntityType.ColumnHeader, ApiTableCellEntityType.Footer]),
     ).toStrictEqual(true);
     expect(
-      firstCell?.hasEntityTypes([ApiTableCellEntityType.Summary, ApiTableCellEntityType.Footer])
+      firstCell?.hasEntityTypes([ApiTableCellEntityType.Summary, ApiTableCellEntityType.Footer]),
     ).toStrictEqual(false);
   });
 

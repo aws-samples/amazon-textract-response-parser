@@ -169,7 +169,7 @@ export function buildWithContent<TContent extends IApiBlockWrapper<ApiBlock> & I
   return function WithContent<
     TBlock extends ApiBlock,
     TPage extends IBlockManager,
-    T extends Constructor<IApiBlockWrapper<TBlock> & IWithParentPage<TPage>>
+    T extends Constructor<IApiBlockWrapper<TBlock> & IWithParentPage<TPage>>,
   >(SuperClass: T) {
     return class extends SuperClass implements IWithContent<TContent> {
       iterContent(): Iterable<TContent> {
@@ -187,7 +187,7 @@ export function buildWithContent<TContent extends IApiBlockWrapper<ApiBlock> & I
                   break;
                 } else if (strict) {
                   throw new Error(
-                    `Child ${item.id} of parent ${this.id} has unexpected non-content block type ${item.blockType}`
+                    `Child ${item.id} of parent ${this.id} has unexpected non-content block type ${item.blockType}`,
                   );
                 }
               }
@@ -214,7 +214,7 @@ export function buildWithContent<TContent extends IApiBlockWrapper<ApiBlock> & I
             result.push(item as TContent);
           } else if (strict) {
             throw new Error(
-              `Child ${item.id} of parent ${this.id} has unexpected non-content block type ${item.blockType}`
+              `Child ${item.id} of parent ${this.id} has unexpected non-content block type ${item.blockType}`,
             );
           }
         }
@@ -284,7 +284,7 @@ export interface IWithWords extends IWithText {
 export function WithWords<
   TBlock extends ApiBlock,
   TPage extends IBlockManager,
-  T extends Constructor<IApiBlockWrapper<TBlock> & IWithParentPage<TPage>>
+  T extends Constructor<IApiBlockWrapper<TBlock> & IWithParentPage<TPage>>,
 >(SuperClass: T) {
   return class extends SuperClass implements IWithWords {
     iterWords(): Iterable<Word> {
@@ -314,7 +314,7 @@ export function WithWords<
     listWords(): Word[] {
       if (!this.dict.Relationships) {
         console.warn(
-          `Tried to fetch WORD children on block ${this.id} of type ${this.blockType} with no 'Relationships'`
+          `Tried to fetch WORD children on block ${this.id} of type ${this.blockType} with no 'Relationships'`,
         );
         return [];
       }

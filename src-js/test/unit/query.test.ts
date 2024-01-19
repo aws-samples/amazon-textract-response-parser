@@ -336,10 +336,10 @@ describe("QueryCollection", () => {
       (b) =>
         b.BlockType === "QUERY" &&
         b.Relationships &&
-        b.Relationships.filter((r) => r.Type === ApiRelationshipType.Answer).length
+        b.Relationships.filter((r) => r.Type === ApiRelationshipType.Answer).length,
     ) as ApiQueryBlock[];
     const modifiedRel = queryBlocks[0].Relationships?.filter(
-      (r) => r.Type === ApiRelationshipType.Answer
+      (r) => r.Type === ApiRelationshipType.Answer,
     )[0] as ApiAnswerRelationship;
     modifiedRel.Ids.push("DUMMY-BLOCK-1");
 
@@ -368,10 +368,10 @@ describe("QueryCollection", () => {
       (b) =>
         b.BlockType === "QUERY" &&
         b.Relationships &&
-        b.Relationships.filter((r) => r.Type === ApiRelationshipType.Answer).length
+        b.Relationships.filter((r) => r.Type === ApiRelationshipType.Answer).length,
     ) as ApiQueryBlock[];
     const modifiedRel = queryBlocks[0].Relationships?.filter(
-      (r) => r.Type === ApiRelationshipType.Answer
+      (r) => r.Type === ApiRelationshipType.Answer,
     )[0] as ApiAnswerRelationship;
     modifiedRel.Ids.push(altBlocks[0].Id);
 
@@ -408,7 +408,7 @@ describe("QueryCollection", () => {
     const response: ApiAnalyzeDocumentResponse = JSON.parse(JSON.stringify(testResponseJson));
     // Remove answers from one question to ensure there's an unanswered query in the example:
     const queryBlocks = response.Blocks.filter(
-      (b) => b.BlockType === "QUERY" && b.Query.Text === "What's the patient's date of birth"
+      (b) => b.BlockType === "QUERY" && b.Query.Text === "What's the patient's date of birth",
     ) as ApiQueryBlock[];
     queryBlocks[0].Relationships = [];
 

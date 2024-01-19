@@ -58,7 +58,7 @@ function checkReadingOrder(filename: string, expectedDocReadingOrder: string[][]
   const doc = new TextractDocument(textractJson);
 
   expectedDocReadingOrder = expectedDocReadingOrder.map((page) =>
-    page.map((para) => para.toLocaleLowerCase())
+    page.map((para) => para.toLocaleLowerCase()),
   );
 
   return expectedDocReadingOrder.map((expectedPageReadingOrder, ixPage) => {
@@ -70,7 +70,7 @@ function checkReadingOrder(filename: string, expectedDocReadingOrder: string[][]
         // paraVDistTol: 0.5,
         // paraLineHeightTol: 0.5,
         // paraIndentThresh: 1.0,
-      }
+      },
     );
     const pageParasLower = readingOrder.map((para) => para.map((line) => line.text.toLocaleLowerCase()));
 
@@ -110,7 +110,7 @@ function expectReadingOrderSuccessful(result: CheckReadingOrderResult[]): void {
     .map((pageResult, ixPage) =>
       pageResult.readingOrderPassed
         ? ""
-        : `Page ${ixPage + 1} after test para index ${pageResult.readingOrderFailedAfterPara}`
+        : `Page ${ixPage + 1} after test para index ${pageResult.readingOrderFailedAfterPara}`,
     )
     .filter((m: string) => m);
   const msg = pagesFailed.length
@@ -131,7 +131,7 @@ describe("Reading order corpus tests", () => {
         console.warn(
           `Test doc ${
             ixTest + 1
-          } got ${nMissingBreaks} missing para breaks and ${nExtraParas} extra paragraphs`
+          } got ${nMissingBreaks} missing para breaks and ${nExtraParas} extra paragraphs`,
         );
       }
     });
@@ -139,15 +139,15 @@ describe("Reading order corpus tests", () => {
 
   it("segments paragraphs okay", () => {
     const docResults = READING_ORDER_TESTS.map((test) =>
-      checkReadingOrder(test.textractJsonFile, test.sequence)
+      checkReadingOrder(test.textractJsonFile, test.sequence),
     );
     const nMissingBreaks = docResults.reduce(
       (acc, docResult) => acc + docResult.reduce((acc, next) => acc + next.missingBreaks.length, 0),
-      0
+      0,
     );
     const nExtraParas = docResults.reduce(
       (acc, docResult) => acc + docResult.reduce((acc, next) => acc + next.extraParas.length, 0),
-      0
+      0,
     );
     if (nMissingBreaks > 0 || nExtraParas > 0) {
       console.warn(`Overall got ${nMissingBreaks} missing para breaks and ${nExtraParas} extra paragraphs`);

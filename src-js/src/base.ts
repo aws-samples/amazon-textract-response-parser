@@ -192,7 +192,7 @@ export function escapeHtml(str: string, { forAttr = false }: IEscapeHtmlOpts = {
         ">": "&gt;",
         "'": "&#39;",
         '"': "&quot;",
-      }[entity] as string)
+      })[entity] as string,
   );
 }
 
@@ -227,7 +227,7 @@ export interface IIndentOpts {
  */
 export function indent(
   text: string,
-  { character = " ", count = 2, includeEmptyLines = false, skipFirstLine = false }: IIndentOpts = {}
+  { character = " ", count = 2, includeEmptyLines = false, skipFirstLine = false }: IIndentOpts = {},
 ): string {
   const result = text.replace(includeEmptyLines ? /^/gm : /^(?!\s*$)/gm, character.repeat(count));
   if (skipFirstLine) {
@@ -314,7 +314,7 @@ export function aggregate(arr: Iterable<number>, aggMethod: AggregationMethod): 
 export function argMax(arr: number[]): { maxValue: number; maxIndex: number } {
   return arr.reduce(
     (state, nextVal, nextIx) => (nextVal > state.maxValue ? { maxValue: nextVal, maxIndex: nextIx } : state),
-    { maxValue: -Infinity, maxIndex: -1 }
+    { maxValue: -Infinity, maxIndex: -1 },
   );
 }
 
@@ -358,7 +358,7 @@ export interface IBlockManager extends IDocBlocks {
    */
   getItemByBlockId(
     blockId: string,
-    allowBlockTypes?: ApiBlockType | ApiBlockType[] | null
+    allowBlockTypes?: ApiBlockType | ApiBlockType[] | null,
   ): IApiBlockWrapper<ApiBlock>;
   /**
    * Register a newly parsed ApiBlockWrapper for a particular block ID

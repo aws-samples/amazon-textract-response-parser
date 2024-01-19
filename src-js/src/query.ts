@@ -82,11 +82,11 @@ export class QueryInstanceGeneric<TPage extends IBlockManager>
       const ansBlock = parentPage.getBlockById(id);
       if (!ansBlock) {
         console.warn(
-          `Answer block ${id} referenced by QUERY block ${block.Id} is missing and will be skipped`
+          `Answer block ${id} referenced by QUERY block ${block.Id} is missing and will be skipped`,
         );
       } else if (ansBlock.BlockType !== ApiBlockType.QueryResult) {
         console.warn(
-          `Expected block ${id} to be of type ${ApiBlockType.QueryResult} as referenced by QUERY block ${block.Id}, but got type: ${ansBlock.BlockType}`
+          `Expected block ${id} to be of type ${ApiBlockType.QueryResult} as referenced by QUERY block ${block.Id}, but got type: ${ansBlock.BlockType}`,
         );
       } else {
         // Automatically self-registers with the parent block manager (page):
@@ -147,7 +147,7 @@ export class QueryInstanceGeneric<TPage extends IBlockManager>
       .slice()
       .sort(
         // Negative -> a sorted before b
-        (a, b) => b.confidence - a.confidence
+        (a, b) => b.confidence - a.confidence,
       );
   }
 
@@ -223,7 +223,7 @@ export class QueryInstanceCollectionGeneric<TPage extends IBlockManager> impleme
           `${query.text}\n${query
             .listResultsByConfidence()
             .map((r) => r.text)
-            .join("\n")}`
+            .join("\n")}`,
       )
       .join("\n\n");
   }
@@ -253,7 +253,7 @@ export class QueryInstanceCollectionGeneric<TPage extends IBlockManager> impleme
    */
   html(): string {
     return ['<div class="queries">', indent(this._queries.map((q) => q.html()).join("\n")), "</div>"].join(
-      "\n"
+      "\n",
     );
   }
 

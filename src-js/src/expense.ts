@@ -277,7 +277,7 @@ export class TextractExpense extends ApiObjectWrapper<ApiAnalyzeExpenseResponse>
 
     if (!textractResult.ExpenseDocuments) {
       throw new Error(
-        "Input doesn't seem like a Textract expense analysis result: missing property 'ExpenseDocuments'"
+        "Input doesn't seem like a Textract expense analysis result: missing property 'ExpenseDocuments'",
       );
     }
 

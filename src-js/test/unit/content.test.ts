@@ -410,7 +410,7 @@ describe("LineGeneric", () => {
       line
         .listWords()
         .map((word) => word.text)
-        .join(" ")
+        .join(" "),
     );
   });
 

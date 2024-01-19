@@ -67,7 +67,7 @@ export class FieldKeyGeneric<TPage extends IBlockManager>
   getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     return aggregate(
       this.listWords().map((w) => w.confidence),
-      aggMethod
+      aggMethod,
     );
   }
   /**
@@ -136,7 +136,7 @@ export class FieldValueGeneric<TPage extends IBlockManager>
   getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     return aggregate(
       this.listContent().map((c) => c.confidence),
-      aggMethod
+      aggMethod,
     );
   }
   /**
@@ -184,7 +184,7 @@ export class FieldGeneric<TPage extends IBlockManager>
     if (valueBlockIds.length > 1) {
       const fieldLogName = this._key ? `field '${this._key.text}'` : "unnamed form field";
       console.warn(
-        `Got ${valueBlockIds.length} value blocks for ${fieldLogName} (Expected 0-1). Including first only.`
+        `Got ${valueBlockIds.length} value blocks for ${fieldLogName} (Expected 0-1). Including first only.`,
       );
     }
     if (valueBlockIds.length) {
@@ -192,7 +192,7 @@ export class FieldGeneric<TPage extends IBlockManager>
       const valBlock = parentForm.parentPage.getBlockById(valBlockId);
       if (!valBlock) {
         console.warn(
-          `Document missing child block ${valBlockId} referenced by value for field key ${this.key.id}`
+          `Document missing child block ${valBlockId} referenced by value for field key ${this.key.id}`,
         );
       } else {
         this._value = new FieldValueGeneric(valBlock as ApiKeyValueSetBlock | ApiValueBlock, this);
@@ -268,7 +268,7 @@ export class FieldGeneric<TPage extends IBlockManager>
     const keyValContent = (this._value ? this._value.listContent() : []).concat(this._key.listWords());
     return aggregate(
       keyValContent.map((c) => c.confidence),
-      aggMethod
+      aggMethod,
     );
   }
 
@@ -352,7 +352,7 @@ export class FormGeneric<TPage extends IBlockManager> implements IRenderable {
     return `<form>\n${indent(
       this.listFields()
         .map((f) => f.html())
-        .join("\n")
+        .join("\n"),
     )}\n</form>`;
   }
 
@@ -442,8 +442,8 @@ export class FormsCompositeGeneric<TPage extends IBlockManager, TDocument extend
           form
             .listFields()
             .map((f) => `${f.html()}\n`) // Ensure a trailing newline
-            .join("")
-        )}</div>\n` // Ensure a trailing newline
+            .join(""),
+        )}</div>\n`, // Ensure a trailing newline
     );
     return `<form>\n${indent(pageHtmls.join(""))}</form>`;
   }

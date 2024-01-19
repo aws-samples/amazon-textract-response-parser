@@ -86,7 +86,7 @@ export interface ApiAsyncJobOuputInProgress {
     {
       ErrorCode: string;
       Pages: number[];
-    }
+    },
   ];
 }
 

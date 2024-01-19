@@ -45,7 +45,7 @@ describe("aggregate", () => {
   it("supports geometric mean value aggregation of positive numbers", () => {
     expect(aggregate([1, 1, 8], AggregationMethod.GeometricMean)).toStrictEqual(2);
     expect(
-      Math.abs((aggregate([4, 1, 1 / 32], AggregationMethod.GeometricMean) as number) - 0.5)
+      Math.abs((aggregate([4, 1, 1 / 32], AggregationMethod.GeometricMean) as number) - 0.5),
     ).toBeLessThan(EPSILON);
   });
 
@@ -58,10 +58,10 @@ describe("aggregate", () => {
   it("supports mean value aggregation", () => {
     expect(aggregate([-5, -1, 0, 1, 5], AggregationMethod.Mean)).toStrictEqual(0);
     expect(Math.abs((aggregate([3.6, 6.3, 2.4], AggregationMethod.Mean) as number) - 4.1)).toBeLessThan(
-      EPSILON
+      EPSILON,
     );
     expect(Math.abs((aggregate([-3.6, -6.3, -2.4], AggregationMethod.Mean) as number) + 4.1)).toBeLessThan(
-      EPSILON
+      EPSILON,
     );
   });
 
@@ -81,20 +81,20 @@ describe("aggregate", () => {
     expect(
       aggregate(
         getIterable(() => [1, 0, 2, 10, 5, 8, 7]),
-        AggregationMethod.Min
-      )
+        AggregationMethod.Min,
+      ),
     ).toStrictEqual(0);
     expect(
       aggregate(
         getIterable(() => [2, 4, 4, 5, 7, 100, 100.001]),
-        AggregationMethod.Mode
-      )
+        AggregationMethod.Mode,
+      ),
     ).toStrictEqual(4);
     expect(
       aggregate(
         getIterable(() => [-5, -1, 0, 1, 5]),
-        AggregationMethod.Mean
-      )
+        AggregationMethod.Mean,
+      ),
     ).toStrictEqual(0);
   });
 
@@ -137,13 +137,13 @@ describe("documentMetadata", () => {
 describe("escapeHtml", () => {
   it("escapes only [&<>] by default for use in general text nodes", () => {
     expect(escapeHtml(`A "fun" example & a 'great' function >_< !?`)).toStrictEqual(
-      `A "fun" example &amp; a 'great' function &gt;_&lt; !?`
+      `A "fun" example &amp; a 'great' function &gt;_&lt; !?`,
     );
   });
 
   it(`escapes [&<>'"] when configured for use in node attributes`, () => {
     expect(escapeHtml(`A "fun" example & a 'great' function >_< !?`, { forAttr: true })).toStrictEqual(
-      `A &quot;fun&quot; example &amp; a &#39;great&#39; function &gt;_&lt; !?`
+      `A &quot;fun&quot; example &amp; a &#39;great&#39; function &gt;_&lt; !?`,
     );
   });
 });
@@ -151,25 +151,25 @@ describe("escapeHtml", () => {
 describe("indent", () => {
   it("indents text with 2 spaces by default", () => {
     expect(indent("I'm a\nbasic kind of\nstring you know")).toStrictEqual(
-      "  I'm a\n  basic kind of\n  string you know"
+      "  I'm a\n  basic kind of\n  string you know",
     );
   });
 
   it("can customize level of indentation", () => {
     expect(indent("I'm a\nbasic kind of\nstring you know", { count: 3 })).toStrictEqual(
-      "   I'm a\n   basic kind of\n   string you know"
+      "   I'm a\n   basic kind of\n   string you know",
     );
   });
 
   it("can customize indentation prefix", () => {
     expect(indent("I'm a\nbasic kind of\nstring you know", { character: "dog", count: 3 })).toStrictEqual(
-      "dogdogdogI'm a\ndogdogdogbasic kind of\ndogdogdogstring you know"
+      "dogdogdogI'm a\ndogdogdogbasic kind of\ndogdogdogstring you know",
     );
   });
 
   it("can omit first line indentation", () => {
     expect(indent("I'm a\nbasic kind of\nstring you know", { skipFirstLine: true })).toStrictEqual(
-      "I'm a\n  basic kind of\n  string you know"
+      "I'm a\n  basic kind of\n  string you know",
     );
   });
 
@@ -210,7 +210,7 @@ describe("ApiBlockWrapper", () => {
       "DUMMY-8",
     ]);
     expect(
-      wrapper.relatedBlockIdsByRelType([ApiRelationshipType.ComplexFeatures, ApiRelationshipType.Answer])
+      wrapper.relatedBlockIdsByRelType([ApiRelationshipType.ComplexFeatures, ApiRelationshipType.Answer]),
     ).toStrictEqual(["DUMMY-2", "DUMMY-3", "DUMMY-7", "DUMMY-8"]);
     expect(wrapper.relatedBlockIdsByRelType(ApiRelationshipType.MergedCell)).toStrictEqual([]);
   });

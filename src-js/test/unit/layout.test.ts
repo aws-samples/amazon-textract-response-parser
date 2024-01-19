@@ -200,7 +200,7 @@ describe("LayoutKeyValue", () => {
       kv
         .listContent()
         .map((line) => line.text)
-        .join("\n")
+        .join("\n"),
     );
     expect(kv.str()).toStrictEqual(`---- Key-value ----\n${kv.text}\n-------------------`);
 
@@ -237,7 +237,7 @@ describe("LayoutSectionHeader", () => {
     const head = page.layout
       .listItems()
       .find(
-        (item) => item.blockType === ApiBlockType.LayoutSectionHeader
+        (item) => item.blockType === ApiBlockType.LayoutSectionHeader,
       ) as LayoutSectionHeaderGeneric<Page>;
     expect(head).toBeTruthy();
     // This test figure doesn't have any test content (TODO: Find or make one that does!)
@@ -289,7 +289,7 @@ describe("LayoutTable", () => {
       tab
         .listContent()
         .map((item) => item.text)
-        .join("\n")
+        .join("\n"),
     );
 
     // HTML:
@@ -430,7 +430,7 @@ describe("Layout", () => {
       page.layout
         .listItems()
         .map((item) => item.text)
-        .join("\n\n")
+        .join("\n\n"),
     );
 
     // str() representation:
@@ -441,7 +441,7 @@ describe("Layout", () => {
       page.layout
         .listItems()
         .map((item) => item.str())
-        .join("\n\n")
+        .join("\n\n"),
     );
 
     // HTML:
@@ -450,7 +450,7 @@ describe("Layout", () => {
       page.layout
         .listItems()
         .map((item) => item.html())
-        .join("\n")
+        .join("\n"),
     );
   });
 });

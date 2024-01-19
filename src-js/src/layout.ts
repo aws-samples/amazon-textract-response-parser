@@ -43,7 +43,7 @@ export interface ILayoutItem<
   TBlock extends ApiLayoutBlock,
   TContent extends IApiBlockWrapper<ApiBlock> & IRenderable,
   TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
-  TGeometryHost extends ApiObjectWrapper<TBlock>
+  TGeometryHost extends ApiObjectWrapper<TBlock>,
 > extends IApiBlockWrapper<TBlock>,
     IRenderable,
     IWithContent<TContent>,
@@ -88,7 +88,7 @@ export interface ILayoutItem<
  */
 class LayoutItemBaseGeneric<
     TBlock extends ApiLayoutBlock,
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
+    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
   >
   extends PageHostedApiBlockWrapper<TBlock, TPage>
   // extends buildWithContent<IApiBlockWrapper<ApiBlock> & IRenderable>()(PageHostedApiBlockWrapper)<TBlock, TPage>
@@ -124,9 +124,9 @@ class LayoutItemBaseGeneric<
  */
 class LayoutLineContainerItem<
   TBlock extends ApiLayoutBlock,
-  TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
+  TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
 > extends buildWithContent<LineGeneric<IBlockManager>>({ contentTypes: [ApiBlockType.Line] })(
-  LayoutItemBaseGeneric
+  LayoutItemBaseGeneric,
 )<TBlock, TPage> {
   /**
    * Iterate through the text `Line`s in this object
@@ -183,7 +183,7 @@ class LayoutLineContainerItem<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutFigure`.
  */
 export class LayoutFigureGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
+    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutFigureBlock, TPage>
   implements
@@ -218,7 +218,7 @@ export class LayoutFigureGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutFooter`.
  */
 export class LayoutFooterGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
+    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutFooterBlock, TPage>
   implements
@@ -249,7 +249,7 @@ export class LayoutFooterGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutHeader`.
  */
 export class LayoutHeaderGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
+    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutHeaderBlock, TPage>
   implements
@@ -280,7 +280,7 @@ export class LayoutHeaderGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutKeyValue`.
  */
 export class LayoutKeyValueGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
+    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutKeyValueBlock, TPage>
   implements
@@ -422,7 +422,7 @@ export class LayoutKeyValueGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutPageNumber`.
  */
 export class LayoutPageNumberGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
+    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutPageNumberBlock, TPage>
   implements
@@ -451,7 +451,7 @@ export class LayoutPageNumberGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutSectionHeader`.
  */
 export class LayoutSectionHeaderGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
+    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutSectionHeaderBlock, TPage>
   implements
@@ -480,7 +480,7 @@ export class LayoutSectionHeaderGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutTable`.
  */
 export class LayoutTableGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
+    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutTableBlock, TPage>
   implements
@@ -511,9 +511,9 @@ export class LayoutTableGeneric<
             cell
               .listContent()
               .map((item) => item.id)
-              .flat()
+              .flat(),
           )
-          .flat()
+          .flat(),
       )
       .flat();
     const footerIds = table
@@ -522,7 +522,7 @@ export class LayoutTableGeneric<
         foot
           .listWords()
           .map((word) => word.id)
-          .flat()
+          .flat(),
       )
       .flat();
     const titleIds = table
@@ -531,7 +531,7 @@ export class LayoutTableGeneric<
         title
           .listWords()
           .map((word) => word.id)
-          .flat()
+          .flat(),
       )
       .flat();
     return titleIds.concat(cellContentIds, footerIds);
@@ -643,7 +643,7 @@ export class LayoutTableGeneric<
    */
   str(): string {
     return ["|==== Table (structure unknown) ====|", this.text, "|==================================|"].join(
-      "\n"
+      "\n",
     );
   }
 }
@@ -654,7 +654,7 @@ export class LayoutTableGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutText`.
  */
 export class LayoutTextGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
+    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutTextBlock, TPage>
   implements
@@ -686,7 +686,7 @@ export class LayoutTextGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutTitle`.
  */
 export class LayoutTitleGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
+    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutTitleBlock, TPage>
   implements
@@ -715,7 +715,7 @@ export class LayoutTitleGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutList`.
  */
 export class LayoutListGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
+    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
   >
   extends buildWithContent<
     LayoutTextGeneric<IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>>
@@ -738,7 +738,7 @@ export class LayoutListGeneric<
     return `<ul>\n${indent(
       this.listContent()
         .map((item) => `<li>${item.html()}</li>`)
-        .join("\n")
+        .join("\n"),
     )}\n</ul>`;
   }
   /**
@@ -770,12 +770,12 @@ export class LayoutListGeneric<
     function extractLinesRecursive(
       items: Array<
         IApiBlockWrapper<ApiBlock> & IRenderable & IWithContent<IApiBlockWrapper<ApiBlock> & IRenderable>
-      >
+      >,
     ): LineGeneric<TPage>[] {
       return items
         .map((item) => {
           if (item.blockType === ApiBlockType.Line) return [item as unknown as LineGeneric<TPage>];
-          else if (typeof item.listContent !== undefined)
+          else if (typeof item.listContent !== "undefined")
             return extractLinesRecursive(
               // Scary typing basically reduces to: "Whatever was in the function signature, but
               // the content it contains is also that type"
@@ -787,7 +787,7 @@ export class LayoutListGeneric<
                       IRenderable &
                       IWithContent<IApiBlockWrapper<ApiBlock> & IRenderable>
                   >
-              ).listContent()
+              ).listContent(),
             );
           else return [];
         })
@@ -823,7 +823,7 @@ export class LayoutListGeneric<
  * TypeScript type collecting all possible TRP parsed objects corresponding to layout elements
  */
 export type LayoutItemGeneric<
-  TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
+  TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
 > =
   | LayoutFigureGeneric<TPage>
   | LayoutFooterGeneric<TPage>
@@ -842,8 +842,9 @@ export type LayoutItemGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/Layout`.
  */
 export class LayoutGeneric<
-  TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>
-> implements IRenderable, IWithParentPage<TPage>
+    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+  >
+  implements IRenderable, IWithParentPage<TPage>
 {
   _items: LayoutItemGeneric<TPage>[];
   _parentPage: TPage;
@@ -888,7 +889,7 @@ export class LayoutGeneric<
           console.warn(
             `Ignoring unrecognised BlockType '${(block as ApiBlock).BlockType}' when parsing layout block ${
               (block as ApiBlock).Id
-            }`
+            }`,
           );
       }
     });

@@ -10,7 +10,7 @@ import { ApiObjectWrapper } from "./base";
  */
 export class BoundingBox<
   TParentBlock,
-  TParent extends ApiObjectWrapper<TParentBlock>
+  TParent extends ApiObjectWrapper<TParentBlock>,
 > extends ApiObjectWrapper<ApiBoundingBox> {
   _parentGeometry: Geometry<TParentBlock, TParent> | null;
 
@@ -90,7 +90,7 @@ export class BoundingBox<
         Top: top,
         Width: right - left,
       },
-      null
+      null,
     );
   }
 
@@ -113,7 +113,7 @@ export class BoundingBox<
           Top: vIsectTop,
           Width: hIsectRight - hIsectLeft,
         },
-        null
+        null,
       );
     } else {
       return null;
@@ -133,7 +133,7 @@ export class BoundingBox<
  */
 export class Point<
   TParentBlock,
-  TParent extends ApiObjectWrapper<TParentBlock>
+  TParent extends ApiObjectWrapper<TParentBlock>,
 > extends ApiObjectWrapper<ApiPoint> {
   _parentGeometry: Geometry<TParentBlock, TParent> | null;
 
@@ -174,7 +174,7 @@ export class Point<
  */
 export class Geometry<
   TParentBlock,
-  TParent extends ApiObjectWrapper<TParentBlock>
+  TParent extends ApiObjectWrapper<TParentBlock>,
 > extends ApiObjectWrapper<ApiGeometry> {
   _boundingBox: BoundingBox<TParentBlock, TParent>;
   _parentObject: TParent | null;

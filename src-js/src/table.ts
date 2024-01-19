@@ -124,7 +124,7 @@ function WithCellBaseProps<
       IWithContent<SelectionElement | Signature | Word> &
       IWithParentPage<TPage> &
       IWithText
-  >
+  >,
 >(SuperClass: T) {
   return class extends SuperClass implements ICellBaseProps, IRenderable {
     get columnIndex(): number {
@@ -165,7 +165,7 @@ function WithCellBaseProps<
     getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
       return aggregate(
         this.listContent().map((c) => c.confidence),
-        aggMethod
+        aggMethod,
       );
     }
 
@@ -183,7 +183,7 @@ function WithCellBaseProps<
       if (Array.isArray(entityType)) {
         return entityType.some(
           // (Safe type cast because the block above has already returned null if Entitytypes not set)
-          (eType) => (this.dict.EntityTypes as ApiTableCellEntityType[]).indexOf(eType) >= 0
+          (eType) => (this.dict.EntityTypes as ApiTableCellEntityType[]).indexOf(eType) >= 0,
         );
       }
       return this.dict.EntityTypes.indexOf(entityType) >= 0;
@@ -210,7 +210,7 @@ function WithCellBaseProps<
           escapeHtml(this.text),
           `</${tagName}>`,
         ].join(""),
-        { skipFirstLine: true }
+        { skipFirstLine: true },
       );
     }
 
@@ -252,7 +252,7 @@ export class CellGeneric<TPage extends IBlockManager>
  * If you're consuming this library, you probably just want to use `document.ts/MergedCell`.
  */
 export class MergedCellGeneric<TPage extends IBlockManager> extends WithCellBaseProps(
-  buildWithContent<SelectionElement | Signature | Word>()(CellBaseGeneric)
+  buildWithContent<SelectionElement | Signature | Word>()(CellBaseGeneric),
 )<ApiMergedCellBlock, TPage> {
   constructor(block: ApiMergedCellBlock, parentTable: TableGeneric<TPage>) {
     super(block, parentTable);
@@ -310,7 +310,7 @@ export class MergedCellGeneric<TPage extends IBlockManager> extends WithCellBase
   override listContent(): Array<SelectionElement | Signature | Word> {
     // listContent needs to traverse each child CELL in turn, instead of directly scannning current
     return ([] as Array<SelectionElement | Signature | Word>).concat(
-      ...this.listSubCells().map((c) => c.listContent())
+      ...this.listSubCells().map((c) => c.listContent()),
     );
   }
 
@@ -339,7 +339,7 @@ export class RowGeneric<TPage extends IBlockManager> {
 
   constructor(
     cells: Array<CellGeneric<TPage> | MergedCellGeneric<TPage>> = [],
-    parentTable: TableGeneric<TPage>
+    parentTable: TableGeneric<TPage>,
   ) {
     this._cells = cells;
     this._parentTable = parentTable;
@@ -376,7 +376,7 @@ export class RowGeneric<TPage extends IBlockManager> {
   getConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     return aggregate(
       this._cells.map((c) => c.confidence),
-      aggMethod
+      aggMethod,
     );
   }
 
@@ -391,7 +391,7 @@ export class RowGeneric<TPage extends IBlockManager> {
    */
   getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     const contentConfs = ([] as number[]).concat(
-      ...this._cells.map((cell) => cell.listContent().map((content) => content.confidence))
+      ...this._cells.map((cell) => cell.listContent().map((content) => content.confidence)),
     );
     return aggregate(contentConfs, aggMethod);
   }
@@ -546,7 +546,7 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
 
       if (rs.Type === ApiRelationshipType.Child) {
         this._cells = this._cells.concat(
-          itemBlocks.map((cblk) => new CellGeneric(cblk as ApiCellBlock, this))
+          itemBlocks.map((cblk) => new CellGeneric(cblk as ApiCellBlock, this)),
         );
       } else if (rs.Type === ApiRelationshipType.TableFooter) {
         // Parsed objects will self-register with the parentPage:
@@ -559,7 +559,7 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
         console.warn(
           `TABLE ${this.id} contained a relationship of unexpected type '${
             (rs as ApiRelationship).Type
-          }' which will be ignored`
+          }' which will be ignored`,
         );
       }
     }
@@ -583,8 +583,8 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
                 return;
               }
               return new MergedCellGeneric(cellBlock as ApiMergedCellBlock, this);
-            }).filter((cell) => cell) as MergedCellGeneric<TPage>[]
-        )
+            }).filter((cell) => cell) as MergedCellGeneric<TPage>[],
+        ),
     );
   }
 
@@ -600,10 +600,13 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
    * Update this Table instance's map of (split) Cells by ID for efficient retrieval
    */
   _updateCellsById(): void {
-    this._cellsById = this._cells.reduce((acc, next) => {
-      acc[next.id] = next;
-      return acc;
-    }, {} as { [id: string]: CellGeneric<TPage> });
+    this._cellsById = this._cells.reduce(
+      (acc, next) => {
+        acc[next.id] = next;
+        return acc;
+      },
+      {} as { [id: string]: CellGeneric<TPage> },
+    );
   }
 
   /**
@@ -638,7 +641,7 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
   cellAt(
     rowIndex: number,
     columnIndex: number,
-    opts: IGetCellOptions = {}
+    opts: IGetCellOptions = {},
   ): CellGeneric<TPage> | MergedCellGeneric<TPage> | undefined {
     const ignoreMerged = opts.ignoreMerged || false;
     const mergedResult =
@@ -648,7 +651,7 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
           c.columnIndex <= columnIndex &&
           c.columnIndex + c.columnSpan > columnIndex &&
           c.rowIndex <= rowIndex &&
-          c.rowIndex + c.rowSpan > rowIndex
+          c.rowIndex + c.rowSpan > rowIndex,
       );
     if (mergedResult) {
       return mergedResult;
@@ -668,7 +671,7 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
   cellsAt(
     rowIndex: number | null,
     columnIndex: number | null,
-    opts: IGetCellOptions = {}
+    opts: IGetCellOptions = {},
   ): Array<CellGeneric<TPage> | MergedCellGeneric<TPage>> {
     const ignoreMerged = opts.ignoreMerged || false;
     const mergedCells = ignoreMerged
@@ -677,19 +680,22 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
           (c) =>
             (rowIndex == null || (c.rowIndex <= rowIndex && c.rowIndex + c.rowSpan > rowIndex)) &&
             (columnIndex == null ||
-              (c.columnIndex <= columnIndex && c.columnIndex + c.columnSpan > columnIndex))
+              (c.columnIndex <= columnIndex && c.columnIndex + c.columnSpan > columnIndex)),
         );
-    const mergedCellChildIds = mergedCells.reduce((acc, next) => {
-      next.listSubCells().forEach((c) => {
-        acc[c.id] = true;
-      });
-      return acc;
-    }, {} as { [id: string]: true });
+    const mergedCellChildIds = mergedCells.reduce(
+      (acc, next) => {
+        next.listSubCells().forEach((c) => {
+          acc[c.id] = true;
+        });
+        return acc;
+      },
+      {} as { [id: string]: true },
+    );
     const rawCells = this._cells.filter(
       (c) =>
         (rowIndex == null || c.rowIndex === rowIndex) &&
         (columnIndex == null || c.columnIndex === columnIndex) &&
-        !(c.id in mergedCellChildIds)
+        !(c.id in mergedCellChildIds),
     );
     const result = (mergedCells as Array<CellGeneric<TPage> | MergedCellGeneric<TPage>>).concat(rawCells);
     this._sortCellsByLocation(result);
@@ -707,7 +713,7 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
    */
   getOcrConfidence(aggMethod: AggregationMethod = AggregationMethod.Mean): number | null {
     const contentConfs = ([] as number[]).concat(
-      ...this._cells.map((cell) => cell.listContent().map((content) => content.confidence))
+      ...this._cells.map((cell) => cell.listContent().map((content) => content.confidence)),
     );
     return aggregate(contentConfs, aggMethod);
   }
@@ -771,7 +777,7 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
    */
   listFooters(): TableFooterGeneric<TPage>[] {
     return this.relatedBlockIdsByRelType(ApiRelationshipType.TableFooter).map(
-      (id) => this.parentPage.getItemByBlockId(id) as TableFooterGeneric<TPage>
+      (id) => this.parentPage.getItemByBlockId(id) as TableFooterGeneric<TPage>,
     );
   }
 
@@ -788,7 +794,7 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
    */
   listTitles(): TableTitleGeneric<TPage>[] {
     return this.relatedBlockIdsByRelType(ApiRelationshipType.TableTitle).map(
-      (id) => this.parentPage.getItemByBlockId(id) as TableTitleGeneric<TPage>
+      (id) => this.parentPage.getItemByBlockId(id) as TableTitleGeneric<TPage>,
     );
   }
 
@@ -802,7 +808,7 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
     const allRowCells = this.cellsAt(rowIndex, null, { ignoreMerged: opts.ignoreMerged });
     return new RowGeneric(
       repeatMultiRowCells ? allRowCells : allRowCells.filter((c) => c.rowIndex === rowIndex),
-      this
+      this,
     );
   }
 
@@ -886,7 +892,7 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
     if (nMatches === 0) return null;
     if (nMatches > 1) {
       throw new Error(
-        `TABLE block ${this._dict.Id} EntityTypes contained multiple conflicting table types: "${this._dict.EntityTypes}"`
+        `TABLE block ${this._dict.Id} EntityTypes contained multiple conflicting table types: "${this._dict.EntityTypes}"`,
       );
     }
     if (isStructured) return ApiTableEntityType.StructuredTable;
@@ -917,10 +923,10 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
           row
             .listCells()
             .map((cell) => cell.html())
-            .join("\n")
+            .join("\n"),
         ),
         "</tr>",
-      ].join("\n")
+      ].join("\n"),
     );
     const titleTexts = this.listTitles().map((item) => item.html());
     const footerTexts = this.listFooters().map((item) => item.html());
@@ -943,7 +949,7 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
             '<div class="table-footer">',
             indent(footerInnerHtml),
             "</div>",
-          ].join("\n")
+          ].join("\n"),
         ),
         "</div>",
       ].join("\n");
