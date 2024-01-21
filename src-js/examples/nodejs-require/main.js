@@ -1,15 +1,17 @@
-/* eslint-disable no-undef */
-/* eslint-disable @typescript-eslint/no-var-requires */
-
+/**
+ * Example script using TRP.js from NodeJS with ES-style module imports
+ */
 // NodeJS Built-Ins:
 const assert = require("assert").strict;
 
-// Local Dependencies:
-const { TextractDocument, TextractExpense } = require("../..");
-const testResponse = require("../data/test-response.json");
-const testExpenseResponse = require("../data/invoice-expense-response.json");
+// TRP.js:
+const { TextractDocument, TextractExpense } = require("amazon-textract-response-parser");
 
-console.log("Checking built assets can be used with NodeJS via 'require'...");
+// Test data files:
+// (These data file imports will only work in this example project, because the files aren't
+// published to NPM)
+const testResponse = require("amazon-textract-response-parser/test/data/test-response.json");
+const testExpenseResponse = require("amazon-textract-response-parser/test/data/invoice-expense-response.json");
 
 // Quick smoke tests:
 const doc = new TextractDocument(testResponse);

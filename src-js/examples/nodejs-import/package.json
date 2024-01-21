@@ -1,0 +1,19 @@
+{
+  "name": "@amazon-textract-response-parser/nodejs-import",
+  "version": "0.0.1",
+  "description": "Example of using TRP.js from NodeJS with ES-style 'import' statements",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-specifier-resolution=node main.js"
+  },
+  "author": "Amazon Rekognition Textract Demos <rekognition-textract-demos@amazon.com>",
+  "license": "Apache-2.0",
+  "private": true,
+  "dependencies": {
+    "amazon-textract-response-parser": "file:../.."
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

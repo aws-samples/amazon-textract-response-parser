@@ -26,13 +26,14 @@
     "build:types": "tsc -p tsconfig.types.json && replace 'readonly text: string;' 'get text(): string;' ./dist/types -r",
     "build": "concurrently -n 'iife,cjs,es,types' 'npm run build:browser' 'npm run build:cjs' 'npm run build:es' 'npm run build:types'",
     "clean": "rimraf dist",
-    "prepublishOnly": "npm run clean && npm run build && npm run test:postbuild",
+    "prepublishOnly": "npm run clean && npm run build && npm run test:examples",
     "prettify": "prettier --config .prettierrc.js 'src/**/*.{js,ts,tsx}' --write",
     "lint:src": "eslint --quiet --fix 'src/**/*.{js,ts,tsx}'",
     "lint": "eslint --quiet --fix '{src,test}/**/*.{js,ts,tsx}'",
     "reading-order-diagnostic": "npm run build && node bin/reading-order-diagnostic.js",
     "test": "jest --coverage",
-    "test:postbuild": "node test/postbuild/browser.js && node test/postbuild/node-require.js && node --experimental-specifier-resolution=node test/postbuild/node-import.mjs",
+    "//": "# TODO: test:examples command is not yet cross-platform - requires bash-like shell",
+    "test:examples": "(set -e && for ex in examples/*; do if [ $ex == 'examples/README.md' ]; then continue; fi; (cd $ex && npm install && npm run test); done)",
     "test:unit": "jest --coverage --testPathPattern=test/unit"
   },
   "repository": {

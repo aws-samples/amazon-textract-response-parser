@@ -16,11 +16,13 @@ $ npm install amazon-textract-response-parser
 ```
 
 ```js
+// With ES-style module imports:
 import { TextractDocument, TextractExpense } from "amazon-textract-response-parser";
+// Or CommonJS-style require:
 const { TextractDocument, TextractIdentity } = require("amazon-textract-response-parser");
 ```
 
-...Or link directly in the browser - for example via the [unpkg CDN](https://unpkg.com/):
+...Or link directly in the browser - for example via a CDN like [unpkg](https://unpkg.com/):
 
 ```html
 <script src="https://unpkg.com/amazon-textract-response-parser@x.y.z"></script>
@@ -33,19 +35,13 @@ const { TextractDocument, TextractIdentity } = require("amazon-textract-response
 </script>
 ```
 
-At a low level, the distribution of this library provides multiple builds:
+To enable this, the distribution of this library provides multiple builds:
 
 - `dist/cjs` (default `main`), for CommonJS environments like NodeJS - including most front end applications built with tools like React and Webpack.
 - `dist/es` (default `module`), for ES6/ES2015/esnext capable environments.
 - `dist/browser` (default `jsdelivr` and `unpkg`), for linking directly from browser HTML with no module framework (IIFE).
 
-This means that **deep imports** will depend on your build environment. For example:
-
-```typescript
-import { aggregate, AggregationMethod } from "amazon-textract-response-parser/dist/cjs/base";
-
-const minConfidence = aggregate([80, 90, 85], AggregationMethod.Min);
-```
+This means that **deep imports** will depend on your build environment. Check out the [examples/](examples/README.md) folder on GitHub for some basic starters using the different styles.
 
 
 ## Loading data
@@ -449,7 +445,7 @@ In particular for **array properties**, you'll note that TRP generally exposes g
 
 ## Other features and examples
 
-For more examples of the features of the library, you can refer to the [tests](tests/) folder and/or the source code. If you have suggestions for additional features that would be useful, please open a GitHub issue!
+For more examples on how to use the library, you can refer to the (basic) [examples](examples/) and (more complete) [tests](tests/) folders on GitHub, and the source code itself. If you have suggestions for additional features that would be useful, please open a GitHub issue!
 
 
 ## Development
