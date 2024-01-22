@@ -68,7 +68,7 @@ import {
 // `MergedCellGeneric<Page>` everywhere.
 export {
   /**
-   * @deprecated Please import direct from `base` submodule (or use `trp.base` in IIFE)
+   * @deprecated Planned for private-only: Please let us know if you have a use-case for this?
    */
   ApiBlockWrapper,
 } from "./base";

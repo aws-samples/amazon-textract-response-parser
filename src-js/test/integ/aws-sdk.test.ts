@@ -9,10 +9,14 @@ import {
   DetectDocumentTextCommand,
 } from "@aws-sdk/client-textract";
 
-// Local Dependencies:
-import { ApiAnalyzeExpenseResponse, ApiResponsePage, ApiResponsePages } from "../../src/api-models/response";
-import { TextractDocument } from "../../src/document";
-import { TextractExpense } from "../../src/expense";
+// TRP.js library:
+import {
+  ApiAnalyzeExpenseResponse,
+  ApiResponsePage,
+  ApiResponsePages,
+  TextractDocument,
+  TextractExpense,
+} from "../../src";
 
 const textract = new TextractClient({});
 

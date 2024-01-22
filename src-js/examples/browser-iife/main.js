@@ -12,25 +12,25 @@
 window.fileProcessed = false;
 
 // Run initial tests that don't require the Textract JSON:
-console.log("Checking sub-module components are accessible through IIFE...");
-const CHILD = trp.api.base.ApiRelationshipType.Child;
-const ApiTextType = trp.api.content.ApiTextType;
-const ApiKeyValueEntityTypeEnum = trp.api.form.ApiKeyValueEntityType;
-const ApiJobStatus = trp.api.response.ApiJobStatus;
-const ApiTableEntityType = trp.api.table.ApiTableEntityType;
-const aggregate = trp.base.aggregate;
-const Word = trp.content.Word;
-const TexDoc = trp.document.TextractDocument;
-const TexExp = trp.expense.TextractExpense;
-const FormGeneric = trp.form.FormGeneric;
-const Geometry = trp.geometry.Geometry;
-const TexId = trp.id.TextractIdentity;
-const QueryResultGeneric = trp.query.QueryResultGeneric;
-const TableGeneric = trp.table.TableGeneric;
+console.log("Checking some expected components are accessible through IIFE...");
+const CHILD = trp.ApiRelationshipType.Child;
+const ApiTextType = trp.ApiTextType;
+const ApiKeyValueEntityTypeEnum = trp.ApiKeyValueEntityType;
+const ApiJobStatus = trp.ApiJobStatus;
+const ApiTableEntityType = trp.ApiTableEntityType;
+const aggregate = trp.aggregate;
+const Word = trp.Word;
+const TexDoc = trp.TextractDocument;
+const TexExp = trp.TextractExpense;
+const FormGeneric = trp.FormGeneric;
+const Geometry = trp.Geometry;
+const TexId = trp.TextractIdentity;
+const QueryResultGeneric = trp.QueryResultGeneric;
+const TableGeneric = trp.TableGeneric;
 console.log("Testing aggregate() utility function...");
-const aggTest = aggregate([1, 2, 3, 4], trp.base.AggregationMethod.Mean);
+const aggTest = aggregate([1, 2, 3, 4], trp.AggregationMethod.Mean);
 if (aggTest !== 2.5) {
-  throw new Error(`Expected trp.base.aggregate([1, 2, 3, 4], "MEAN") to return 2.5: Got ${aggTest}`);
+  throw new Error(`Expected trp.aggregate([1, 2, 3, 4], "MEAN") to return 2.5: Got ${aggTest}`);
 }
 
 /**

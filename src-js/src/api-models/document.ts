@@ -21,99 +21,102 @@ import {
   ApiTableTitleBlock,
 } from "./table";
 
-// Temporary re-exports for consistency with old all-top-level API:
+// Temporary re-exports for consistency with old API:
 export {
   /**
-   * @deprecated Please import direct from `api-models/base` (or use `trp.api.base` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiRelationshipType,
   /**
-   * @deprecated Please import direct from `api-models/base` (or use `trp.api.base` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiAnswerRelationship,
   /**
-   * @deprecated Please import direct from `api-models/base` (or use `trp.api.base` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiChildRelationship,
+  /**
+   * @deprecated Please import direct from top-level TRP.js
+   */
   ApiComplexFeaturesRelationship,
   /**
-   * @deprecated Please import direct from `api-models/base` (or use `trp.api.base` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiMergedCellRelationship,
   /**
-   * @deprecated Please import direct from `api-models/base` (or use `trp.api.base` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiValueRelationship,
   /**
-   * @deprecated Please import direct from `api-models/base` (or use `trp.api.base` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiRelationship,
   /**
-   * @deprecated Please import direct from `api-models/base` (or use `trp.api.base` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiBlockType,
 } from "./base";
 export {
   /**
-   * @deprecated Please import direct from `api-models/content` (or use `trp.api.content` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiTextType,
   /**
-   * @deprecated Please import direct from `api-models/content` (or use `trp.api.content` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiWordBlock,
   /**
-   * @deprecated Please import direct from `api-models/content` (or use `trp.api.content` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiLineBlock,
   /**
-   * @deprecated Please import direct from `api-models/content` (or use `trp.api.content` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiSelectionStatus,
   /**
-   * @deprecated Please import direct from `api-models/content` (or use `trp.api.content` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiSelectionElementBlock,
 } from "./content";
 export {
   /**
-   * @deprecated Please import direct from `api-models/form` (or use `trp.api.form` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiKeyValueEntityType,
   /**
-   * @deprecated Please import direct from `api-models/form` (or use `trp.api.form` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiKeyValueSetBlock,
 } from "./form";
 export {
   /**
-   * @deprecated Please import direct from `api-models/query` (or use `trp.api.query` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiQueryBlock,
   /**
-   * @deprecated Please import direct from `api-models/query` (or use `trp.api.query` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiQueryResultBlock,
 } from "./query";
 export {
   /**
-   * @deprecated Please import direct from `api-models/table` (or use `trp.api.table` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiTableEntityType,
   /**
-   * @deprecated Please import direct from `api-models/table` (or use `trp.api.table` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiTableBlock,
   /**
-   * @deprecated Please import direct from `api-models/table` (or use `trp.api.table` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiTableCellEntityType,
   /**
-   * @deprecated Please import direct from `api-models/table` (or use `trp.api.table` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiCellBlock,
   /**
-   * @deprecated Please import direct from `api-models/table` (or use `trp.api.table` in IIFE)
+   * @deprecated Please import direct from top-level TRP.js
    */
   ApiMergedCellBlock,
 } from "./table";

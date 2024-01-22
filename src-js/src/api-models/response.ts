@@ -79,7 +79,7 @@ export interface ApiDetectDocumentTextResponse extends ApiResponseWithContent {
   DetectDocumentTextModelVersion: string;
 }
 
-export interface ApiAsyncJobOuputInProgress {
+export interface ApiAsyncJobOutputInProgress {
   JobStatus: "IN_PROGRESS";
   StatusMessage?: string; // If not completed
   Warnings?: [
@@ -89,6 +89,11 @@ export interface ApiAsyncJobOuputInProgress {
     },
   ];
 }
+
+/**
+ * @deprecated Backward compatibility for typo: Please use ApiAsyncJobOutputInProgress
+ */
+export interface ApiAsyncJobOuputInProgress extends ApiAsyncJobOutputInProgress {}
 
 /**
  * Shared fields reported for Get*Analysis APIs concerning asynchronous jobs
@@ -124,7 +129,7 @@ export interface ApiAsyncJobOutputFailed extends ApiAsyncJobOutputStatus {
 }
 
 export type ApiAsyncDocumentAnalysis =
-  | ApiAsyncJobOuputInProgress
+  | ApiAsyncJobOutputInProgress
   | ({ AnalyzeDocumentModelVersion: string } & (
       | ApiAsyncJobOutputFailed
       | ApiAsyncJobOutputPartialSuccess
@@ -132,7 +137,7 @@ export type ApiAsyncDocumentAnalysis =
     ));
 
 export type ApiAsyncDocumentTextDetection =
-  | ApiAsyncJobOuputInProgress
+  | ApiAsyncJobOutputInProgress
   | ({ DetectDocumentTextModelVersion: string } & (
       | ApiAsyncJobOutputFailed
       | ApiAsyncJobOutputPartialSuccess

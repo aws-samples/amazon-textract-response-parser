@@ -41,7 +41,7 @@ To enable this, the distribution of this library provides multiple builds:
 - `dist/es` (default `module`), for ES6/ES2015/esnext capable environments.
 - `dist/browser` (default `jsdelivr` and `unpkg`), for linking directly from browser HTML with no module framework (IIFE).
 
-This means that **deep imports** will depend on your build environment. Check out the [examples/](examples/README.md) folder on GitHub for some basic starters using the different styles.
+This means that **deep imports** will depend on your build environment, but are generally discouraged anyway and may not work correctly with TypeScript. Check out the [examples/](examples/README.md) folder on GitHub for some basic starters using the different styles.
 
 
 ## Loading data
@@ -63,7 +63,7 @@ If you're using TypeScript, you may need to **typecast** your input JSON while l
 > The `ApiResponsePage` input interface exposed and expected by this module is subtly different from - but functionally compatible with - the output types produced by the [AWS SDK for JavaScript Textract Client](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-textract/index.html).
 
 ```typescript
-import { ApiAnalyzeExpenseResponse } from "amazon-textract-response-parser/api-models/response";
+import { ApiAnalyzeExpenseResponse } from "amazon-textract-response-parser";
 import { TextractClient, AnalyzeExpenseCommand } from "@aws-sdk/client-textract";
 const textract = new TextractClient({});
 
@@ -203,10 +203,7 @@ The `Table.confidence`, `Row.getConfidence()` and `Cell.confidence` scores refle
 Use `Table.tableType` and `Cell.hasEntityTypes()` to explore the more advanced [entity types](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html) extracted by Amazon Textract: For example column headers, title cells, footer cells, and summary cells:
 
 ```typescript
-import {
-  ApiTableCellEntityType,
-  ApiTableEntityType,
-} from "amazon-textract-response-parser/api-models/table";
+import { ApiTableCellEntityType, ApiTableEntityType } from "amazon-textract-response-parser";
 
 const isSemiStruct = table.tableType === ApiTableEntityType.SemiStructuredTable;
 const colHeaders = table.rowAt(1).listCells()
@@ -233,8 +230,7 @@ page.layout.listItems().forEach((layItem) => {
 If Forms and/or Tables analyses were also enabled, you'll be able to traverse from the relevant Layout object types to these more detailed representations. **However,** because these are separate analyses the correspondence may not be 1-to-1 and TRP is having to do some reconciliation under the hood:
 
 ```typescript
-import { ApiBlockType } from "amazon-textract-response-parser/api-models/base";
-import { LayoutKeyValue, LayoutTable } from "amazon-textract-response-parser/document";
+import { ApiBlockType, LayoutKeyValue, LayoutTable } from "amazon-textract-response-parser";
 
 page.layout.listItems().forEach((layItem) => {
   if (layItem.blockType === ApiBlockType.LayoutKeyValue) {
@@ -255,7 +251,7 @@ Particularly for multi-column documents, the default output sequence for Amazon 
 Alternatively, TRP.js provides a **client-side heuristic algorithm** that can attempt to sort results without Layout. There are even some configuration parameters exposed to help you tune the results for your particular domain, and test harnesses in the [tests/unit/corpus folder](tests/unit/corpus) to help you experiment via `npm run test:unit`:
 
 ```typescript
-import { ReadingOrderLayoutMode } from "amazon-textract-response-parser/document";
+import { ReadingOrderLayoutMode } from "amazon-textract-response-parser";
 
 // By default, we automatically use `Layout` when it's available and heuristics when it's not:
 let textInReadingOrder: string = page.getTextInReadingOrder();  // Just generate text

@@ -6,7 +6,7 @@
 - Serialize individual elements, pages and documents to semantic markup with `.html()` (for page and document level, currently depends on `Layout` being enabled).
 - Proper support for [table title and footer elements](https://aws.amazon.com/blogs/machine-learning/announcing-enhanced-table-extractions-with-amazon-textract/) (`TABLE_TITLE` and `TABLE_FOOTER`) linked from tables. ([#171](https://github.com/aws-samples/amazon-textract-response-parser/issues/171))
 - Support [signature detection results](https://aws.amazon.com/blogs/machine-learning/detect-signatures-on-documents-or-images-using-the-signatures-feature-in-amazon-textract/) (`SIGNATURE` blocks)
-- More complete and systematically structured exposure of sub-module constructs for in-browser IIFE users, who previously couldn't access any constructs that weren't explicitly re-exported at top level. The global `trp` object should now mirror the module file structure e.g. can access `trp.api.content.ApiTextType`.
+- More complete exposure of Textract API model constructs and `base.ts` utility functions in external-facing TRP API
 ### Changed
 - **(BREAKING)** Previously-exposed `CellBase` class is removed, due to refactoring `Cell` and `MergedCell` to depend more on composable mixins and less on fragile hierarchy of (now internal) `CellBaseGeneric`. Use `Cell | MergedCell` instead for typing.
 - `Page`s now explicitly track parsed objects in their scope by block ID, which reduced state tracking requirements for other objects (like `Line`, `Query`) as we work toward supporting more edit/mutation operations. See `IBlockManager.registerParsedItem()` and `.getItemByBlockId()` for details. This may result in some minor warning & error behavior changes when handling invalid or incomplete Textract JSON.
@@ -15,7 +15,9 @@
 - `Table.nCells` now correctly reflects merged cells (instead of just counting all sub-cells).
 - Support alternative `KEY` and `VALUE` blocks for Forms K-V data, observed in place of the typical `KEY_VALUE_SET` blocks for some test data files (Was this a temporary API issue? A change going forward? 🤷‍♂️)
 ### Deprecated
-- Several top-level **re-exports** now tagged as deprecated and will be removed in future: Prefer imports from the underlying sub-modules.
+- `ApiBlockWrapper` base class is now slated to become internal-only: Please let us know if you have use-cases
+- Various re-exports from `/api-modules/document` sub-module: Prefer importing direct from top-level
+- `ApiAsyncJobOuputInProgress` typo superseded by `ApiAsyncJobOutputInProgress`, but original not yet fully removed
 
 ## 0.3.1 (2023-08-28)
 ### Fixed
