@@ -133,6 +133,11 @@ export class IdDocumentField extends ApiObjectWrapper<ApiIdentityDocumentField> 
   }
 }
 
+/**
+ * Parsed TRP object for a single identity document in an identity analysis result
+ *
+ * You'll usually create this via a `TextractIdentity`, rather than directly.
+ */
 export class IdDocument extends ApiObjectWrapper<ApiIdentityDocument> {
   _fields: IdDocumentField[];
   _fieldsByNormalizedType: { [key in IdFieldType]?: IdDocumentField };
@@ -208,9 +213,19 @@ export class IdDocument extends ApiObjectWrapper<ApiIdentityDocument> {
   }
 }
 
+/**
+ * Main TRP class to parse and analyze Amazon Textract identity analysis results
+ *
+ * Contains a list of (potentially multiple separate) detected identity documents from the
+ * submitted content
+ */
 export class TextractIdentity extends ApiObjectWrapper<ApiAnalyzeIdResponse> {
   _documents: IdDocument[];
 
+  /**
+   * Create (parse) a TextractIdentity object from Amazon Textract identity analysis result JSON
+   * @param textractResult Response JSON from identity analysis API
+   */
   constructor(dict: ApiAnalyzeIdResponse) {
     super(dict);
     this._documents = (dict.IdentityDocuments || []).map((docDict) => new IdDocument(docDict, this));

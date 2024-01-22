@@ -168,6 +168,12 @@ export interface HeaderFooterSegmentModelParams {
   minGap?: number;
 }
 
+/**
+ * Parsed TRP.js object for a single page in a document analysis / text detection result
+ *
+ * Wraps an Amazon Textract API `PAGE` Block, with utilities for analysis. You'll usually create
+ * this via a `TextractDocument`, rather than directly.
+ */
 export class Page
   extends ApiBlockWrapper<ApiPageBlock>
   implements IBlockManager, IRenderable, IWithForm<Page>, IWithTables<Page>
@@ -196,6 +202,13 @@ export class Page
   _queries: QueryInstanceCollectionGeneric<Page>;
   _tables: TableGeneric<Page>[];
 
+  /**
+   * Create (parse) a Page object from a PAGE block and the list of other Blocks ocurring on it
+   *
+   * @param pageBlock The API Block object representing the PAGE itself
+   * @param blocks The list of all API Blocks occurring on this Page
+   * @param parentDocument The parsed TRP.js TextractDocument object the page belongs to
+   */
   constructor(pageBlock: ApiPageBlock, blocks: ApiBlock[], parentDocument: TextractDocument) {
     super(pageBlock);
     this._blocks = blocks;
@@ -1189,40 +1202,246 @@ export class Page
 }
 
 // content.ts concrete Page-dependent types:
+/**
+ * Parsed TRP object for a line of text on the page
+ *
+ * Wraps an Amazon Textract `LINE` Block in the underlying API response. You'll usually create
+ * this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-lines-words.html
+ */
 export class Line extends LineGeneric<Page> {}
 
 // form.ts concrete Page-dependent types:
+/**
+ * Parsed TRP object for a key-value field in form analysis data
+ *
+ * You'll usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+ */
 export class Field extends FieldGeneric<Page> {}
+/**
+ * Parsed TRP object for the key/label of a key-value field pair in form analysis data
+ *
+ * Wraps an Amazon Textract `KEY_VALUE_SET` (or `KEY`) Block in the underlying API response. You'll
+ * usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+ */
 export class FieldKey extends FieldKeyGeneric<Page> {}
+/**
+ * Parsed TRP object for the value/data of a key-value field pair in form analysis data
+ *
+ * Wraps an Amazon Textract `KEY_VALUE_SET` (or `VALUE`) Block in the underlying API response.
+ * You'll usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+ */
 export class FieldValue extends FieldValueGeneric<Page> {}
+/**
+ * Parsed TRP object wrapping all the key-value form data for one page of a document
+ *
+ * You'll usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+ */
 export class Form extends FormGeneric<Page> {}
 
 // layout.ts concrete Page-dependent types:
+/**
+ * Parsed TRP object for a diagram / image / figure on a page, detected by document layout analysis
+ *
+ * Wraps an Amazon Textract `LAYOUT_FIGURE` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
 export class LayoutFigure extends LayoutFigureGeneric<Page> {}
+/**
+ * Parsed TRP object for an element of page footer content, detected by document layout analysis
+ *
+ * Note this excludes page numbers (see `LayoutPageNumber`). Wraps an Amazon Textract
+ * `LAYOUT_FOOTER` Block in the underlying API response. You'll usually create this via a
+ * `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
 export class LayoutFooter extends LayoutFooterGeneric<Page> {}
+/**
+ * Parsed TRP object for an element of page header content, detected by document layout analysis
+ *
+ * Note this excludes page numbers (see `LayoutPageNumber`). Wraps an Amazon Textract
+ * `LAYOUT_HEADER` Block in the underlying API response. You'll usually create this via a
+ * `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
 export class LayoutHeader extends LayoutHeaderGeneric<Page> {}
+/**
+ * Parsed TRP object for an area of key-value (form data) content, detected by layout analysis
+ *
+ * Note this typically includes multiple `Field` objects (if you have forms data analysis enabled).
+ * Wraps an Amazon Textract `LAYOUT_KEY_VALUE` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
 export class LayoutKeyValue extends LayoutKeyValueGeneric<Page> {}
+/**
+ * Parsed TRP object for a page number annotation, detected by document layout analysis
+ *
+ * Wraps an Amazon Textract `LAYOUT_PAGE_NUMBER` Block in the underlying API response. You'll
+ * usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
 export class LayoutPageNumber extends LayoutPageNumberGeneric<Page> {}
+/**
+ * Parsed TRP object for a section heading / title, detected by document layout analysis
+ *
+ * Wraps an Amazon Textract `LAYOUT_SECTION_HEADER` Block in the underlying API response. You'll
+ * usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
 export class LayoutSectionHeader extends LayoutSectionHeaderGeneric<Page> {}
+/**
+ * Parsed TRP object for a table, detected by document layout analysis
+ *
+ * Note this can link through to, but may not correspond 1:1 with, structured table data extracted
+ * by the Tables analysis. Wraps an Amazon Textract `LAYOUT_TABLE` Block in the underlying API
+ * response. You'll usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
 export class LayoutTable extends LayoutTableGeneric<Page> {}
+/**
+ * Parsed TRP object for a paragraph / independent element of text, detected by layout analysis
+ *
+ * Wraps an Amazon Textract `LAYOUT_TEXT` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
 export class LayoutText extends LayoutTextGeneric<Page> {}
+/**
+ * Parsed TRP object for an overall document title, detected by document layout analysis
+ *
+ * Wraps an Amazon Textract `LAYOUT_TITLE` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
 export class LayoutTitle extends LayoutTitleGeneric<Page> {}
+/**
+ * Parsed TRP object for a bulleted or numbered list, detected by document layout analysis
+ *
+ * Wraps an Amazon Textract `LAYOUT_LIST` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
 export class LayoutList extends LayoutListGeneric<Page> {}
+/**
+ * Parsed TRP object for the overall layout of a page, detected by document layout analysis
+ *
+ * Can be used to iterate through content like headings, paragraphs, headers and footers, in
+ * implied reading order (even for multi-column documents). You'll usually create this via a
+ * `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
 export class Layout extends LayoutGeneric<Page> {}
 
 // query.ts concrete Page-dependent types:
+/**
+ * Parsed TRP object for one page's instance of a submitted Amazon Textract Query
+ *
+ * Wraps an Amazon Textract `QUERY` Block in the underlying API response. You'll usually create
+ * this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html
+ */
 export class QueryInstance extends QueryInstanceGeneric<Page> {}
+/**
+ * Parsed TRP object wrapping all the Textract Queries results for one page in a document
+ *
+ * You'll usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html
+ */
 export class QueryInstanceCollection extends QueryInstanceCollectionGeneric<Page> {}
+/**
+ * Parsed TRP object for one detected result for a submitted Amazon Textract Query
+ *
+ * Wraps an Amazon Textract `QUERY_RESULT` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html
+ */
 export class QueryResult extends QueryResultGeneric<Page> {}
 
 // table.ts concrete Page-dependent types:
+/**
+ * Parsed TRP object for a (sub-)cell of a table, before considering any merged cells
+ *
+ * Wraps an Amazon Textract `CELL` Block in the underlying API response. You'll usually create this
+ * via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+ */
 export class Cell extends CellGeneric<Page> {}
+/**
+ * Parsed TRP object for a merged cell in a table
+ *
+ * Wraps an Amazon Textract `MERGED_CELL` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+ */
 export class MergedCell extends MergedCellGeneric<Page> {}
+/**
+ * Parsed TRP object for one row in a table
+ *
+ * `Row`s don't directly wrap any one object in Amazon Textract API results, but are a collection
+ * used to help iterate through table contents. You'll usually create this via a
+ * `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+ */
 export class Row extends RowGeneric<Page> {}
+/**
+ * Parsed TRP object for a table on a page, detected by document tables analysis
+ *
+ * Wraps an Amazon Textract `TABLE` Block in the underlying API response. You'll usually create
+ * this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+ */
 export class Table extends TableGeneric<Page> {}
+/**
+ * Parsed TRP object for a trailing/footer caption of a table
+ *
+ * Wraps an Amazon Textract `TABLE_FOOTER` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+ */
 export class TableFooter extends TableFooterGeneric<Page> {}
+/**
+ * Parsed TRP object for a leading/header caption of a table
+ *
+ * Wraps an Amazon Textract `TABLE_TITLE` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+ */
 export class TableTitle extends TableTitleGeneric<Page> {}
 
+/**
+ * Main TRP class to parse and analyze Amazon Textract document analysis & text detection results
+ */
 export class TextractDocument
   extends ApiObjectWrapper<ApiResponsePage & ApiResponseWithContent>
   implements IDocBlocks, IRenderable
@@ -1232,6 +1451,8 @@ export class TextractDocument
   _pages: Page[];
 
   /**
+   * Create (parse) a TextractDocument from Amazon Textract API response JSON(s)
+   *
    * @param textractResults A (parsed) Textract response JSON, or an array of multiple from the same job
    */
   constructor(textractResults: ApiResponsePage | ApiResponsePages) {

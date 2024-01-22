@@ -192,6 +192,11 @@ export class ExpenseLineItemGroup extends ApiObjectWrapper<ApiExpenseLineItemGro
   }
 }
 
+/**
+ * Parsed TRP object for a single expense/invoice/receipt in an expense analysis result
+ *
+ * You'll usually create this via a `TextractExpense`, rather than directly.
+ */
 export class ExpenseDocument extends ApiObjectWrapper<ApiExpenseDocument> {
   _lineItemGroups: ExpenseLineItemGroup[];
   _parentExpense: TextractExpense | null;
@@ -268,10 +273,20 @@ export class ExpenseDocument extends ApiObjectWrapper<ApiExpenseDocument> {
   }
 }
 
+/**
+ * Main TRP class to parse and analyze Amazon Textract expense analysis results
+ *
+ * Contains a list of (potentially multiple separate) detected expense documents from the submitted
+ * content
+ */
 export class TextractExpense extends ApiObjectWrapper<ApiAnalyzeExpenseResponse> {
   _docs: ExpenseDocument[];
   _metadata: DocumentMetadata;
 
+  /**
+   * Create (parse) a TextractExpense object from Amazon Textract expense analysis result JSON
+   * @param textractResult Response JSON from sync or async expense analysis APIs
+   */
   constructor(textractResult: ApiAnalyzeExpenseResponse) {
     super(textractResult);
 

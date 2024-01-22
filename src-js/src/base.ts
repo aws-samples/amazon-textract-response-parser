@@ -123,7 +123,16 @@ export class ApiBlockWrapper<T extends ApiBlock> extends ApiObjectWrapper<T> imp
   }
 }
 
+/**
+ * Parsed TRP object representing a document metadata descriptor from a Textract API result
+ *
+ * You'll usually create this via `TextractDocument`, `TextractExpense`, `TextractIdentity`
+ * classes, etc - rather than directly.
+ */
 export class DocumentMetadata extends ApiObjectWrapper<ApiDocumentMetadata> {
+  /**
+   * Number of pages in the document, according to the Amazon Textract DocumentMetadata field
+   */
   get nPages(): number {
     return this._dict?.Pages || 0;
   }
