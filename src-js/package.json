@@ -26,6 +26,8 @@
     "build:types": "tsc -p tsconfig.types.json && replace 'readonly text: string;' 'get text(): string;' ./dist/types -r",
     "build": "concurrently -n 'iife,cjs,es,types' 'npm run build:browser' 'npm run build:cjs' 'npm run build:es' 'npm run build:types'",
     "clean": "rimraf dist",
+    "//": "# TODO: clean:examples command is not yet cross-platform - requires bash-like shell",
+    "clean:examples": "(set -e && for ex in examples/*; do if [ $ex == 'examples/README.md' ]; then continue; fi; (cd $ex && rimraf node_modules); done)",
     "prepublishOnly": "npm run clean && npm run build && npm run test:examples",
     "prettify": "prettier --config .prettierrc.js 'src/**/*.{js,ts,tsx}' --write",
     "lint:src": "eslint --quiet --fix 'src/**/*.{js,ts,tsx}'",

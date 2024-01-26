@@ -87,9 +87,11 @@ function checkMultiColReadingOrder(
 
 describe("Basic TextractDocument parsing", () => {
   it("should throw status error on failed async job JSONs (list)", () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
     expect(() => {
       new TextractDocument([testFailedJson] as ApiResponsePages);
     }).toThrowError(/status.*FAILED/);
+    warn.mockReset();
   });
 
   it("should throw status error on still-in-progress async job JSON (individual)", () => {

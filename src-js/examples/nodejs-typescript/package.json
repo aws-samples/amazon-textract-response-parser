@@ -13,6 +13,7 @@
   "license": "Apache-2.0",
   "private": true,
   "dependencies": {
+    "@aws-sdk/client-textract": "^3.499.0",
     "amazon-textract-response-parser": "file:../.."
   },
   "devDependencies": {
