@@ -139,7 +139,7 @@ describe("LayoutFooter", () => {
       .find((item) => item.blockType === ApiBlockType.LayoutFooter) as LayoutFooterGeneric<Page>;
     expect(foot).toBeTruthy();
     expect(foot.text).toStrictEqual("Form 1005");
-    expect(foot.html()).toStrictEqual(`<div class="footer-el">\n  ${foot.text}\n</div>`);
+    expect(foot.html()).toStrictEqual(`<div class="footer-el">\n\t${foot.text}\n</div>`);
     expect(foot.str()).toStrictEqual(`---- Footer text ----\n${foot.text}\n---------------------`);
   });
 });
@@ -154,7 +154,7 @@ describe("LayoutHeader", () => {
       .find((item) => item.blockType === ApiBlockType.LayoutHeader) as LayoutHeaderGeneric<Page>;
     expect(head).toBeTruthy();
     expect(head.text).toStrictEqual("IV. Administered Accounts");
-    expect(head.html()).toStrictEqual(`<div class="header-el">\n  ${head.text}\n</div>`);
+    expect(head.html()).toStrictEqual(`<div class="header-el">\n\t${head.text}\n</div>`);
     expect(head.str()).toStrictEqual(`---- Header text ----\n${head.text}\n---------------------`);
   });
 });
@@ -205,10 +205,10 @@ describe("LayoutKeyValue", () => {
     expect(kv.str()).toStrictEqual(`---- Key-value ----\n${kv.text}\n-------------------`);
 
     const kvHtml = kv.html();
-    expect(kvHtml).toMatch(/^<div class="key-value">\n {2}[^\s]/g); // Starts with HTML tag and indent
+    expect(kvHtml).toMatch(/^<div class="key-value">\n\t[^\s]/g); // Starts with HTML tag and indent
     expect(kvHtml).toMatch(/\n<\/div>$/g); // Ends with expected closing tag
     // As many <input/> tags as linked K-V fields:
-    expect((kvHtml.match(/ {2}<input label="/g) || []).length).toStrictEqual(kv.listFields().length);
+    expect((kvHtml.match(/\t<input label="/g) || []).length).toStrictEqual(kv.listFields().length);
     // TODO: More fine-grained checks
   });
 });
@@ -224,7 +224,7 @@ describe("LayoutPageNumber", () => {
     expect(pgnum).toBeTruthy();
     // This test figure doesn't have any test content (TODO: Find or make one that does!)
     expect(pgnum.text).toStrictEqual("57");
-    expect(pgnum.html()).toStrictEqual(`<div class="page-num">\n  ${pgnum.text}\n</div>`);
+    expect(pgnum.html()).toStrictEqual(`<div class="page-num">\n\t${pgnum.text}\n</div>`);
     expect(pgnum.str()).toStrictEqual(`---- Page number: ${pgnum.text}`);
   });
 });
@@ -242,7 +242,7 @@ describe("LayoutSectionHeader", () => {
     expect(head).toBeTruthy();
     // This test figure doesn't have any test content (TODO: Find or make one that does!)
     expect(head.text).toStrictEqual("Earnings Statement");
-    expect(head.html()).toStrictEqual(`<h2>\n  ${head.text}\n</h2>`);
+    expect(head.html()).toStrictEqual(`<h2>\n\t${head.text}\n</h2>`);
     expect(head.str()).toStrictEqual("\nEarnings Statement\n------------------\n");
   });
 });
@@ -296,8 +296,8 @@ describe("LayoutTable", () => {
     const tabHtml = tab.html();
     const linkedTables = tab.listTables();
     expect(linkedTables.length).toStrictEqual(2);
-    expect(tabHtml).toMatch(/^<div class="table">\n {2}[^\s]/g); // Starts with HTML tag and indent
-    expect(tabHtml).toMatch(/ {2}[^\s].*\n<\/div>$/g); // Ends closing HTML tag
+    expect(tabHtml).toMatch(/^<div class="table">\n\t[^\s]/g); // Starts with HTML tag and indent
+    expect(tabHtml).toMatch(/\t[^\s].*\n<\/div>$/g); // Ends closing HTML tag
     expect(tabHtml).toContain(indent(linkedTables[0].html()));
 
     // str() representation:
@@ -319,7 +319,7 @@ describe("LayoutTitle", () => {
     expect(head).toBeTruthy();
     // This test figure doesn't have any test content (TODO: Find or make one that does!)
     expect(head.text).toStrictEqual("ADMINISTERED ACCOUNTS");
-    expect(head.html()).toStrictEqual(`<h1>\n  ${head.text}\n</h1>`);
+    expect(head.html()).toStrictEqual(`<h1>\n\t${head.text}\n</h1>`);
     expect(head.str()).toStrictEqual("\n\nADMINISTERED ACCOUNTS\n=====================\n");
   });
 });
@@ -392,7 +392,7 @@ describe("LayoutList", () => {
     expect(ls).toBeTruthy();
     expect(ls.str()).toStrictEqual(ls.text);
     const lsHtml = ls.html();
-    expect(lsHtml).toMatch(/^<ul>\n {2}<li>/g); // Starts with ul and li tags
+    expect(lsHtml).toMatch(/^<ul>\n\t<li>/g); // Starts with ul and li tags
     expect(lsHtml).toMatch(/<\/li>\n<\/ul>$/g); // Ends closing li and ul tags
     expect((lsHtml.match(/<li>/g) || []).length).toStrictEqual(ls.nContentItems);
     // TODO: Stricter checks?

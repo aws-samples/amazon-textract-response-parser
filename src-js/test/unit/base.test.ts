@@ -149,15 +149,15 @@ describe("escapeHtml", () => {
 });
 
 describe("indent", () => {
-  it("indents text with 2 spaces by default", () => {
+  it("indents text with one tab by default", () => {
     expect(indent("I'm a\nbasic kind of\nstring you know")).toStrictEqual(
-      "  I'm a\n  basic kind of\n  string you know",
+      "\tI'm a\n\tbasic kind of\n\tstring you know",
     );
   });
 
   it("can customize level of indentation", () => {
     expect(indent("I'm a\nbasic kind of\nstring you know", { count: 3 })).toStrictEqual(
-      "   I'm a\n   basic kind of\n   string you know",
+      "\t\t\tI'm a\n\t\t\tbasic kind of\n\t\t\tstring you know",
     );
   });
 
@@ -169,14 +169,14 @@ describe("indent", () => {
 
   it("can omit first line indentation", () => {
     expect(indent("I'm a\nbasic kind of\nstring you know", { skipFirstLine: true })).toStrictEqual(
-      "I'm a\n  basic kind of\n  string you know",
+      "I'm a\n\tbasic kind of\n\tstring you know",
     );
   });
 
   it("can indent empty lines (but doesn't by default)", () => {
     const rawStr = "I'm a\n\nstring you know";
-    expect(indent(rawStr)).toStrictEqual("  I'm a\n\n  string you know");
-    expect(indent(rawStr, { includeEmptyLines: true })).toStrictEqual("  I'm a\n  \n  string you know");
+    expect(indent(rawStr)).toStrictEqual("\tI'm a\n\n\tstring you know");
+    expect(indent(rawStr, { includeEmptyLines: true })).toStrictEqual("\tI'm a\n\t\n\tstring you know");
   });
 });
 

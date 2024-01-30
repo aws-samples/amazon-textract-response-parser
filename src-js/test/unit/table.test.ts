@@ -18,75 +18,75 @@ const testResponseJson: ApiResponsePage = require("../data/test-response.json");
 const testTitleFootersJson: ApiAnalyzeDocumentResponse = require("../data/financial-document-response.json");
 
 const REFERENCE_TABLE_NO_CAPTION_HTML = `<table>
-  <tr>
-    <th>Date</th>
-    <th>Description</th>
-    <th>Credit</th>
-    <th>Debit</th>
-    <th>Balance</th>
-  </tr>
-  <tr>
-    <td colspan="4">Previous Balance</td>
-    <td>11,000</td>
-  </tr>
-  <tr>
-    <td rowspan="2">2022-01-01</td>
-    <td>Payment - Credit Card</td>
-    <td></td>
-    <td>1,000</td>
-    <td>10,000</td>
-  </tr>
-  <tr>
-    <td>Payment - Utility</td>
-    <td></td>
-    <td>40</td>
-    <td>9,960</td>
-  </tr>
-  <tr>
-    <td>2022-01-02</td>
-    <td>Deposit</td>
-    <td>1,000</td>
-    <td></td>
-    <td>10,960</td>
-  </tr>
-  <tr>
-    <td colspan="4">Ending Balance</td>
-    <td>10,960</td>
-  </tr>
+\t<tr>
+\t\t<th>Date</th>
+\t\t<th>Description</th>
+\t\t<th>Credit</th>
+\t\t<th>Debit</th>
+\t\t<th>Balance</th>
+\t</tr>
+\t<tr>
+\t\t<td colspan="4">Previous Balance</td>
+\t\t<td>11,000</td>
+\t</tr>
+\t<tr>
+\t\t<td rowspan="2">2022-01-01</td>
+\t\t<td>Payment - Credit Card</td>
+\t\t<td></td>
+\t\t<td>1,000</td>
+\t\t<td>10,000</td>
+\t</tr>
+\t<tr>
+\t\t<td>Payment - Utility</td>
+\t\t<td></td>
+\t\t<td>40</td>
+\t\t<td>9,960</td>
+\t</tr>
+\t<tr>
+\t\t<td>2022-01-02</td>
+\t\t<td>Deposit</td>
+\t\t<td>1,000</td>
+\t\t<td></td>
+\t\t<td>10,960</td>
+\t</tr>
+\t<tr>
+\t\t<td colspan="4">Ending Balance</td>
+\t\t<td>10,960</td>
+\t</tr>
 </table>`;
 
 const REFERENCE_TABLE_WITH_HEADER_HTML = `<table>
-  <caption style="caption-side: top">
-    Previous Employment History
-  </caption>
-  <tr>
-    <th>Start Date</th>
-    <th>End Date</th>
-    <th>Employer Name</th>
-    <th>Position Held</th>
-    <th>Reason for leaving</th>
-  </tr>
-  <tr>
-    <td>1/15/2009</td>
-    <td>6/30/2011</td>
-    <td>Any Company</td>
-    <td>Assistant baker</td>
-    <td>relocated</td>
-  </tr>
-  <tr>
-    <td>7/1/2011</td>
-    <td>8/10/2013</td>
-    <td>Example Corp.</td>
-    <td>Baker</td>
-    <td>better opp.</td>
-  </tr>
-  <tr>
-    <td>8/15/2013</td>
-    <td>Present</td>
-    <td>AnyCompany</td>
-    <td>head baker</td>
-    <td>N/A, current</td>
-  </tr>
+\t<caption style="caption-side: top">
+\t\tPrevious Employment History
+\t</caption>
+\t<tr>
+\t\t<th>Start Date</th>
+\t\t<th>End Date</th>
+\t\t<th>Employer Name</th>
+\t\t<th>Position Held</th>
+\t\t<th>Reason for leaving</th>
+\t</tr>
+\t<tr>
+\t\t<td>1/15/2009</td>
+\t\t<td>6/30/2011</td>
+\t\t<td>Any Company</td>
+\t\t<td>Assistant baker</td>
+\t\t<td>relocated</td>
+\t</tr>
+\t<tr>
+\t\t<td>7/1/2011</td>
+\t\t<td>8/10/2013</td>
+\t\t<td>Example Corp.</td>
+\t\t<td>Baker</td>
+\t\t<td>better opp.</td>
+\t</tr>
+\t<tr>
+\t\t<td>8/15/2013</td>
+\t\t<td>Present</td>
+\t\t<td>AnyCompany</td>
+\t\t<td>head baker</td>
+\t\t<td>N/A, current</td>
+\t</tr>
 </table>`;
 
 describe("MergedCell", () => {

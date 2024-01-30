@@ -321,10 +321,10 @@ describe("Form", () => {
     const page = doc.listPages()[0];
     // TODO: Could probably add some more checks here, but would ideally have a smaller ref JSON.
     expect(page.form.html()).toMatch(
-      /^<form>\n(?: {2}<input label=".*" type="text" disabled value=".*" \/>\n)*<\/form>$/g,
+      /^<form>\n(?:\t<input label=".*" type="text" disabled value=".*" \/>\n)*<\/form>$/g,
     );
     expect(doc.form.html()).toMatch(
-      /^<form>\n(?: {2}<div class="form-page" id="form-page-\d+">\n(?: {4}<input label=".*" type="text" disabled value=".*" \/>\n)* {2}<\/div>\n)*<\/form>$/g,
+      /^<form>\n(?:\t<div class="form-page" id="form-page-\d+">\n(?:\t\t<input label=".*" type="text" disabled value=".*" \/>\n)*\t<\/div>\n)*<\/form>$/g,
     );
   });
 

@@ -7,10 +7,10 @@ import { QueryInstance, QueryResult, TextractDocument } from "../../src/document
 const testResponseJson: ApiResponsePage = require("../data/test-query-response.json");
 
 const REFERENCE_QUERY_HTML = `<div class="query">
-  <p>What is the patient name?</p>
-  <ul>
-    <li>Mary Major</li>
-  </ul>
+\t<p>What is the patient name?</p>
+\t<ul>
+\t\t<li>Mary Major</li>
+\t</ul>
 </div>`;
 
 const REFERENCE_QUERY_STR = `Query
@@ -20,28 +20,28 @@ Answers:
  - Mary Major`;
 
 const REFERENCE_QUERIES_HTML = `<div class="queries">
-  <div class="query">
-    <p>What's the patient's date of birth</p>
-    <ul></ul>
-  </div>
-  <div class="query">
-    <p>What is the patient name?</p>
-    <ul>
-      <li>Mary Major</li>
-    </ul>
-  </div>
-  <div class="query">
-    <p>What is the lot number of the 1st dose?</p>
-    <ul>
-      <li>AA1234</li>
-    </ul>
-  </div>
-  <div class="query">
-    <p>Who is the manufacturer of the 2nd dose?</p>
-    <ul>
-      <li>Pfizer</li>
-    </ul>
-  </div>
+\t<div class="query">
+\t\t<p>What's the patient's date of birth</p>
+\t\t<ul></ul>
+\t</div>
+\t<div class="query">
+\t\t<p>What is the patient name?</p>
+\t\t<ul>
+\t\t\t<li>Mary Major</li>
+\t\t</ul>
+\t</div>
+\t<div class="query">
+\t\t<p>What is the lot number of the 1st dose?</p>
+\t\t<ul>
+\t\t\t<li>AA1234</li>
+\t\t</ul>
+\t</div>
+\t<div class="query">
+\t\t<p>Who is the manufacturer of the 2nd dose?</p>
+\t\t<ul>
+\t\t\t<li>Pfizer</li>
+\t\t</ul>
+\t</div>
 </div>`;
 
 describe("QueryResult", () => {

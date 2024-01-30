@@ -211,12 +211,18 @@ export function escapeHtml(str: string, { forAttr = false }: IEscapeHtmlOpts = {
 export interface IIndentOpts {
   /**
    * The character/string that should be used to indent text.
-   * @default " "
+   *
+   * We default to 1x tab (rather than e.g. 2x spaces) to minimize token count for LLM use-cases
+   *
+   * @default "\t"
    */
   character?: string;
   /**
    * The number of times the indent `character` should be repeated.
-   * @default 2
+   *
+   * We default to 1x tab (rather than e.g. 2x spaces) to minimize token count for LLM use-cases
+   *
+   * @default 1
    */
   count?: number;
   /**
@@ -236,7 +242,7 @@ export interface IIndentOpts {
  */
 export function indent(
   text: string,
-  { character = " ", count = 2, includeEmptyLines = false, skipFirstLine = false }: IIndentOpts = {},
+  { character = "\t", count = 1, includeEmptyLines = false, skipFirstLine = false }: IIndentOpts = {},
 ): string {
   const result = text.replace(includeEmptyLines ? /^/gm : /^(?!\s*$)/gm, character.repeat(count));
   if (skipFirstLine) {
