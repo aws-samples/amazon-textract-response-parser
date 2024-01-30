@@ -1727,7 +1727,13 @@ export class TextractDocument
    * @throws If Textract Layout analysis was not enabled in the API request.
    */
   html(): string {
-    return this._pages.map((page) => `<div class="page">\n${indent(page.html())}\n</div>`).join("\n");
+    const bodyHtml = [
+      "<body>",
+      indent(this._pages.map((page) => `<div class="page">\n${indent(page.html())}\n</div>`).join("\n")),
+      "</body>",
+    ].join("\n");
+
+    return `<!DOCTYPE html>\n<html>\n${bodyHtml}\n</html>`;
   }
 
   str(): string {
