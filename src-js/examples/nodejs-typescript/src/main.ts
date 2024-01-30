@@ -6,7 +6,7 @@
  */
 // NodeJS Built-Ins:
 import { strict as assert } from "node:assert";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 // External Dependencies:
 import { TextractClient, AnalyzeDocumentCommand } from "@aws-sdk/client-textract";
@@ -67,6 +67,11 @@ async function testCallTextract() {
   const angle = doc.pageNumber(1).getModalWordOrientationDegrees();
   assert.notStrictEqual(angle, null);
   assert.strictEqual(Math.abs(angle as number), 0);
+
+  // Render the test doc to an HTML file:
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  await mkdir("./data-tmp", { recursive: true }).catch((err) => {});
+  await writeFile("./data-tmp/doc.html", doc.html(), "utf-8");
 }
 
 testStaticFiles()

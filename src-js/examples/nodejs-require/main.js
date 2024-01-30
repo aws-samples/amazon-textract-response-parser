@@ -6,7 +6,7 @@
  */
 // NodeJS Built-Ins:
 const assert = require("node:assert").strict;
-const { readFile } = require("node:fs/promises");
+const { mkdir, readFile, writeFile } = require("node:fs/promises");
 
 // External Dependencies:
 const { TextractClient, AnalyzeDocumentCommand } = require("@aws-sdk/client-textract");
@@ -56,6 +56,11 @@ async function testCallTextract() {
   const doc = new TextractDocument(textractResponse);
   assert.strictEqual(doc.nPages, 1);
   assert.strictEqual(Math.abs(doc.pageNumber(1).getModalWordOrientationDegrees()), 0);
+
+  // Render the test doc to an HTML file:
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  await mkdir("./data-tmp", { recursive: true }).catch((err) => {});
+  await writeFile("./data-tmp/doc.html", doc.html(), "utf-8");
 }
 
 testStaticFiles()
