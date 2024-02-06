@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!--
+      Add a <script> tag to your page to load the IIFE version of TRP.js
+      
+      In this example we use the local development version of the library via the dist/ folder
+      (which means you'll need to have run `npm run build`!).
+    -->
+    <script src="../../dist/browser/trp.min.js"></script>
+    <!--
+      To use the published versions of the library through a CDN like jsDelivr or UNPKG, you might
+      set up your tag something like the below.
+
+        <script
+          src="https://cdn.jsdelivr.net/npm/amazon-textract-response-parser@0.4.0"
+          integrity="sha384-6pxnIgHBWoeNR98Ds0f2rkhv/VylY18OQUr90sKuZJDZ98cUt465t+WI/s/tItGD"
+          crossorigin="anonymous"
+        ></script>
+      
+      or:
+
+        <script
+          src="https://unpkg.com/amazon-textract-response-parser@0.4.0"
+          integrity="sha384-6pxnIgHBWoeNR98Ds0f2rkhv/VylY18OQUr90sKuZJDZ98cUt465t+WI/s/tItGD"
+          crossorigin="anonymous"
+        ></script>
+
+      These CDNs should resolve `/dist/browser/trp.min.js` as the default file automatically, but
+      you can specify it explicitly at the end of the URL if you prefer. You could check the
+      expected integrity hash via a tool like https://www.srihash.org/
+    -->
+  </head>
+  <body>
+    <!--
+      After loading the TRP script above, the global `window.trp` object should be set for your
+      code to use. In this example we've put the example JavaScript in main.js - but you could
+      inline it to the <script> tag in this HTML if you prefer:
+    -->
+    <script src="./main.js"></script>
+    <!--
+      Browser JavaScript generally can't access the local filesystem for security reasons, so this
+      example uses a file upload control which the test runner will automatically operate:
+    -->
+    <h1>Select an Amazon Textract API response JSON file to analyze</h1>
+    <input id="textractJson" type="file" onchange="onFileUpload(this)"/>
+  </body>
+</html>

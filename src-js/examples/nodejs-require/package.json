@@ -1,0 +1,16 @@
+{
+  "name": "@amazon-textract-response-parser-examples/nodejs-require",
+  "version": "0.0.1",
+  "description": "Example of using TRP.js from NodeJS with CommonJS-style 'require' statements",
+  "main": "main.js",
+  "scripts": {
+    "test": "node main.js"
+  },
+  "author": "Amazon Rekognition Textract Demos <rekognition-textract-demos@amazon.com>",
+  "license": "Apache-2.0",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-textract": "^3.499.0",
+    "amazon-textract-response-parser": "file:../.."
+  }
+}

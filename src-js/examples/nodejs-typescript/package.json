@@ -1,0 +1,23 @@
+{
+  "name": "@amazon-textract-response-parser-examples/nodejs-typescript",
+  "version": "0.0.1",
+  "description": "Example of using TRP.js from NodeJS with TypeScript",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist",
+    "start": "node dist/main.js",
+    "test": "npm run clean && npm run build && npm run start"
+  },
+  "author": "Amazon Rekognition Textract Demos <rekognition-textract-demos@amazon.com>",
+  "license": "Apache-2.0",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-textract": "^3.499.0",
+    "amazon-textract-response-parser": "file:../.."
+  },
+  "devDependencies": {
+    "rimraf": "^5.0.5",
+    "typescript": "^4.9.5"
+  }
+}

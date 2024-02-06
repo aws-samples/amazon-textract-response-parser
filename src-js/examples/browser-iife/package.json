@@ -1,0 +1,17 @@
+{
+  "name": "@amazon-textract-response-parser-examples/browser-iife",
+  "version": "0.0.1",
+  "description": "Example of using TRP.js via global object from HTML <script> tag",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "author": "Amazon Rekognition Textract Demos <rekognition-textract-demos@amazon.com>",
+  "license": "Apache-2.0",
+  "private": true,
+  "dependencies": {
+    "colors": "^1.4.0",
+    "puppeteer": "^21.7.0"
+  }
+}

@@ -3,17 +3,12 @@
  */
 
 // Local Dependencies:
-import {
-  ApiBlock,
-  ApiBlockType,
-  ApiCellBlock,
-  ApiKeyValueEntityType,
-  ApiKeyValueSetBlock,
-  ApiLineBlock,
-  ApiMergedCellBlock,
-  ApiPageBlock,
-  ApiQueryBlock,
-} from "./api-models/document";
+import { ApiBlockType, isLayoutBlockType } from "./api-models/base";
+import { ApiLineBlock } from "./api-models/content";
+import { ApiBlock, ApiPageBlock } from "./api-models/document";
+import { ApiKeyBlock, ApiKeyValueEntityType, ApiKeyValueSetBlock } from "./api-models/form";
+import { ApiLayoutBlock } from "./api-models/layout";
+import { ApiQueryBlock } from "./api-models/query";
 import {
   ApiDocumentMetadata,
   ApiResponsePage,
@@ -26,21 +21,85 @@ import {
   ApiObjectWrapper,
   getIterable,
   IDocBlocks,
+  indent,
   modalAvg,
-  WithParentDocBlocks,
+  IBlockManager,
+  IRenderable,
+  IApiBlockWrapper,
 } from "./base";
-import { LineGeneric } from "./content";
-import { FieldGeneric, FieldKeyGeneric, FieldValueGeneric, FormsCompositeGeneric, FormGeneric } from "./form";
+import { LineGeneric, SelectionElement, Signature, Word } from "./content";
+import {
+  FieldGeneric,
+  FieldKeyGeneric,
+  FieldValueGeneric,
+  FormsCompositeGeneric,
+  FormGeneric,
+  IWithForm,
+} from "./form";
 import { BoundingBox, Geometry } from "./geometry";
+import {
+  LayoutFigureGeneric,
+  LayoutFooterGeneric,
+  LayoutGeneric,
+  LayoutHeaderGeneric,
+  LayoutItemGeneric,
+  LayoutKeyValueGeneric,
+  LayoutListGeneric,
+  LayoutPageNumberGeneric,
+  LayoutSectionHeaderGeneric,
+  LayoutTableGeneric,
+  LayoutTextGeneric,
+  LayoutTitleGeneric,
+} from "./layout";
 import { QueryInstanceCollectionGeneric, QueryInstanceGeneric, QueryResultGeneric } from "./query";
-import { CellBaseGeneric, CellGeneric, MergedCellGeneric, RowGeneric, TableGeneric } from "./table";
+import {
+  CellGeneric,
+  IWithTables,
+  MergedCellGeneric,
+  RowGeneric,
+  TableFooterGeneric,
+  TableGeneric,
+  TableTitleGeneric,
+} from "./table";
 
 // Direct Exports:
 // We don't directly export the *Generic classes here, and instead define concrete alternatives below once
 // Page is defined: Because e.g. using `MergedCell` in user code is much nicer than having to put
 // `MergedCellGeneric<Page>` everywhere.
-export { ApiBlockWrapper } from "./base";
+export {
+  /**
+   * @deprecated Planned for private-only: Please let us know if you have a use-case for this?
+   */
+  ApiBlockWrapper,
+} from "./base";
 export { SelectionElement, Word } from "./content";
+
+/**
+ * How heuristic reading order methods should react to the presence of Textract Layout results
+ *
+ * When the `Layout` analysis is enabled in Amazon Textract, additional `LAYOUT_*` blocks are
+ * generated using ML to infer the structural layout and reference reading order of the page. This
+ * carries additional API charges, but is likely to produce more accurate results than our simple
+ * TRP.js heuristics.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ *
+ * @experimental
+ */
+export const enum ReadingOrderLayoutMode {
+  /**
+   * Use Textract Layout results for reading order when present, heuristics otherwise
+   */
+  Auto = "AUTO",
+  /**
+   * Use heuristics for reading order, even if Textract Layout results are present
+   */
+  IgnoreLayout = "IGNORE_LAYOUT",
+  /**
+   * Use Textract Layout results for reading order, throw an error if they're not available
+   */
+  RequireLayout = "REQUIRE_LAYOUT",
+}
 
 /**
  * @experimental
@@ -80,6 +139,11 @@ export interface HeuristicReadingOrderModelParams {
    * specify paragraph indentation in terms of a multiplier on text line-height. Default 0.
    */
   paraIndentThresh?: number;
+  /**
+   * Whether to use Textract Layout results *instead* of heuristics for improved reading order when
+   * available; or always use heuristics; or insist on Layout and throw an error if not present.
+   */
+  useLayout?: ReadingOrderLayoutMode;
 }
 
 /**
@@ -104,16 +168,47 @@ export interface HeaderFooterSegmentModelParams {
   minGap?: number;
 }
 
-export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDocBlocks {
+/**
+ * Parsed TRP.js object for a single page in a document analysis / text detection result
+ *
+ * Wraps an Amazon Textract API `PAGE` Block, with utilities for analysis. You'll usually create
+ * this via a `TextractDocument`, rather than directly.
+ */
+export class Page
+  extends ApiBlockWrapper<ApiPageBlock>
+  implements IBlockManager, IRenderable, IWithForm<Page>, IWithTables<Page>
+{
   _blocks: ApiBlock[];
   _content: Array<LineGeneric<Page> | TableGeneric<Page> | FieldGeneric<Page>>;
   _form: FormGeneric<Page>;
   _geometry: Geometry<ApiPageBlock, Page>;
+  _itemsByBlockId: {
+    [blockId: string]:
+      | LineGeneric<Page>
+      | SelectionElement
+      | Signature
+      | Word
+      | FieldGeneric<Page>
+      | FieldValueGeneric<Page>
+      | LayoutItemGeneric<Page>
+      | QueryInstanceGeneric<Page>
+      | QueryResultGeneric<Page>
+      | TableGeneric<Page>
+      | CellGeneric<Page>;
+  };
+  _layout: LayoutGeneric<Page>;
   _lines: LineGeneric<Page>[];
   _parentDocument: TextractDocument;
   _queries: QueryInstanceCollectionGeneric<Page>;
   _tables: TableGeneric<Page>[];
 
+  /**
+   * Create (parse) a Page object from a PAGE block and the list of other Blocks ocurring on it
+   *
+   * @param pageBlock The API Block object representing the PAGE itself
+   * @param blocks The list of all API Blocks occurring on this Page
+   * @param parentDocument The parsed TRP.js TextractDocument object the page belongs to
+   */
   constructor(pageBlock: ApiPageBlock, blocks: ApiBlock[], parentDocument: TextractDocument) {
     super(pageBlock);
     this._blocks = blocks;
@@ -125,6 +220,8 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
     this._lines = [];
     this._tables = [];
     this._form = new FormGeneric<Page>([], this);
+    this._itemsByBlockId = {};
+    this._layout = new LayoutGeneric<Page>([], this);
     this._queries = new QueryInstanceCollectionGeneric<Page>([], this);
     // Parse the content:
     this._parse(blocks);
@@ -132,9 +229,11 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
 
   _parse(blocks: ApiBlock[]): void {
     this._content = [];
+    this._itemsByBlockId = {};
     this._lines = [];
     this._tables = [];
-    const formKeyBlocks: ApiKeyValueSetBlock[] = [];
+    const formKeyBlocks: Array<ApiKeyBlock | ApiKeyValueSetBlock> = [];
+    const layoutBlocks: ApiLayoutBlock[] = [];
     const queryBlocks: ApiQueryBlock[] = [];
 
     blocks.forEach((item) => {
@@ -142,21 +241,75 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
         const l = new LineGeneric(item, this);
         this._lines.push(l);
         this._content.push(l);
-      } else if (item.BlockType == ApiBlockType.Table) {
-        const t = new TableGeneric(item, this);
-        this._tables.push(t);
-        this._content.push(t);
-      } else if (item.BlockType == ApiBlockType.KeyValueSet) {
+        this._itemsByBlockId[l.id] = l;
+      } else if (item.BlockType === ApiBlockType.Key) {
+        formKeyBlocks.push(item);
+      } else if (item.BlockType === ApiBlockType.KeyValueSet) {
         if (item.EntityTypes.indexOf(ApiKeyValueEntityType.Key) >= 0) {
           formKeyBlocks.push(item);
         }
-      } else if (item.BlockType == ApiBlockType.Query) {
+      } else if (isLayoutBlockType(item.BlockType)) {
+        layoutBlocks.push(item as ApiLayoutBlock);
+      } else if (item.BlockType === ApiBlockType.Query) {
         queryBlocks.push(item);
+      } else if (item.BlockType === ApiBlockType.SelectionElement) {
+        const s = new SelectionElement(item);
+        this._itemsByBlockId[s.id] = s;
+      } else if (item.BlockType === ApiBlockType.Signature) {
+        const sig = new Signature(item);
+        this._itemsByBlockId[sig.id] = sig;
+      } else if (item.BlockType === ApiBlockType.Table) {
+        const t = new TableGeneric(item, this);
+        this._tables.push(t);
+        this._content.push(t);
+        this._itemsByBlockId[t.id] = t;
+      } else if (item.BlockType === ApiBlockType.Word) {
+        const w = new Word(item);
+        this._itemsByBlockId[w.id] = w;
       }
     });
 
     this._form = new FormGeneric<Page>(formKeyBlocks, this);
     this._queries = new QueryInstanceCollectionGeneric<Page>(queryBlocks, this);
+    this._layout = new LayoutGeneric<Page>(layoutBlocks, this);
+  }
+
+  getBlockById(blockId: string): ApiBlock | undefined {
+    return this._parentDocument.getBlockById(blockId);
+  }
+
+  getItemByBlockId(
+    blockId: string,
+    allowBlockTypes?: ApiBlockType | ApiBlockType[] | null,
+  ):
+    | Page
+    | LineGeneric<Page>
+    | SelectionElement
+    | Signature
+    | Word
+    | FieldGeneric<Page>
+    | FieldValueGeneric<Page>
+    | LayoutItemGeneric<Page>
+    | QueryInstanceGeneric<Page>
+    | QueryResultGeneric<Page>
+    | TableGeneric<Page>
+    | CellGeneric<Page> {
+    if (blockId === this.id) return this;
+    const result = this._itemsByBlockId[blockId];
+    if (!result) {
+      throw new Error(`Missing parser item for block ID ${blockId}`);
+    }
+    if (allowBlockTypes) {
+      const typeMatch = Array.isArray(allowBlockTypes)
+        ? allowBlockTypes.indexOf(result.blockType) >= 0
+        : allowBlockTypes === result.blockType;
+      if (!typeMatch) {
+        throw new Error(
+          `Parser item for block ID ${blockId} had BlockType ${result.blockType} (expected ${allowBlockTypes})`,
+        );
+      }
+    }
+    return result;
   }
 
   /**
@@ -166,7 +319,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
    */
   getModalWordOrientationDegrees(): number | null {
     const wordDegreesByLine = this.listLines().map((line) =>
-      line.listWords().map((word) => word.geometry.orientationDegrees())
+      line.listWords().map((word) => word.geometry.orientationDegrees()),
     );
 
     const wordDegrees = ([] as Array<number | null>)
@@ -213,7 +366,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
             Height: lineBox.height * 2.5,
             Width: lineBox.width,
           },
-          null
+          null,
         );
       } else if (!/[^-–—=~\s]/.test(line.text)) {
         // All low punctuation marks (e.g. just a dash?) - line height is really a guess
@@ -225,7 +378,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
             Height: lineBox.height * 2.5,
             Width: lineBox.width,
           },
-          null
+          null,
         );
       } else if (!/[^'"`^\s]/.test(line.text)) {
         // All high punctuation marks - line height is really a guess
@@ -237,7 +390,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
             Height: lineBox.height * 2.5,
             Width: lineBox.width,
           },
-          null
+          null,
         );
       } else if (!/[^-–—=~.,_acemnorsuvwxz+<>:;\s]/.test(line.text)) {
         // All low/mid punctuation and x-height letters - adjust line height up slightly
@@ -249,7 +402,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
             Height: lineBox.height * 1.25,
             Width: lineBox.width,
           },
-          null
+          null,
         );
       } else {
         // Keep box as-is
@@ -368,12 +521,21 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
   /**
    * List lines in reading order, grouped by 'cluster' (somewhat like a paragraph)
    *
-   * This method works by applying local heuristics to group text together into paragraphs, and then sorting
-   * paragraphs into "columns" in reading order. Although parameters are exposed to customize the behaviour,
-   * note that this customization API is experimental and subject to change. For complex requirements,
-   * consider implementing your own more robust approach - perhaps using expected global page structure.
+   * By default if Amazon Textract Layout analysis was enabled for the document, this method will
+   * use those results to infer separate clusters (e.g. paragraphs, headings) and arrange them in
+   * expected reading order. If Layout was not analyzed service-side, this method applies local
+   * heuristics to group text together into paragraphs, and then sorts paragraphs into "columns" in
+   * reading order. Although parameters are exposed to customize the heuristic model, note that
+   * this customization API is experimental and subject to change.
    *
-   * @returns Nested array of text lines by paragraph, line
+   * Textract's ML-powered Layout functionality should generally work better than local heuristics,
+   * but carries extra cost and in edge cases it's difficult for any method to define one "correct"
+   * reading order for rich content: So can set the `useLayout` mode to ignore (or force)
+   * Layout-based calculation if you need.
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   *
+   * @returns Nested array of text lines by "paragraph"/element, line
    */
   getLineClustersInReadingOrder({
     colHOverlapThresh = 0.8,
@@ -381,7 +543,17 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
     paraVDistTol = 0.7,
     paraLineHeightTol = 0.3,
     paraIndentThresh = 0,
+    useLayout = ReadingOrderLayoutMode.Auto,
   }: HeuristicReadingOrderModelParams = {}): LineGeneric<Page>[][] {
+    if (this.hasLayout) {
+      if (useLayout !== ReadingOrderLayoutMode.IgnoreLayout) {
+        return this.layout.listItems().map((item) => item.listTextLines());
+      }
+    } else if (useLayout === ReadingOrderLayoutMode.RequireLayout) {
+      throw new Error(
+        `Configured with useLayout=${useLayout}, but Amazon Textract Layout analysis results not found on page ${this.id}`,
+      );
+    }
     // Pass through to the private function, but flatten the result to simplify out the "columns":
     return ([] as LineGeneric<Page>[][]).concat(
       ...this._getLineClustersByColumn({
@@ -390,16 +562,36 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
         paraVDistTol,
         paraLineHeightTol,
         paraIndentThresh,
-      })
+      }),
     );
   }
 
+  /**
+   * Extract all page text in approximate reading order
+   *
+   * By default if Amazon Textract Layout analysis was enabled for the document, this method will
+   * use those results to infer separate clusters (e.g. paragraphs, headings) and arrange them in
+   * expected reading order. If Layout was not analyzed service-side, this method applies local
+   * heuristics to group text together into paragraphs, and then sorts paragraphs into "columns" in
+   * reading order. Although parameters are exposed to customize the heuristic model, note that
+   * this customization API is experimental and subject to change.
+   *
+   * Textract's ML-powered Layout functionality should generally work better than local heuristics,
+   * but carries extra cost and in edge cases it's difficult for any method to define one "correct"
+   * reading order for rich content: So can set the `useLayout` mode to ignore (or force)
+   * Layout-based calculation if you need.
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   *
+   * @returns Nested array of text lines by "paragraph"/element, line
+   */
   getTextInReadingOrder({
     colHOverlapThresh = 0.8,
     colHMultilineUnionThresh = 0.7,
     paraVDistTol = 0.7,
     paraLineHeightTol = 0.3,
     paraIndentThresh = 0,
+    useLayout = ReadingOrderLayoutMode.Auto,
   }: HeuristicReadingOrderModelParams = {}): string {
     return this.getLineClustersInReadingOrder({
       colHOverlapThresh,
@@ -407,6 +599,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
       paraVDistTol,
       paraLineHeightTol,
       paraIndentThresh,
+      useLayout,
     })
       .map((lines) => lines.map((l) => l.text).join("\n"))
       .join("\n\n");
@@ -433,7 +626,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
   _groupLinesByVerticalGaps(
     focusTop: number,
     focusHeight: number,
-    lines?: LineGeneric<Page>[]
+    lines?: LineGeneric<Page>[],
   ): { vGaps: BoundingBox<unknown, ApiObjectWrapper<unknown>>[]; lines: LineGeneric<Page>[][] } {
     // Start with one big "gap" covering the entire focus region, and iteratively split/refine it
     // from the lines of text:
@@ -445,7 +638,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
           Height: focusHeight,
           Width: this._geometry.boundingBox.width,
         },
-        null
+        null,
       ),
     ];
     let preGapLineLists: LineGeneric<Page>[][] = [[]];
@@ -491,8 +684,8 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
                 Height: isect.top - gap.top,
                 Width: gap.width,
               },
-              null
-            )
+              null,
+            ),
           );
           nextPreGapLineLists.push(orphanedLines.concat(preGapLineList));
           orphanedLines = [];
@@ -504,8 +697,8 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
                 Height: gap.bottom - isect.bottom,
                 Width: gap.width,
               },
-              null
-            )
+              null,
+            ),
           );
           nextPreGapLineLists.push([line]);
           lineAssigned = true;
@@ -525,8 +718,8 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
                   Height: gap.height - isect.height,
                   Width: gap.width,
                 },
-                null
-              )
+                null,
+              ),
             );
           } else {
             nextGaps.push(
@@ -537,8 +730,8 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
                   Height: isect.top - gap.top,
                   Width: gap.width,
                 },
-                null
-              )
+                null,
+              ),
             );
           }
           nextPreGapLineLists.push(preGapLines);
@@ -582,20 +775,20 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
   _getHeaderOrFooterLines(
     isHeader: boolean,
     { maxMargin = 0.16, minGap = 0.8 }: HeaderFooterSegmentModelParams = {},
-    fromLines?: LineGeneric<Page>[]
+    fromLines?: LineGeneric<Page>[],
   ): LineGeneric<Page>[] {
     // Find contiguous vertical gaps (spaces with no LINEs) in the defined area of the page:
     const { vGaps, lines: linesByGap } = this._groupLinesByVerticalGaps(
       isHeader ? this._geometry.boundingBox.top : this._geometry.boundingBox.bottom - maxMargin,
       maxMargin,
-      fromLines
+      fromLines,
     );
 
     // We'll look at gaps relative to text line height, rather than absolute page size:
     // ...But need to be careful as some linesByGap (e.g. at the very edge of the page) may have
     // no text.
     const lineGroupAvgHeights: Array<number | null> = linesByGap.map((lines) =>
-      lines.length ? lines.reduce((acc, l) => acc + l.geometry.boundingBox.height, 0) / lines.length : null
+      lines.length ? lines.reduce((acc, l) => acc + l.geometry.boundingBox.height, 0) / lines.length : null,
     );
     const nonNullLineGroupAvgHeights = lineGroupAvgHeights.filter((h) => h) as number[];
     const defaultLineHeight =
@@ -624,7 +817,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
       // - Is bigger than the minGap threshold
       const ixSplit = vGaps.findIndex(
         (gap, ixGap) =>
-          (ixGap > 0 || linesByGap[ixGap].length) && gap.height >= gapAvgLineHeights[ixGap] * minGap
+          (ixGap > 0 || linesByGap[ixGap].length) && gap.height >= gapAvgLineHeights[ixGap] * minGap,
       );
       return ixSplit < 0 ? [] : ([] as LineGeneric<Page>[]).concat(...linesByGap.slice(0, ixSplit + 1));
     } else {
@@ -636,7 +829,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
         .reverse()
         .findIndex(
           (gap, ixGap) =>
-            (ixGap > 0 || revLinesBygap[ixGap].length) && gap.height >= revGapAvgLineHeights[ixGap] * minGap
+            (ixGap > 0 || revLinesBygap[ixGap].length) && gap.height >= revGapAvgLineHeights[ixGap] * minGap,
         );
       return ixRevSplit < 0
         ? []
@@ -650,6 +843,8 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
    * Output lines are not guaranteed to be sorted either in reading order or strictly in the
    * default Amazon Textract output order. See also getLinesByLayoutArea() for this.
    *
+   * TODO: Consider updating for Textract Layout where available
+   *
    * @param {HeaderFooterSegmentModelParams} [config] (Experimental) heuristic configurations.
    * @param {Line[]} [fromLines] Optional array of Line objects to group. By default, the full list
    *      of lines on the page will be analyzed.
@@ -657,7 +852,7 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
    */
   getFooterLines(
     config: HeaderFooterSegmentModelParams = {},
-    fromLines?: LineGeneric<Page>[]
+    fromLines?: LineGeneric<Page>[],
   ): LineGeneric<Page>[] {
     return this._getHeaderOrFooterLines(false, config, fromLines);
   }
@@ -668,6 +863,8 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
    * Output lines are not guaranteed to be sorted either in reading order or strictly in the
    * default Amazon Textract output order. See also getLinesByLayoutArea() for this.
    *
+   * TODO: Consider updating for Textract Layout where available
+   *
    * @param {HeaderFooterSegmentModelParams} [config] (Experimental) heuristic configurations.
    * @param {Line[]} [fromLines] Optional array of Line objects to group. By default, the full list
    *      of lines on the page will be analyzed.
@@ -675,13 +872,15 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
    */
   getHeaderLines(
     config: HeaderFooterSegmentModelParams = {},
-    fromLines?: LineGeneric<Page>[]
+    fromLines?: LineGeneric<Page>[],
   ): LineGeneric<Page>[] {
     return this._getHeaderOrFooterLines(true, config, fromLines);
   }
 
   /**
    * Segment page text into header, content, and footer - optionally in (approximate) reading order
+   *
+   * TODO: Consider updating for Textract Layout where available
    *
    * @param {boolean|HeuristicReadingOrderModelParams} [inReadingOrder=false] Set true to sort text
    *      in reading order, or leave false (the default) to use the standard Textract ouput order
@@ -696,33 +895,39 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
   getLinesByLayoutArea(
     inReadingOrder: boolean | HeuristicReadingOrderModelParams = false,
     headerConfig: HeaderFooterSegmentModelParams = {},
-    footerConfig: HeaderFooterSegmentModelParams = {}
+    footerConfig: HeaderFooterSegmentModelParams = {},
   ): { header: LineGeneric<Page>[]; content: LineGeneric<Page>[]; footer: LineGeneric<Page>[] } {
     const sourceLines = inReadingOrder
       ? ([] as LineGeneric<Page>[]).concat(
           ...(inReadingOrder === true
             ? this.getLineClustersInReadingOrder()
-            : this.getLineClustersInReadingOrder(inReadingOrder))
+            : this.getLineClustersInReadingOrder(inReadingOrder)),
         )
       : this._lines;
 
-    const sourceLineSortOrder = sourceLines.reduce((acc, next, ix) => {
-      acc[next.id] = ix;
-      return acc;
-    }, {} as { [id: string]: number });
+    const sourceLineSortOrder = sourceLines.reduce(
+      (acc, next, ix) => {
+        acc[next.id] = ix;
+        return acc;
+      },
+      {} as { [id: string]: number },
+    );
 
     const header = this._getHeaderOrFooterLines(true, headerConfig, sourceLines).sort(
-      (a, b) => sourceLineSortOrder[a.id] - sourceLineSortOrder[b.id]
+      (a, b) => sourceLineSortOrder[a.id] - sourceLineSortOrder[b.id],
     );
-    let usedIds = header.reduce((acc, next) => {
-      acc[next.id] = true;
-      return acc;
-    }, {} as { [key: string]: true });
+    let usedIds = header.reduce(
+      (acc, next) => {
+        acc[next.id] = true;
+        return acc;
+      },
+      {} as { [key: string]: true },
+    );
 
     const footer = this._getHeaderOrFooterLines(
       false,
       footerConfig,
-      sourceLines.filter((l) => !(l.id in usedIds))
+      sourceLines.filter((l) => !(l.id in usedIds)),
     ).sort((a, b) => sourceLineSortOrder[a.id] - sourceLineSortOrder[b.id]);
     usedIds = footer.reduce((acc, next) => {
       acc[next.id] = true;
@@ -739,9 +944,9 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
   }
 
   /**
-   * Iterate through the lines on the page in raw Textract order
+   * Iterate through the text lines on the page in raw Textract order
    *
-   * For reading order, see getLineClustersInReadingOrder instead.
+   * For reading order, see `.layout` or `.getLineClustersInReadingOrder` instead.
    *
    * @example
    * for (const line of page.iterLines()) {
@@ -753,7 +958,24 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
   }
 
   /**
+   * Iterate through any signatures detected on the page
+   *
+   * If this Textract feature was not enabled, the iterator will be empty
+   *
+   * @example
+   * for (const line of page.iterLines()) {
+   *   console.log(line.text);
+   * }
+   */
+  iterSignatures(): Iterable<Signature> {
+    return getIterable(() => this.listSignatures());
+  }
+
+  /**
    * Iterate through the tables on the page
+   *
+   * If TABLES analysis was not enabled, the iterable will be empty.
+   *
    * @example
    * for (const table of page.iterTables()) {
    *   console.log(table.str());
@@ -765,6 +987,15 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
     return getIterable(() => this._tables);
   }
 
+  /**
+   * Fetch a particular parsed `Line` of text on the page by its index in the Textract result
+   *
+   * For reading order, see `.layout` or `.getLineClustersInReadingOrder` instead.
+   *
+   * @param ix 0-based index of the parsed Line to fetch
+   * @returns The item at position `ix` in this page's list of text lines (in raw Textract order)
+   * @throws If `ix` is less than 0, or gte than the number of text lines on the page
+   */
   lineAtIndex(ix: number): LineGeneric<Page> {
     if (ix < 0 || ix >= this._lines.length) {
       throw new Error(`Line index ${ix} must be >=0 and <${this._lines.length}`);
@@ -772,18 +1003,76 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
     return this._lines[ix];
   }
 
+  /**
+   * Fetch a snapshot of the list of all API `Block` items owned by this PAGE
+   *
+   * @returns (A shallow copy of) the list of raw `Block` objects
+   */
   listBlocks(): ApiBlock[] {
     return this._blocks.slice();
   }
 
+  /**
+   * Fetch a snapshot of the list of all text lines on the page, in raw Textract order
+   *
+   * For reading order, see `.layout` or `.getLineClustersInReadingOrder` instead.
+   *
+   * @returns (A shallow copy of) the list of parsed `Line`s present on this page
+   */
   listLines(): LineGeneric<Page>[] {
     return this._lines.slice();
   }
 
+  /**
+   * Fetch a snapshot list of any signatures detected on the page
+   *
+   * If this Textract feature was not enabled, the iterator will be empty
+   *
+   * @returns (A shallow/snapshot copy of) the list of parsed `Signature`s present on this page
+   */
+  listSignatures(): Signature[] {
+    return this._blocks
+      .filter((block) => block.BlockType === ApiBlockType.Signature)
+      .map((block) => this.getItemByBlockId(block.Id) as Signature);
+  }
+
+  /**
+   * Fetch a snapshot of the list of Tables present on this page
+   *
+   * If TABLES analysis was not enabled, will return empty list `[]`.
+   *
+   * @returns (A shallow copy of) the list of parsed `Table`s present on this page
+   */
   listTables(): TableGeneric<Page>[] {
     return this._tables.slice();
   }
 
+  registerParsedItem(
+    blockId: string,
+    item:
+      | LineGeneric<Page>
+      | SelectionElement
+      | Word
+      | FieldGeneric<Page>
+      | FieldValueGeneric<Page>
+      | LayoutItemGeneric<Page>
+      | QueryInstanceGeneric<Page>
+      | QueryResultGeneric<Page>
+      | TableGeneric<Page>
+      | CellGeneric<Page>,
+  ): void {
+    this._itemsByBlockId[blockId] = item;
+  }
+
+  /**
+   * Fetch a particular parsed `Table` on the page by its index in the Textract result
+   *
+   * (See also `.iterTables()`, `.listTables()`)
+   *
+   * @param ix 0-based index of the Table to fetch
+   * @returns The item at position `ix` in this page's list of tables
+   * @throws If `ix` is less than 0, or gte than the number of tables on the page
+   */
   tableAtIndex(ix: number): TableGeneric<Page> {
     if (ix < 0 || ix >= this._tables.length) {
       throw new Error(`Table index ${ix} must be >=0 and <${this._tables.length}`);
@@ -791,15 +1080,54 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
     return this._tables[ix];
   }
 
+  /**
+   * The Textract Forms analysis result container for this page (even if the feature was disabled)
+   *
+   * For details see: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+   */
   get form(): FormGeneric<Page> {
     return this._form;
   }
+  /**
+   * Shape & position of the page relative to the input image.
+   *
+   * This is typically the whole [0,0]-[1,1] box (esp for digital documents e.g. PDFs), or
+   * something close to it (for photographs of receipts, etc).
+   */
   get geometry(): Geometry<ApiPageBlock, Page> {
     return this._geometry;
   }
+  /**
+   * Whether this page includes results from a Textract Layout analysis
+   *
+   * For details see: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  get hasLayout(): boolean {
+    return this._layout.nItems > 0;
+  }
+  /**
+   * The Textract Layout analysis result container for this page (even if the feature was disabled)
+   *
+   * For details see: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   */
+  get layout(): LayoutGeneric<Page> {
+    return this._layout;
+  }
+  /**
+   * Number of text LINE blocks present in the page
+   */
   get nLines(): number {
     return this._lines.length;
   }
+  /**
+   * Number of SIGNATURE blocks detected in the page (0 if Signatures analysis was not enabled)
+   */
+  get nSignatures(): number {
+    return this.listSignatures().length;
+  }
+  /**
+   * Number of TABLEs present in the page (0 if Tables analysis was not enabled)
+   */
   get nTables(): number {
     return this._tables.length;
   }
@@ -815,18 +1143,57 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
       return pageIndex + 1;
     }
   }
+  /**
+   * Parsed document object to which this individual page belongs
+   */
   get parentDocument(): TextractDocument {
     return this._parentDocument;
   }
 
   /**
-   * Amazon Textract Queries on this page
+   * The Textract Queries analysis result container for this page (even if the feature was disabled)
+   *
+   * For details see: https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html
    */
   get queries(): QueryInstanceCollectionGeneric<Page> {
     return this._queries;
   }
+  /**
+   * Property to simply extract all text on the page
+   *
+   * This is calculated by concatenating the text of all the page's LINE Blocks.
+   */
   get text(): string {
     return this._lines.map((l) => l.text).join("\n");
+  }
+
+  /**
+   * Return a best-effort semantic HTML representation of the page and its content
+   *
+   * This is useful for ingesting the document into tools like search engines or Generative Large
+   * Language Models (LLMs) that might be capable of understanding semantic structure such as
+   * paragraphs or headings, but cannot consume fully multi-modal (image/text coordinate) data.
+   *
+   * If the Textract LAYOUT feature was enabled, this function uses its results to assemble and
+   * sequence paragraphs, headings, and other features.
+   *
+   * TODO: Support more basic .html() on Textract results for which LAYOUT analysis was not enabled
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   *
+   * @throws If Textract Layout analysis was not enabled in the API request.
+   */
+  html(): string {
+    if (this.hasLayout) {
+      // Since the Textract LAYOUT feature was enabled, we can use it to render semantic HTML
+      return this._layout.html();
+    } else {
+      // To render semantic HTML for non-Layout-analysed documents, we'd want to collect the
+      // various components (plain text lines, fields, tables, etc) in approximate reading order
+      // and intersperse them. It seems possible, but not straightforward - don't have a solution
+      // yet.
+      throw new Error("Page.html() is not yet implemented for results where Textract LAYOUT was not enabled");
+    }
   }
 
   str(): string {
@@ -835,38 +1202,257 @@ export class Page extends ApiBlockWrapper<ApiPageBlock> implements WithParentDoc
 }
 
 // content.ts concrete Page-dependent types:
+/**
+ * Parsed TRP object for a line of text on the page
+ *
+ * Wraps an Amazon Textract `LINE` Block in the underlying API response. You'll usually create
+ * this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-lines-words.html
+ */
 export class Line extends LineGeneric<Page> {}
 
 // form.ts concrete Page-dependent types:
+/**
+ * Parsed TRP object for a key-value field in form analysis data
+ *
+ * You'll usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+ */
 export class Field extends FieldGeneric<Page> {}
+/**
+ * Parsed TRP object for the key/label of a key-value field pair in form analysis data
+ *
+ * Wraps an Amazon Textract `KEY_VALUE_SET` (or `KEY`) Block in the underlying API response. You'll
+ * usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+ */
 export class FieldKey extends FieldKeyGeneric<Page> {}
+/**
+ * Parsed TRP object for the value/data of a key-value field pair in form analysis data
+ *
+ * Wraps an Amazon Textract `KEY_VALUE_SET` (or `VALUE`) Block in the underlying API response.
+ * You'll usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+ */
 export class FieldValue extends FieldValueGeneric<Page> {}
+/**
+ * Parsed TRP object wrapping all the key-value form data for one page of a document
+ *
+ * You'll usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+ */
 export class Form extends FormGeneric<Page> {}
 
+// layout.ts concrete Page-dependent types:
+/**
+ * Parsed TRP object for a diagram / image / figure on a page, detected by document layout analysis
+ *
+ * Wraps an Amazon Textract `LAYOUT_FIGURE` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
+export class LayoutFigure extends LayoutFigureGeneric<Page> {}
+/**
+ * Parsed TRP object for an element of page footer content, detected by document layout analysis
+ *
+ * Note this excludes page numbers (see `LayoutPageNumber`). Wraps an Amazon Textract
+ * `LAYOUT_FOOTER` Block in the underlying API response. You'll usually create this via a
+ * `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
+export class LayoutFooter extends LayoutFooterGeneric<Page> {}
+/**
+ * Parsed TRP object for an element of page header content, detected by document layout analysis
+ *
+ * Note this excludes page numbers (see `LayoutPageNumber`). Wraps an Amazon Textract
+ * `LAYOUT_HEADER` Block in the underlying API response. You'll usually create this via a
+ * `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
+export class LayoutHeader extends LayoutHeaderGeneric<Page> {}
+/**
+ * Parsed TRP object for an area of key-value (form data) content, detected by layout analysis
+ *
+ * Note this typically includes multiple `Field` objects (if you have forms data analysis enabled).
+ * Wraps an Amazon Textract `LAYOUT_KEY_VALUE` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
+export class LayoutKeyValue extends LayoutKeyValueGeneric<Page> {}
+/**
+ * Parsed TRP object for a page number annotation, detected by document layout analysis
+ *
+ * Wraps an Amazon Textract `LAYOUT_PAGE_NUMBER` Block in the underlying API response. You'll
+ * usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
+export class LayoutPageNumber extends LayoutPageNumberGeneric<Page> {}
+/**
+ * Parsed TRP object for a section heading / title, detected by document layout analysis
+ *
+ * Wraps an Amazon Textract `LAYOUT_SECTION_HEADER` Block in the underlying API response. You'll
+ * usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
+export class LayoutSectionHeader extends LayoutSectionHeaderGeneric<Page> {}
+/**
+ * Parsed TRP object for a table, detected by document layout analysis
+ *
+ * Note this can link through to, but may not correspond 1:1 with, structured table data extracted
+ * by the Tables analysis. Wraps an Amazon Textract `LAYOUT_TABLE` Block in the underlying API
+ * response. You'll usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
+export class LayoutTable extends LayoutTableGeneric<Page> {}
+/**
+ * Parsed TRP object for a paragraph / independent element of text, detected by layout analysis
+ *
+ * Wraps an Amazon Textract `LAYOUT_TEXT` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
+export class LayoutText extends LayoutTextGeneric<Page> {}
+/**
+ * Parsed TRP object for an overall document title, detected by document layout analysis
+ *
+ * Wraps an Amazon Textract `LAYOUT_TITLE` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
+export class LayoutTitle extends LayoutTitleGeneric<Page> {}
+/**
+ * Parsed TRP object for a bulleted or numbered list, detected by document layout analysis
+ *
+ * Wraps an Amazon Textract `LAYOUT_LIST` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
+export class LayoutList extends LayoutListGeneric<Page> {}
+/**
+ * Parsed TRP object for the overall layout of a page, detected by document layout analysis
+ *
+ * Can be used to iterate through content like headings, paragraphs, headers and footers, in
+ * implied reading order (even for multi-column documents). You'll usually create this via a
+ * `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+ */
+export class Layout extends LayoutGeneric<Page> {}
+
 // query.ts concrete Page-dependent types:
+/**
+ * Parsed TRP object for one page's instance of a submitted Amazon Textract Query
+ *
+ * Wraps an Amazon Textract `QUERY` Block in the underlying API response. You'll usually create
+ * this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html
+ */
 export class QueryInstance extends QueryInstanceGeneric<Page> {}
+/**
+ * Parsed TRP object wrapping all the Textract Queries results for one page in a document
+ *
+ * You'll usually create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html
+ */
 export class QueryInstanceCollection extends QueryInstanceCollectionGeneric<Page> {}
+/**
+ * Parsed TRP object for one detected result for a submitted Amazon Textract Query
+ *
+ * Wraps an Amazon Textract `QUERY_RESULT` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/queryresponse.html
+ */
 export class QueryResult extends QueryResultGeneric<Page> {}
 
 // table.ts concrete Page-dependent types:
+/**
+ * Parsed TRP object for a (sub-)cell of a table, before considering any merged cells
+ *
+ * Wraps an Amazon Textract `CELL` Block in the underlying API response. You'll usually create this
+ * via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+ */
 export class Cell extends CellGeneric<Page> {}
-export abstract class CellBase<T extends ApiCellBlock | ApiMergedCellBlock> extends CellBaseGeneric<
-  T,
-  Page
-> {}
+/**
+ * Parsed TRP object for a merged cell in a table
+ *
+ * Wraps an Amazon Textract `MERGED_CELL` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+ */
 export class MergedCell extends MergedCellGeneric<Page> {}
+/**
+ * Parsed TRP object for one row in a table
+ *
+ * `Row`s don't directly wrap any one object in Amazon Textract API results, but are a collection
+ * used to help iterate through table contents. You'll usually create this via a
+ * `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+ */
 export class Row extends RowGeneric<Page> {}
+/**
+ * Parsed TRP object for a table on a page, detected by document tables analysis
+ *
+ * Wraps an Amazon Textract `TABLE` Block in the underlying API response. You'll usually create
+ * this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+ */
 export class Table extends TableGeneric<Page> {}
+/**
+ * Parsed TRP object for a trailing/footer caption of a table
+ *
+ * Wraps an Amazon Textract `TABLE_FOOTER` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+ */
+export class TableFooter extends TableFooterGeneric<Page> {}
+/**
+ * Parsed TRP object for a leading/header caption of a table
+ *
+ * Wraps an Amazon Textract `TABLE_TITLE` Block in the underlying API response. You'll usually
+ * create this via a `TextractDocument`, rather than directly.
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-tables.html
+ */
+export class TableTitle extends TableTitleGeneric<Page> {}
 
+/**
+ * Main TRP class to parse and analyze Amazon Textract document analysis & text detection results
+ */
 export class TextractDocument
   extends ApiObjectWrapper<ApiResponsePage & ApiResponseWithContent>
-  implements IDocBlocks
+  implements IDocBlocks, IRenderable
 {
   _blockMap: { [blockId: string]: ApiBlock };
   _form: FormsCompositeGeneric<Page, TextractDocument>;
   _pages: Page[];
 
   /**
+   * Create (parse) a TextractDocument from Amazon Textract API response JSON(s)
+   *
    * @param textractResults A (parsed) Textract response JSON, or an array of multiple from the same job
    */
   constructor(textractResults: ApiResponsePage | ApiResponsePages) {
@@ -892,10 +1478,13 @@ export class TextractDocument
   }
 
   _parse(): void {
-    this._blockMap = this._dict.Blocks.reduce((acc, next) => {
-      acc[next.Id] = next;
-      return acc;
-    }, {} as { [blockId: string]: ApiBlock });
+    this._blockMap = this._dict.Blocks.reduce(
+      (acc, next) => {
+        acc[next.Id] = next;
+        return acc;
+      },
+      {} as { [blockId: string]: ApiBlock },
+    );
 
     let currentPageBlock: ApiPageBlock | null = null;
     let currentPageContent: ApiBlock[] = [];
@@ -917,12 +1506,12 @@ export class TextractDocument
 
     this._form = new FormsCompositeGeneric(
       this._pages.map((p) => p.form),
-      this
+      this,
     );
   }
 
   static _consolidateMultipleResponses(
-    textractResultArray: ApiResponsePages
+    textractResultArray: ApiResponsePages,
   ): ApiResponsePage & ApiResponseWithContent {
     if (!textractResultArray?.length) throw new Error(`Input Textract Results list empty!`);
     let nPages = 0;
@@ -950,7 +1539,7 @@ export class TextractDocument
         analysisType = "AnalyzeDocument";
         if (modelVersion && modelVersion !== textractResult.AnalyzeDocumentModelVersion) {
           console.warn(
-            `Inconsistent Textract model versions ${modelVersion} and ${textractResult.AnalyzeDocumentModelVersion}: Ignoring latter`
+            `Inconsistent Textract model versions ${modelVersion} and ${textractResult.AnalyzeDocumentModelVersion}: Ignoring latter`,
           );
         } else {
           modelVersion = textractResult.AnalyzeDocumentModelVersion;
@@ -963,7 +1552,7 @@ export class TextractDocument
         analysisType = "DetectText";
         if (modelVersion && modelVersion !== textractResult.DetectDocumentTextModelVersion) {
           console.warn(
-            `Inconsistent Textract model versions ${modelVersion} and ${textractResult.DetectDocumentTextModelVersion}: Ignoring latter`
+            `Inconsistent Textract model versions ${modelVersion} and ${textractResult.DetectDocumentTextModelVersion}: Ignoring latter`,
           );
         } else {
           modelVersion = textractResult.DetectDocumentTextModelVersion;
@@ -977,7 +1566,7 @@ export class TextractDocument
           throw new Error(`Textract results contain failed job of status ${textractResult.JobStatus}`);
         } else if (jobStatus && jobStatus !== textractResult.JobStatus) {
           throw new Error(
-            `Textract results inconsistent JobStatus values ${jobStatus}, ${textractResult.JobStatus}`
+            `Textract results inconsistent JobStatus values ${jobStatus}, ${textractResult.JobStatus}`,
           );
         }
         jobStatus = textractResult.JobStatus;
@@ -1005,8 +1594,8 @@ export class TextractDocument
       analysisType == "AnalyzeDocument"
         ? { AnalyzeDocumentModelVersion: modelVersion }
         : analysisType == "DetectText"
-        ? { DetectDocumentTextModelVersion: modelVersion }
-        : { AnalyzeDocumentModelVersion: modelVersion || "Unknown" };
+          ? { DetectDocumentTextModelVersion: modelVersion }
+          : { AnalyzeDocumentModelVersion: modelVersion || "Unknown" };
     const jobStatusFields = jobStatus ? { JobStatus: jobStatus } : {};
     const statusMessageFields = jobStatusMessage ? { StatusMessage: jobStatusMessage } : {};
     const warningFields = warnings ? { ArfBarf: warnings } : {};
@@ -1024,16 +1613,58 @@ export class TextractDocument
     };
   }
 
+  /**
+   * The Textract Forms analysis result container for all K-Vs across the document
+   *
+   * This object is still created (but will be empty) if the Textract FORMS analysis was disabled
+   *
+   * For details see: https://docs.aws.amazon.com/textract/latest/dg/how-it-works-kvp.html
+   */
   get form(): FormsComposite {
     return this._form;
   }
 
+  /**
+   * The number of pages present in the document
+   */
   get nPages(): number {
     return this._pages.length;
   }
 
+  /**
+   * Property to simply extract the document content as flat text
+   *
+   * Page contents are separated by 4 newlines
+   */
+  get text(): string {
+    return this._pages.map((page) => page.text).join("\n\n\n\n");
+  }
+
   getBlockById(blockId: string): ApiBlock | undefined {
     return this._blockMap && this._blockMap[blockId];
+  }
+
+  /**
+   * Return a parsed TRP.js object corresponding to an API Block
+   *
+   * At the document level, this works by querying each `Page` in turn
+   *
+   * @param blockId Unique ID of the API Block for which a parsed object should be fetched
+   * @param allowBlockTypes Optional restriction on acceptable ApiBlockType(s) to return
+   * @throws If no parsed object exists for the block ID, or it doesn't match `allowBlockTypes`
+   */
+  getItemByBlockId(
+    blockId: string,
+    allowBlockTypes?: ApiBlockType | ApiBlockType[] | null,
+  ): IApiBlockWrapper<ApiBlock> {
+    for (const page of this._pages) {
+      try {
+        return page.getItemByBlockId(blockId, allowBlockTypes);
+      } catch {
+        // Throws when no block present - so ignore this and try next page
+      }
+    }
+    throw new Error(`No parser item found on any page, for block ID ${blockId}`);
   }
 
   /**
@@ -1049,19 +1680,60 @@ export class TextractDocument
     return getIterable(() => this._pages);
   }
 
+  /**
+   * Fetch a snapshot of the list of all API `Block` items owned by this PAGE
+   *
+   * @returns (A shallow copy of) the list of raw `Block` objects
+   */
   listBlocks(): ApiBlock[] {
     return this._dict.Blocks.slice();
   }
 
+  /**
+   * Fetch a snapshot of the list of parsed `Page`s in this document object
+   *
+   * @returns (A shallow copy of) the list of parsed `Page` objects
+   */
   listPages(): Page[] {
     return this._pages.slice();
   }
 
+  /**
+   * Fetch a parsed `Page` of the document by 1-based page number
+   * @param pageNum 1-based index of the target page to fetch
+   * @throws If `pageNum` is less than 1, or greater than or equal to `doc.nPages``
+   */
   pageNumber(pageNum: number): Page {
     if (!(pageNum >= 1 && pageNum <= this._pages.length)) {
       throw new Error(`pageNum ${pageNum} must be between 1 and ${this._pages.length}`);
     }
     return this._pages[pageNum - 1];
+  }
+
+  /**
+   * Return a best-effort semantic HTML representation of the document
+   *
+   * This is useful for ingesting the document into tools like search engines or Generative Large
+   * Language Models (LLMs) that might be capable of understanding semantic structure such as
+   * paragraphs or headings, but cannot consume fully multi-modal (image/text coordinate) data.
+   *
+   * As per `Page.html()`, this currently depends on the Textract LAYOUT feature being enabled in
+   * the underlying API request.
+   *
+   * TODO: Support more basic .html() on Textract results for which LAYOUT analysis was not enabled
+   *
+   * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
+   *
+   * @throws If Textract Layout analysis was not enabled in the API request.
+   */
+  html(): string {
+    const bodyHtml = [
+      "<body>",
+      indent(this._pages.map((page) => `<div class="page">\n${indent(page.html())}\n</div>`).join("\n")),
+      "</body>",
+    ].join("\n");
+
+    return `<!DOCTYPE html>\n<html>\n${bodyHtml}\n</html>`;
   }
 
   str(): string {

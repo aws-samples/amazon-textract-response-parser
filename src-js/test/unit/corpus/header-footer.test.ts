@@ -14,7 +14,7 @@
  * every use case - so if you're struggling to tune parameters for your own documents, you may find it easier
  * to write custom logic!
  */
-import { ApiResponsePages } from "../../../src/api-models";
+import { ApiResponsePages } from "../../../src/api-models/response";
 import { HeaderFooterSegmentModelParams, Line, TextractDocument } from "../../../src/document";
 
 interface HeaderFooterTest {
@@ -23,7 +23,7 @@ interface HeaderFooterTest {
     pageNum: number;
     headerLinesLike: string[];
     footerLinesLike: string[];
-  }>
+  }>;
 }
 
 // Define your tests in a .ts file in the corpus folder alongside your documents:
@@ -72,30 +72,30 @@ function checkLinesAreLike(
   expected: string[],
   filename: string,
   pageNum: number,
-  lineType: string
+  lineType: string,
 ) {
   const nExpected = expected.length;
   if (lines.length !== nExpected) {
     throw new Error(
-      `${filename} page ${pageNum} returned ${lines.length} ${lineType} LINEs. Expected ${nExpected}`
+      `${filename} page ${pageNum} returned ${lines.length} ${lineType} LINEs. Expected ${nExpected}`,
     );
   }
   const remainingExpectedLines = expected.map((e) => e.toLocaleLowerCase());
   for (const line of lines) {
     const lineTextLower = line.text.toLocaleLowerCase();
     const foundTextIx = remainingExpectedLines.findIndex(
-      (expected) => lineTextLower.indexOf(expected.toLocaleLowerCase()) >= 0
+      (expected) => lineTextLower.indexOf(expected.toLocaleLowerCase()) >= 0,
     );
     if (foundTextIx < 0) {
       throw new Error(
-        `${filename} page ${pageNum} returned unexpected ${lineType} line '${line.text}' not matching spec`
+        `${filename} page ${pageNum} returned unexpected ${lineType} line '${line.text}' not matching spec`,
       );
     }
     remainingExpectedLines.splice(foundTextIx, 1);
   }
   if (remainingExpectedLines.length) {
     throw new Error(
-      `${filename} page ${pageNum} expected ${lineType} lines were not present:\n${remainingExpectedLines}`
+      `${filename} page ${pageNum} expected ${lineType} lines were not present:\n${remainingExpectedLines}`,
     );
   }
 }
@@ -115,7 +115,7 @@ function checkHeaderFooters(filename: string, headerFooterSpec: PageHeaderFooter
         pageSpec.headerLinesLike,
         filename,
         pageSpec.pageNum,
-        "header"
+        "header",
       );
     }
 
@@ -125,7 +125,7 @@ function checkHeaderFooters(filename: string, headerFooterSpec: PageHeaderFooter
         pageSpec.footerLinesLike,
         filename,
         pageSpec.pageNum,
-        "footer"
+        "footer",
       );
     }
   }

@@ -1,5 +1,5 @@
 /**
- * Top-level API response models used by the Textract response parser.
+ * Top-level API response models used by the Textract Response Parser.
  *
  * These models/interfaces cover the top-level response structures as returned by Textract APIs
  */
@@ -9,6 +9,9 @@ import { ApiExpenseDocument } from "./expense";
 import { ApiIdentityDocument } from "./id";
 import { ApiBlock } from "./document";
 
+/**
+ * Enumeration of status messages reported for async API jobs
+ */
 export const enum ApiJobStatus {
   Failed = "FAILED",
   InProgress = "IN_PROGRESS",
@@ -16,15 +19,32 @@ export const enum ApiJobStatus {
   Succeeded = "SUCCEEDED",
 }
 
+/**
+ * Information about an input document
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/API_DocumentMetadata.html
+ */
 export interface ApiDocumentMetadata {
   Pages: number;
 }
 
+/**
+ * Result data from an Amazon Textract expense analysis
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/API_AnalyzeExpense.html
+ *
+ * (Async GetExpenseAnalysis results share the structure but add fields)
+ */
 export interface ApiAnalyzeExpenseResponse {
   DocumentMetadata: ApiDocumentMetadata;
   ExpenseDocuments: ApiExpenseDocument[];
 }
 
+/**
+ * Result data from an Amazon Textract identity document analysis
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/API_AnalyzeID.html
+ */
 export interface ApiAnalyzeIdResponse {
   readonly AnalyzeIDModelVersion: string;
   DocumentMetadata: ApiDocumentMetadata;
@@ -36,6 +56,11 @@ export interface ApiResponseWithContent {
   DocumentMetadata: ApiDocumentMetadata;
 }
 
+/**
+ * Result data from an Amazon Textract general document analysis
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/API_GetDocumentAnalysis.html
+ */
 export interface ApiAnalyzeDocumentResponse extends ApiResponseWithContent {
   AnalyzeDocumentModelVersion: string;
   HumanLoopActivationOutput?: {
@@ -45,21 +70,34 @@ export interface ApiAnalyzeDocumentResponse extends ApiResponseWithContent {
   };
 }
 
+/**
+ * Result data from an Amazon Textract text detection job (OCR only, no analysis)
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/API_GetDocumentTextDetection.html
+ */
 export interface ApiDetectDocumentTextResponse extends ApiResponseWithContent {
   DetectDocumentTextModelVersion: string;
 }
 
-export interface ApiAsyncJobOuputInProgress {
+export interface ApiAsyncJobOutputInProgress {
   JobStatus: "IN_PROGRESS";
   StatusMessage?: string; // If not completed
   Warnings?: [
     {
       ErrorCode: string;
       Pages: number[];
-    }
+    },
   ];
 }
 
+/**
+ * @deprecated Backward compatibility for typo: Please use ApiAsyncJobOutputInProgress
+ */
+export interface ApiAsyncJobOuputInProgress extends ApiAsyncJobOutputInProgress {}
+
+/**
+ * Shared fields reported for Get*Analysis APIs concerning asynchronous jobs
+ */
 interface ApiAsyncJobOutputStatus {
   JobStatus: "IN_PROGRESS" | "SUCCEEDED" | "FAILED" | "PARTIAL_SUCCESS";
   /**
@@ -91,7 +129,7 @@ export interface ApiAsyncJobOutputFailed extends ApiAsyncJobOutputStatus {
 }
 
 export type ApiAsyncDocumentAnalysis =
-  | ApiAsyncJobOuputInProgress
+  | ApiAsyncJobOutputInProgress
   | ({ AnalyzeDocumentModelVersion: string } & (
       | ApiAsyncJobOutputFailed
       | ApiAsyncJobOutputPartialSuccess
@@ -99,7 +137,7 @@ export type ApiAsyncDocumentAnalysis =
     ));
 
 export type ApiAsyncDocumentTextDetection =
-  | ApiAsyncJobOuputInProgress
+  | ApiAsyncJobOutputInProgress
   | ({ DetectDocumentTextModelVersion: string } & (
       | ApiAsyncJobOutputFailed
       | ApiAsyncJobOutputPartialSuccess

@@ -1,7 +1,20 @@
-import { AggregationMethod, aggregate, argMax, modalAvg } from "../../src/base";
+import { ApiBlockType, ApiRelationshipType } from "../../src/api-models/base";
+import { ApiBlock } from "../../src/api-models/document";
+import { ApiDocumentMetadata } from "../../src/api-models/response";
+import {
+  AggregationMethod,
+  ApiBlockWrapper,
+  DocumentMetadata,
+  aggregate,
+  argMax,
+  escapeHtml,
+  getIterable,
+  indent,
+  modalAvg,
+} from "../../src/base";
 
 // Precision limit for testing summary statistics
-const EPSILON = 1e-15;
+const PRECISION_DPS = 10;
 
 describe("modalAvg", () => {
   it("calculates the modal average of an array of numbers", () => {
@@ -32,8 +45,8 @@ describe("aggregate", () => {
   it("supports geometric mean value aggregation of positive numbers", () => {
     expect(aggregate([1, 1, 8], AggregationMethod.GeometricMean)).toStrictEqual(2);
     expect(
-      Math.abs((aggregate([4, 1, 1 / 32], AggregationMethod.GeometricMean) as number) - 0.5)
-    ).toBeLessThan(EPSILON);
+      (aggregate([4, 1, 1 / 32], AggregationMethod.GeometricMean) as number).toFixed(PRECISION_DPS),
+    ).toStrictEqual((0.5).toFixed(PRECISION_DPS));
   });
 
   it("supports max value aggregation", () => {
@@ -44,12 +57,12 @@ describe("aggregate", () => {
 
   it("supports mean value aggregation", () => {
     expect(aggregate([-5, -1, 0, 1, 5], AggregationMethod.Mean)).toStrictEqual(0);
-    expect(Math.abs((aggregate([3.6, 6.3, 2.4], AggregationMethod.Mean) as number) - 4.1)).toBeLessThan(
-      EPSILON
-    );
-    expect(Math.abs((aggregate([-3.6, -6.3, -2.4], AggregationMethod.Mean) as number) + 4.1)).toBeLessThan(
-      EPSILON
-    );
+    expect(
+      (aggregate([3.6, 6.3, 2.4], AggregationMethod.Mean) as number).toFixed(PRECISION_DPS),
+    ).toStrictEqual((4.1).toFixed(PRECISION_DPS));
+    expect(
+      (aggregate([-3.6, -6.3, -2.4], AggregationMethod.Mean) as number).toFixed(PRECISION_DPS),
+    ).toStrictEqual((-4.1).toFixed(PRECISION_DPS));
   });
 
   it("supports min value aggregation", () => {
@@ -62,6 +75,27 @@ describe("aggregate", () => {
     expect(aggregate([2, 4, 4, 5, 7, 100, 100.001], AggregationMethod.Mode)).toStrictEqual(4);
     expect(aggregate([-30, -2.3, -2.3, 0, 1], AggregationMethod.Mode)).toStrictEqual(-2.3);
     expect(aggregate([0, 1, 1, 1, 2, 2, 2, 2], AggregationMethod.Mode)).toStrictEqual(2);
+  });
+
+  it("works with iterables", () => {
+    expect(
+      aggregate(
+        getIterable(() => [1, 0, 2, 10, 5, 8, 7]),
+        AggregationMethod.Min,
+      ),
+    ).toStrictEqual(0);
+    expect(
+      aggregate(
+        getIterable(() => [2, 4, 4, 5, 7, 100, 100.001]),
+        AggregationMethod.Mode,
+      ),
+    ).toStrictEqual(4);
+    expect(
+      aggregate(
+        getIterable(() => [-5, -1, 0, 1, 5]),
+        AggregationMethod.Mean,
+      ),
+    ).toStrictEqual(0);
   });
 
   it("throws an error for unsupported aggregation types", () => {
@@ -82,5 +116,102 @@ describe("argMax", () => {
       maxIndex: 0,
     });
     expect(argMax([8, -6, NaN, 13, NaN, 3.14])).toStrictEqual({ maxValue: 13, maxIndex: 3 });
+  });
+});
+
+describe("documentMetadata", () => {
+  it("fetches number of pages in document", () => {
+    const docMetaDict = { Pages: 42 };
+    const docMeta = new DocumentMetadata(docMetaDict);
+    expect(docMeta.dict).toBe(docMetaDict);
+    expect(docMeta.nPages).toStrictEqual(docMetaDict.Pages);
+  });
+
+  it("defaults missing page count to 0", () => {
+    expect(new DocumentMetadata({} as ApiDocumentMetadata).nPages).toStrictEqual(0);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(new DocumentMetadata(undefined as any).nPages).toStrictEqual(0);
+  });
+});
+
+describe("escapeHtml", () => {
+  it("escapes only [&<>] by default for use in general text nodes", () => {
+    expect(escapeHtml(`A "fun" example & a 'great' function >_< !?`)).toStrictEqual(
+      `A "fun" example &amp; a 'great' function &gt;_&lt; !?`,
+    );
+  });
+
+  it(`escapes [&<>'"] when configured for use in node attributes`, () => {
+    expect(escapeHtml(`A "fun" example & a 'great' function >_< !?`, { forAttr: true })).toStrictEqual(
+      `A &quot;fun&quot; example &amp; a &#39;great&#39; function &gt;_&lt; !?`,
+    );
+  });
+});
+
+describe("indent", () => {
+  it("indents text with one tab by default", () => {
+    expect(indent("I'm a\nbasic kind of\nstring you know")).toStrictEqual(
+      "\tI'm a\n\tbasic kind of\n\tstring you know",
+    );
+  });
+
+  it("can customize level of indentation", () => {
+    expect(indent("I'm a\nbasic kind of\nstring you know", { count: 3 })).toStrictEqual(
+      "\t\t\tI'm a\n\t\t\tbasic kind of\n\t\t\tstring you know",
+    );
+  });
+
+  it("can customize indentation prefix", () => {
+    expect(indent("I'm a\nbasic kind of\nstring you know", { character: "dog", count: 3 })).toStrictEqual(
+      "dogdogdogI'm a\ndogdogdogbasic kind of\ndogdogdogstring you know",
+    );
+  });
+
+  it("can omit first line indentation", () => {
+    expect(indent("I'm a\nbasic kind of\nstring you know", { skipFirstLine: true })).toStrictEqual(
+      "I'm a\n\tbasic kind of\n\tstring you know",
+    );
+  });
+
+  it("can indent empty lines (but doesn't by default)", () => {
+    const rawStr = "I'm a\n\nstring you know";
+    expect(indent(rawStr)).toStrictEqual("\tI'm a\n\n\tstring you know");
+    expect(indent(rawStr, { includeEmptyLines: true })).toStrictEqual("\tI'm a\n\t\n\tstring you know");
+  });
+});
+
+describe("ApiBlockWrapper", () => {
+  it("fetches related blocks filtered by one or more relationship types", () => {
+    const wrapper = new ApiBlockWrapper({
+      BlockType: ApiBlockType.Line,
+      Id: "DUMMY-1",
+      Relationships: [
+        {
+          Ids: ["DUMMY-2", "DUMMY-3"],
+          Type: ApiRelationshipType.Answer,
+        },
+        {
+          Ids: ["DUMMY-4", "DUMMY-5", "DUMMY-6"],
+          Type: ApiRelationshipType.Child,
+        },
+        {
+          Ids: ["DUMMY-7", "DUMMY-8"],
+          Type: ApiRelationshipType.ComplexFeatures,
+        },
+        {
+          Ids: ["DUMMY-9", "DUMMY-0"],
+          Type: ApiRelationshipType.Child,
+        },
+      ],
+    } as unknown as ApiBlock);
+    expect(wrapper.childBlockIds).toStrictEqual(["DUMMY-4", "DUMMY-5", "DUMMY-6", "DUMMY-9", "DUMMY-0"]);
+    expect(wrapper.relatedBlockIdsByRelType(ApiRelationshipType.ComplexFeatures)).toStrictEqual([
+      "DUMMY-7",
+      "DUMMY-8",
+    ]);
+    expect(
+      wrapper.relatedBlockIdsByRelType([ApiRelationshipType.ComplexFeatures, ApiRelationshipType.Answer]),
+    ).toStrictEqual(["DUMMY-2", "DUMMY-3", "DUMMY-7", "DUMMY-8"]);
+    expect(wrapper.relatedBlockIdsByRelType(ApiRelationshipType.MergedCell)).toStrictEqual([]);
   });
 });

@@ -1,0 +1,10 @@
+{
+  // We can't `include` the test/ folder in the top-level tsconfig.json (or it would get built into
+  // the library) - but we'd like IDEs like VSCode to be able to correctly recognise test files...
+  // So use this auxilliary tsconfig.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "node"]
+  },
+  "include": ["."]
+}
