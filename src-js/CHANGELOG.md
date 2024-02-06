@@ -1,6 +1,6 @@
 # Changelog
 
-## In Development (targeting 0.4.0)
+## 0.4.0 (2024-02-06)
 ### Added
 - Load and navigate [Amazon Textract Layout analysis](https://aws.amazon.com/blogs/machine-learning/amazon-textracts-new-layout-feature-introduces-efficiencies-in-general-purpose-and-generative-ai-document-processing-tasks/) data. ([#164](https://github.com/aws-samples/amazon-textract-response-parser/issues/164))
 - Serialize individual elements, pages and documents to semantic markup with `.html()` (for page and document level, currently depends on `Layout` being enabled).
@@ -9,7 +9,7 @@
 - More complete exposure of Textract API model constructs and `base.ts` utility functions in external-facing TRP API
 ### Changed
 - **(BREAKING)** Previously-exposed `CellBase` class is removed, due to refactoring `Cell` and `MergedCell` to depend more on composable mixins and less on fragile hierarchy of (now internal) `CellBaseGeneric`. Use `Cell | MergedCell` instead for typing.
-- `Page`s now explicitly track parsed objects in their scope by block ID, which reduced state tracking requirements for other objects (like `Line`, `Query`) as we work toward supporting more edit/mutation operations. See `IBlockManager.registerParsedItem()` and `.getItemByBlockId()` for details. This may result in some minor warning & error behavior changes when handling invalid or incomplete Textract JSON.
+- `Page`s now explicitly track parsed objects in their scope by block ID, which reduced state tracking requirements for other objects (like `Line`, `Query`) as we work toward supporting more edit/mutation operations. See `IBlockManager.registerParsedItem()` and `.getItemByBlockId()` for details. This may result in some **minor warning & error behavior changes** when handling invalid or incomplete Textract JSON.
 - Split out `api-models/document` types to better align with library components, and made some minor typing updates.
 ### Fixed
 - `Table.nCells` now correctly reflects merged cells (instead of just counting all sub-cells).

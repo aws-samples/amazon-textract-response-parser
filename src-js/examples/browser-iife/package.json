@@ -1,5 +1,5 @@
 {
-  "name": "@amazon-textract-response-parser/browser-iife",
+  "name": "@amazon-textract-response-parser-examples/browser-iife",
   "version": "0.0.1",
   "description": "Example of using TRP.js via global object from HTML <script> tag",
   "main": "main.js",

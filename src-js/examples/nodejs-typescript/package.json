@@ -1,5 +1,5 @@
 {
-  "name": "@amazon-textract-response-parser/nodejs-typescript",
+  "name": "@amazon-textract-response-parser-examples/nodejs-typescript",
   "version": "0.0.1",
   "description": "Example of using TRP.js from NodeJS with TypeScript",
   "main": "dist/main.js",

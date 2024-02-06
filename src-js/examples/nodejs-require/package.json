@@ -1,5 +1,5 @@
 {
-  "name": "@amazon-textract-response-parser/nodejs-require",
+  "name": "@amazon-textract-response-parser-examples/nodejs-require",
   "version": "0.0.1",
   "description": "Example of using TRP.js from NodeJS with CommonJS-style 'require' statements",
   "main": "main.js",

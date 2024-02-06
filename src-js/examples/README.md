@@ -10,9 +10,11 @@ This folder contains example projects using the Amazon Textract Response Parser 
 
 ### Local builds of TRP.js
 
-The projects use the **local build** of the library for pre-publication testing, so you'll need to run `npm run build` in the parent `src-js` folder before they'll work. To switch to published TRP.js versions:
+The projects use the **local build** of the library for pre-publication testing, so you'll need to run `npm run build` in the parent `src-js` folder before they'll work.
 
-- For NodeJS projects, Replace the package.json relative path in `"amazon-textract-response-parser": "file:../.."` with a normal version spec like `"amazon-textract-response-parser": "^x.y.z"`, and re-run `npm install`
+To instead switch to published TRP.js versions (if you're using an example as a skeleton for your own project):
+
+- For NodeJS projects, Replace the package.json relative path in `"amazon-textract-response-parser": "file:../.."` with a normal version spec like `"amazon-textract-response-parser": "^0.4.0"`, and re-run `npm install`
 - For browser IIFE projects, edit the `<script>` tag in the HTML to point to your chosen CDN or downloaded `trp.min.js` location
 
 

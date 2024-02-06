@@ -4,7 +4,7 @@ This library loads [Amazon Textract](https://docs.aws.amazon.com/textract/latest
 
 It's designed to work in both NodeJS and browser environments, and to support projects in either JavaScript or TypeScript.
 
-> ⚠️ **Warning:** If you're migrating from another TRP implementation such as the [Textract Response Parser for Python](https://github.com/aws-samples/amazon-textract-response-parser/tree/master/src-python), please note that the APIs and available features may be substantially different - due to differences between the languages' conventions and ecosystems.
+> ⚠️ **Warning:** If you're migrating from another TRP implementation such as the [Textract Response Parser for Python](https://github.com/aws-samples/amazon-textract-response-parser/tree/master/src-python), please note that the APIs and available features may be substantially different. Please let us know if there's a feature you're missing!
 
 
 ## Installation
@@ -16,10 +16,10 @@ $ npm install amazon-textract-response-parser
 ```
 
 ```js
-// With ES-style module imports:
-import { TextractDocument, TextractExpense } from "amazon-textract-response-parser";
-// Or CommonJS-style require:
+// With CommonJS-style require:
 const { TextractDocument, TextractIdentity } = require("amazon-textract-response-parser");
+// Or ES-style module imports:
+import { TextractDocument, TextractExpense } from "amazon-textract-response-parser";
 ```
 
 ...Or link directly in the browser - for example via a CDN like [unpkg](https://unpkg.com/):
@@ -28,10 +28,10 @@ const { TextractDocument, TextractIdentity } = require("amazon-textract-response
 <script src="https://unpkg.com/amazon-textract-response-parser@x.y.z"></script>
 
 <script>
-  // Use top-level classes via global `trp` object:
+  // Use the main parser classes:
   var doc = new trp.TextractDocument(...);
-  // Other components will be under sub-modules:
-  var avg = trp.base.aggregate([1, 2, 3], trp.base.AggregationMethod.Mean);
+  // Or other exported utility functions/classes/enums/etc:
+  var avg = trp.aggregate([1, 2, 3], trp.AggregationMethod.Mean);
 </script>
 ```
 
@@ -60,7 +60,7 @@ fs.readFile("./my-analyze-document-response.json", (err, resBuffer) => {
 
 If you're using TypeScript, you may need to **typecast** your input JSON while loading it.
 
-> The `ApiResponsePage` input interface exposed and expected by this module is subtly different from - but functionally compatible with - the output types produced by the [AWS SDK for JavaScript Textract Client](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-textract/index.html).
+> The `ApiResponsePage` input interface exposed and expected by this module is more constrained than - but functionally compatible with - the output types produced by the [AWS SDK for JavaScript Textract Client](https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-textract/index.html).
 
 ```typescript
 import { ApiAnalyzeExpenseResponse } from "amazon-textract-response-parser";
@@ -112,7 +112,7 @@ for (const page of doc.iterPages()) {
 const linesArrsByPage = doc.listPages().map((p) => p.listLines());
 ```
 
-These arrays are in the raw order returned by Amazon Textract, which is not necessarily a logical human reading order especially for multi-column documents. See the *Layout analysis* and *List text in approximate reading order* sections below for extra content sorting utilities.
+These arrays are in the raw order returned by Amazon Textract, which is not necessarily a logical human reading order - especially for multi-column documents. See the *Layout analysis* and *List text in approximate reading order* sections below for extra content sorting utilities.
 
 
 ## Queries
@@ -281,7 +281,7 @@ When configured to use Layout analysis results, these functions should be equiva
 
 ### Render documents to semantic markup/markdown
 
-If you'd like to use AI/ML models to further post-process your Amazon Textract results, you have a choice between those that take text-only inputs - and "multi-modal" models that can also ingest structural information (see for example [this Amazon Comprehend feature](https://aws.amazon.com/about-aws/whats-new/2021/09/amazon-comprehend-extract-entities-native-format/) and [this Amazon SageMaker sample](https://github.com/aws-samples/amazon-textract-transformer-pipeline/tree/main)). While multi-modal models work well on complex structured documents, the pace of research on text-only Large Language Models has historically been faster (perhaps because plain text data is easier to come by and work with).
+If you'd like to use AI/ML models to further post-process your Amazon Textract results, you have a choice between those that take text-only inputs - and "multi-modal" models that can also ingest structural information (see for example [this Amazon Comprehend feature](https://aws.amazon.com/about-aws/whats-new/2021/09/amazon-comprehend-extract-entities-native-format/) and [this Amazon SageMaker sample](https://github.com/aws-samples/amazon-textract-transformer-pipeline/tree/main)). While multi-modal models may work best on complex structured documents, the pace of research on text-only Large Language Models has historically been faster (perhaps because plain text data is easier to come by and work with).
 
 **Semantic markup like HTML** provides somewhat of a middle ground where we can try to preserve the layout/form/table/etc structure Amazon Textract extracted, but still provide plain text. This may be particularly useful for working with **Generative Large Language Models** (GenAI/LLMs) like those on [Amazon Bedrock](https://aws.amazon.com/bedrock/).
 
@@ -433,7 +433,7 @@ Easier analysis and querying of Textract results is useful, but what if you want
 In general:
 
 - Where the library classes (`TextractDocument`, `Page`, `Word`, etc) offer mutation operations, these should modify the source API JSON object **in-place** and ensure self-consistency.
-- For library classes that are backed by a specific object in the source API JSON, you can access it via the `.dict` property (`word.dict`, `table.dict`, etc) but are responsible for updating any required references in other objects if making changes there.
+- For library classes that are backed by a specific object in the source API JSON, you can access it via the `.dict` property (`word.dict`, `table.dict`, etc) but then *you're* responsible for updating any required references in other objects if making changes there.
 - Any individual-block-level changes you make to the underlying API JSON should be dynamically reflected in the parsed TRP objects (e.g. overriding word text, coordinates, etc)... But changes that affect inter-block relationships are more likely to cause staleness issues.
 
 In particular for **array properties**, you'll note that TRP generally exposes getters and iterators (such as `table.nRows`, `table.iterRows()`, `table.listRows()`, `table.cellsAt()`) rather than direct access to lists - to avoid implying that arbitrary array mutations (such as `table.rows.pop()`) are properly supported.
@@ -441,7 +441,7 @@ In particular for **array properties**, you'll note that TRP generally exposes g
 
 ## Other features and examples
 
-For more examples on how to use the library, you can refer to the (basic) [examples](examples/) and (more complete) [tests](tests/) folders on GitHub, and the source code itself. If you have suggestions for additional features that would be useful, please open a GitHub issue!
+For more examples on how to use the library, you can refer to the (basic) [examples](examples/) and (more complete) [test](test/) folders on GitHub, and the source code itself. If you have suggestions for additional features that would be useful, please open a GitHub issue!
 
 
 ## Development
