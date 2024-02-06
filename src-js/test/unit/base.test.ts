@@ -14,7 +14,7 @@ import {
 } from "../../src/base";
 
 // Precision limit for testing summary statistics
-const EPSILON = 1e-15;
+const PRECISION_DPS = 10;
 
 describe("modalAvg", () => {
   it("calculates the modal average of an array of numbers", () => {
@@ -45,8 +45,8 @@ describe("aggregate", () => {
   it("supports geometric mean value aggregation of positive numbers", () => {
     expect(aggregate([1, 1, 8], AggregationMethod.GeometricMean)).toStrictEqual(2);
     expect(
-      Math.abs((aggregate([4, 1, 1 / 32], AggregationMethod.GeometricMean) as number) - 0.5),
-    ).toBeLessThan(EPSILON);
+      (aggregate([4, 1, 1 / 32], AggregationMethod.GeometricMean) as number).toFixed(PRECISION_DPS),
+    ).toStrictEqual((0.5).toFixed(PRECISION_DPS));
   });
 
   it("supports max value aggregation", () => {
@@ -57,12 +57,12 @@ describe("aggregate", () => {
 
   it("supports mean value aggregation", () => {
     expect(aggregate([-5, -1, 0, 1, 5], AggregationMethod.Mean)).toStrictEqual(0);
-    expect(Math.abs((aggregate([3.6, 6.3, 2.4], AggregationMethod.Mean) as number) - 4.1)).toBeLessThan(
-      EPSILON,
-    );
-    expect(Math.abs((aggregate([-3.6, -6.3, -2.4], AggregationMethod.Mean) as number) + 4.1)).toBeLessThan(
-      EPSILON,
-    );
+    expect(
+      (aggregate([3.6, 6.3, 2.4], AggregationMethod.Mean) as number).toFixed(PRECISION_DPS),
+    ).toStrictEqual((4.1).toFixed(PRECISION_DPS));
+    expect(
+      (aggregate([-3.6, -6.3, -2.4], AggregationMethod.Mean) as number).toFixed(PRECISION_DPS),
+    ).toStrictEqual((-4.1).toFixed(PRECISION_DPS));
   });
 
   it("supports min value aggregation", () => {

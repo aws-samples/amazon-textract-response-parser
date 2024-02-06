@@ -4,7 +4,7 @@ import { ApiObjectWrapper } from "../../src/base";
 import { Geometry, Point } from "../../src/geometry";
 
 // Precision limit for testing calculations
-const EPSILON = 1e-15;
+const PRECISION_DPS = 15;
 
 const EXAMPLE_WORD_BLOCK: ApiWordBlock = {
   BlockType: "WORD" as ApiBlockType.Word,
@@ -132,7 +132,9 @@ describe("BoundingBox", () => {
     expect(box.vCenter).toStrictEqual(box.top + box.height / 2);
     expect(box.top).toStrictEqual(blockCopy.Geometry.BoundingBox.Top);
     expect(box.width).toStrictEqual(blockCopy.Geometry.BoundingBox.Width);
-    expect(Math.abs(box.height * box.width - oldArea * 10 * 20)).toBeLessThan(EPSILON);
+    expect((box.height * box.width).toFixed(PRECISION_DPS)).toStrictEqual(
+      (oldArea * 10 * 20).toFixed(PRECISION_DPS),
+    );
   });
 });
 
