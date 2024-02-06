@@ -20,6 +20,7 @@ const HTML_URI = `file:///${__dirname}/main.html`;
 const RESPONSE_JSON_PATH = path.join(__dirname, "..", "..", "test", "data", "test-response.json");
 
 // A try/catch block is necessary to run top-level `await`s in NodeJS module:
+// eslint-disable-next-line no-useless-catch
 try {
   // Launch the browser & configure event listeners to forward console msgs + throw errors:
   const browser = await puppeteer.launch();

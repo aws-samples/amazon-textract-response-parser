@@ -54,7 +54,7 @@ assert.strictEqual(Math.abs(doc.pageNumber(1).getModalWordOrientationDegrees()),
 
 // Render the test doc to an HTML file:
 // eslint-disable-next-line @typescript-eslint/no-empty-function
-await mkdir("./data-tmp", { recursive: true }).catch((err) => {});
+await mkdir("./data-tmp", { recursive: true }).catch((_) => {});
 await writeFile("./data-tmp/doc.html", doc.html(), "utf-8");
 
 console.log("Done!");
