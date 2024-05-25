@@ -1,6 +1,6 @@
 {
   "name": "amazon-textract-response-parser",
-  "version": "0.4.0",
+  "version": "0.4.1-alpha.1",
   "description": "Parse API responses from Amazon Textract with higher-level helpers",
   "keywords": [
     "aws",
