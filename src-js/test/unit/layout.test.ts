@@ -1,3 +1,4 @@
+import { ApiLayoutListBlock } from "../../src";
 import { ApiBlockType, ApiRelationshipType } from "../../src/api-models/base";
 import { ApiAnalyzeDocumentResponse } from "../../src/api-models/response";
 import { indent } from "../../src/base";
@@ -92,6 +93,40 @@ describe("LayoutItemBase and LayoutText", () => {
     for (const line of item.iterTextLines()) {
       expect(line).toBe(contentList[nLines]);
       ++nLines;
+    }
+  });
+
+  it("navigates nested layout items", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    // LAYOUT_TEXT items don't have sub-layouts:
+    const txt = page.layout
+      .listItems()
+      .find((ls) => ls.blockType === ApiBlockType.LayoutText) as LayoutTextGeneric<Page>;
+    expect(txt).toBeTruthy();
+    expect(txt.nLayoutChildrenDirect).toStrictEqual(0);
+    expect(txt.nLayoutChildrenTotal).toStrictEqual(0);
+    expect(txt.listLayoutChildren()).toStrictEqual([]);
+
+    // LAYOUT_LIST items should link to LAYOUT_TEXT children:
+    const lsBlock = finDocResponseJson.Blocks.find(
+      (block) => block.BlockType === ApiBlockType.LayoutList,
+    ) as ApiLayoutListBlock;
+    const lsBlockCids = (lsBlock.Relationships || [])[0].Ids;
+    expect(lsBlockCids.length).toBeGreaterThan(0);
+    const ls = page.layout
+      .listItems()
+      .find((ls) => ls.blockType === ApiBlockType.LayoutList) as LayoutListGeneric<Page>;
+    expect(ls).toBeTruthy();
+    expect(ls.nLayoutChildrenDirect).toStrictEqual(lsBlockCids.length);
+    expect(ls.nLayoutChildrenTotal).toStrictEqual(lsBlockCids.length);
+    expect(ls.listLayoutChildren().map((c) => c.id)).toStrictEqual(lsBlockCids);
+    let ix = 0;
+    for (const c of ls.iterLayoutChildren()) {
+      expect(c.listLayoutChildren()).toStrictEqual([]);
+      expect(c.id).toStrictEqual(lsBlockCids[ix]);
+      ++ix;
     }
   });
 
@@ -400,24 +435,43 @@ describe("LayoutList", () => {
 });
 
 describe("Layout", () => {
-  it("loads and navigates layout elements per page", () => {
+  it("loads and navigates all layout elements per page (by default)", () => {
     const doc = new TextractDocument(finDocResponseJson);
     const page = doc.pageNumber(1);
-    expect(page.layout.nItems).toStrictEqual(14);
+    expect(page.layout.nItemsTotal).toStrictEqual(14);
+    expect(page.layout.nItems).toStrictEqual(page.layout.nItemsTotal); // (Deprecated alias)
     expect(page.layout.parentPage).toBe(page);
 
-    const iterItems = [...page.layout.iterItems()];
-    const itemList = page.layout.listItems();
-    expect(iterItems.length).toStrictEqual(page.layout.nItems);
-    expect(itemList.length).toStrictEqual(page.layout.nItems);
-    for (let ix = 0; ix < page.layout.nItems; ++ix) {
-      expect(iterItems[ix]).toBe(itemList[ix]);
+    const iterAllItems = [...page.layout.iterItems()];
+    const itemAllList = page.layout.listItems();
+    expect(iterAllItems.length).toStrictEqual(page.layout.nItemsTotal);
+    expect(itemAllList.length).toStrictEqual(page.layout.nItemsTotal);
+    for (let ix = 0; ix < page.layout.nItemsTotal; ++ix) {
+      expect(iterAllItems[ix]).toBe(itemAllList[ix]);
     }
 
-    const layoutItem = itemList[0];
+    const layoutItem = itemAllList[0];
     expect(layoutItem.parentPage).toBe(page);
     expect(layoutItem.confidence).toBeGreaterThan(1); // (<1% very unlikely)
     expect(layoutItem.confidence).toBeLessThanOrEqual(100);
+  });
+
+  it("loads and navigates top-level layout elements per page", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+    expect(page.layout.nItemsDirect).toStrictEqual(9);
+    expect(page.layout.parentPage).toBe(page);
+
+    const iterTopItems = [...page.layout.iterItems({ deep: false })];
+    const itemTopList = page.layout.listItems({ deep: false });
+    expect(iterTopItems.length).toStrictEqual(page.layout.nItemsDirect);
+    expect(itemTopList.length).toStrictEqual(itemTopList.length);
+    const nestedChildIds = new Set<string>();
+    for (let ix = 0; ix < itemTopList.length; ++ix) {
+      expect(iterTopItems[ix]).toBe(itemTopList[ix]);
+      iterTopItems[ix].listLayoutChildren({ deep: true }).forEach((child) => nestedChildIds.add(child.id));
+    }
+    expect(itemTopList.length + nestedChildIds.size).toStrictEqual(page.layout.nItemsTotal);
   });
 
   it("renders semantic representations", () => {
@@ -428,7 +482,7 @@ describe("Layout", () => {
     const layText = page.layout.text;
     expect(layText).toStrictEqual(
       page.layout
-        .listItems()
+        .listItems({ deep: false })
         .map((item) => item.text)
         .join("\n\n"),
     );
@@ -439,7 +493,7 @@ describe("Layout", () => {
     expect(layStr).toMatch(/\n#### END PAGE LAYOUT {3}#################\n$/g);
     expect(layStr).toContain(
       page.layout
-        .listItems()
+        .listItems({ deep: false })
         .map((item) => item.str())
         .join("\n\n"),
     );
@@ -448,9 +502,55 @@ describe("Layout", () => {
     const layHtml = page.layout.html();
     expect(layHtml).toStrictEqual(
       page.layout
-        .listItems()
+        .listItems({ deep: false })
         .map((item) => item.html())
         .join("\n"),
+    );
+  });
+
+  it("does not duplicate content of nested layout items in semantic representations", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    // When LayoutList contains LayoutText children, those same LayoutText items will be listed as
+    // children of PAGE. Check that we don't duplicate those nested items in semantic reprs:
+
+    // Text:
+    const layText = page.layout.text;
+    expect(layText).toStrictEqual(
+      page.layout
+        .listItems({ deep: false })
+        .map((item) => item.text)
+        .join("\n\n"),
+    );
+    expect((layText.match(/Transfer out represents transfer to the CCR Trust/g) || []).length).toStrictEqual(
+      1,
+    );
+
+    // str() representation:
+    const layStr = page.layout.str();
+    expect(layStr).toMatch(/^\n#### BEGIN PAGE LAYOUT #################\n/g);
+    expect(layStr).toMatch(/\n#### END PAGE LAYOUT {3}#################\n$/g);
+    expect(layStr).toContain(
+      page.layout
+        .listItems({ deep: false })
+        .map((item) => item.str())
+        .join("\n\n"),
+    );
+    expect((layStr.match(/Transfer out represents transfer to the CCR Trust/g) || []).length).toStrictEqual(
+      1,
+    );
+
+    // HTML:
+    const layHtml = page.layout.html();
+    expect(layHtml).toStrictEqual(
+      page.layout
+        .listItems({ deep: false })
+        .map((item) => item.html())
+        .join("\n"),
+    );
+    expect((layHtml.match(/Transfer out represents transfer to the CCR Trust/g) || []).length).toStrictEqual(
+      1,
     );
   });
 });

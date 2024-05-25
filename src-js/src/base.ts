@@ -139,6 +139,16 @@ export class DocumentMetadata extends ApiObjectWrapper<ApiDocumentMetadata> {
 }
 
 /**
+ * Configuration options for iterating nested lists
+ */
+export interface INestedListOpts {
+  /**
+   * Include nested children (true) or top-level items only (false)
+   */
+  deep?: boolean;
+}
+
+/**
  * Utility function to create an iterable from a collection
  *
  * Input is a collection *fetching function*, rather than a direct collection, in case a user
