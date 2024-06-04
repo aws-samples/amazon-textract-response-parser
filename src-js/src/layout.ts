@@ -157,10 +157,10 @@ class LayoutItemBaseGeneric<
     return this._geometry;
   }
   get nLayoutChildrenDirect(): number {
-    return this.listLayoutChildren().length;
+    return this.listLayoutChildren({deep: false}).length;
   }
   get nLayoutChildrenTotal(): number {
-    return this.listLayoutChildren().length;
+    return this.listLayoutChildren({deep: true}).length;
   }
   get parentLayout(): LayoutGeneric<TPage> {
     return this._parentLayout;
