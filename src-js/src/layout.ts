@@ -5,7 +5,7 @@
  */
 
 // Local Dependencies:
-import { ApiBlockType, isLayoutBlockType } from "./api-models/base";
+import { ApiBlockType, ApiRelationshipType, LAYOUT_BLOCK_TYPES } from "./api-models/base";
 import { ApiBlock } from "./api-models/document";
 import {
   ApiLayoutBlock,
@@ -195,9 +195,9 @@ class LayoutItemBaseGeneric<
         ApiObjectWrapper<ApiLayoutBlock>
       >
     > = [];
-    this.childBlockIds.map((cid) => {
-      const childRaw = this.parentLayout.parentPage.getItemByBlockId(cid);
-      if (!isLayoutBlockType(childRaw.blockType)) return;
+    for (const childRaw of this.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
+      includeBlockTypes: LAYOUT_BLOCK_TYPES,
+    })) {
       const child = childRaw as ILayoutItem<
         ApiLayoutBlock,
         IApiBlockWrapper<ApiBlock> & IRenderable,
@@ -206,7 +206,7 @@ class LayoutItemBaseGeneric<
       >;
       result.push(child);
       if (opts.deep) result = result.concat(child.listLayoutChildren(opts));
-    });
+    }
     return result;
   }
 }

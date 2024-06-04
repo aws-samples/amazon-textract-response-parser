@@ -3,7 +3,7 @@
  */
 
 // Local Dependencies:
-import { ApiRelationship, ApiRelationshipType } from "./api-models/base";
+import { ApiBlockType, ApiRelationship, ApiRelationshipType } from "./api-models/base";
 import { ApiBlock } from "./api-models/document";
 import {
   ApiCellBlock,
@@ -776,9 +776,10 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
    * List the footer(s) associated with the table
    */
   listFooters(): TableFooterGeneric<TPage>[] {
-    return this.relatedBlockIdsByRelType(ApiRelationshipType.TableFooter).map(
-      (id) => this.parentPage.getItemByBlockId(id) as TableFooterGeneric<TPage>,
-    );
+    return this.listRelatedItemsByRelType(ApiRelationshipType.TableFooter, {
+      includeBlockTypes: ApiBlockType.TableFooter,
+      onUnexpectedBlockType: "warn",
+    }) as TableFooterGeneric<TPage>[];
   }
 
   /**
@@ -793,9 +794,10 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
    * List the title(s) associated with the table
    */
   listTitles(): TableTitleGeneric<TPage>[] {
-    return this.relatedBlockIdsByRelType(ApiRelationshipType.TableTitle).map(
-      (id) => this.parentPage.getItemByBlockId(id) as TableTitleGeneric<TPage>,
-    );
+    return this.listRelatedItemsByRelType(ApiRelationshipType.TableTitle, {
+      includeBlockTypes: ApiBlockType.TableTitle,
+      onUnexpectedBlockType: "warn",
+    }) as TableTitleGeneric<TPage>[];
   }
 
   /**

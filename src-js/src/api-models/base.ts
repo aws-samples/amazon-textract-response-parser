@@ -264,7 +264,10 @@ export const enum ApiBlockType {
   Word = "WORD",
 }
 
-const LAYOUT_BLOCK_TYPES = new Set([
+/**
+ * Canonical Set of API block types counted as Layout* elements
+ */
+export const LAYOUT_BLOCK_TYPES = new Set([
   ApiBlockType.LayoutFigure,
   ApiBlockType.LayoutFooter,
   ApiBlockType.LayoutHeader,
