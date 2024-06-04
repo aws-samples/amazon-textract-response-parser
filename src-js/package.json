@@ -19,6 +19,7 @@
     "/dist"
   ],
   "scripts": {
+    "audit:examples": "(set -e && for ex in examples/*; do if [ $ex == 'examples/README.md' ]; then continue; fi; (cd $ex && npm audit fix); done)",
     "build:browser": "rollup -c",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build:es": "tsc -p tsconfig.es.json",
