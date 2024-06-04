@@ -266,6 +266,8 @@ export const enum ApiBlockType {
 
 /**
  * Canonical Set of API block types counted as Layout* elements
+ *
+ * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
  */
 export const LAYOUT_BLOCK_TYPES = new Set([
   ApiBlockType.LayoutFigure,
