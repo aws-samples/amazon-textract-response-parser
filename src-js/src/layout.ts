@@ -5,7 +5,7 @@
  */
 
 // Local Dependencies:
-import { ApiBlockType } from "./api-models/base";
+import { ApiBlockType, ApiRelationshipType, LAYOUT_BLOCK_TYPES } from "./api-models/base";
 import { ApiBlock } from "./api-models/document";
 import {
   ApiLayoutBlock,
@@ -27,6 +27,7 @@ import {
   IApiBlockWrapper,
   IBlockManager,
   indent,
+  INestedListOpts,
   IRenderable,
   IWithParentPage,
   PageHostedApiBlockWrapper,
@@ -58,6 +59,20 @@ export interface ILayoutItem<
    */
   geometry: Geometry<TBlock, TGeometryHost>;
   /**
+   * Number of layout items (any layout blocks) linked as direct children of this item
+   *
+   * Note this does *not* include any nested children. At the time of writing, only
+   * LAYOUT_LIST items link to LAYOUT_TEXT children - so no nesting should be present anyway.
+   */
+  get nLayoutChildrenDirect(): number;
+  /**
+   * *Total* number of layout items (any layout blocks) linked as direct or indirect children
+   *
+   * This includes any nested children. At the time of writing, only LAYOUT_LIST items link to
+   * LAYOUT_TEXT children - so no nesting should be present anyway.
+   */
+  get nLayoutChildrenTotal(): number;
+  /**
    * Number of text `Line`s in this object
    */
   get nTextLines(): number;
@@ -65,6 +80,22 @@ export interface ILayoutItem<
    * Parsed page layout collection that this element belongs to
    */
   parentLayout: LayoutGeneric<TPage>;
+  /**
+   * Layout items (any layout block types) linked as children to this item
+   *
+   * Supports recursing via `opts.deep`, but at the time of writing only LAYOUT_LIST items link to
+   * LAYOUT_TEXT children - so no nesting should be present anyway.
+   */
+  iterLayoutChildren(
+    opts: INestedListOpts,
+  ): Iterable<
+    ILayoutItem<
+      ApiLayoutBlock,
+      IApiBlockWrapper<ApiBlock> & IRenderable,
+      TPage,
+      ApiObjectWrapper<ApiLayoutBlock>
+    >
+  >;
   /**
    * Iterate through the text `Line`s in this object
    * @example
@@ -77,6 +108,22 @@ export interface ILayoutItem<
    * );
    */
   iterTextLines(): Iterable<LineGeneric<TPage>>;
+  /**
+   * Layout items (any layout block types) linked as children to this item
+   *
+   * Supports recursing via `opts.deep`, but at the time of writing only LAYOUT_LIST items link to
+   * LAYOUT_TEXT children - so no nesting should be present anyway.
+   */
+  listLayoutChildren(
+    opts?: INestedListOpts,
+  ): Array<
+    ILayoutItem<
+      ApiLayoutBlock,
+      IApiBlockWrapper<ApiBlock> & IRenderable,
+      TPage,
+      ApiObjectWrapper<ApiLayoutBlock>
+    >
+  >;
   /**
    * List the text `Line` items in this object
    */
@@ -109,8 +156,58 @@ class LayoutItemBaseGeneric<
   get geometry(): Geometry<ApiLayoutBlock, LayoutItemBaseGeneric<TBlock, TPage>> {
     return this._geometry;
   }
+  get nLayoutChildrenDirect(): number {
+    return this.listLayoutChildren({ deep: false }).length;
+  }
+  get nLayoutChildrenTotal(): number {
+    return this.listLayoutChildren({ deep: true }).length;
+  }
   get parentLayout(): LayoutGeneric<TPage> {
     return this._parentLayout;
+  }
+  iterLayoutChildren(
+    opts: INestedListOpts = {},
+  ): Iterable<
+    ILayoutItem<
+      ApiLayoutBlock,
+      IApiBlockWrapper<ApiBlock> & IRenderable,
+      TPage,
+      ApiObjectWrapper<ApiLayoutBlock>
+    >
+  > {
+    return getIterable(() => this.listLayoutChildren(opts));
+  }
+  listLayoutChildren(
+    opts: INestedListOpts = {},
+  ): Array<
+    ILayoutItem<
+      ApiLayoutBlock,
+      IApiBlockWrapper<ApiBlock> & IRenderable,
+      TPage,
+      ApiObjectWrapper<ApiLayoutBlock>
+    >
+  > {
+    let result: Array<
+      ILayoutItem<
+        ApiLayoutBlock,
+        IApiBlockWrapper<ApiBlock> & IRenderable,
+        TPage,
+        ApiObjectWrapper<ApiLayoutBlock>
+      >
+    > = [];
+    for (const childRaw of this.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
+      includeBlockTypes: LAYOUT_BLOCK_TYPES,
+    })) {
+      const child = childRaw as ILayoutItem<
+        ApiLayoutBlock,
+        IApiBlockWrapper<ApiBlock> & IRenderable,
+        TPage,
+        ApiObjectWrapper<ApiLayoutBlock>
+      >;
+      result.push(child);
+      if (opts.deep) result = result.concat(child.listLayoutChildren(opts));
+    }
+    return result;
   }
 }
 
@@ -896,9 +993,29 @@ export class LayoutGeneric<
   }
 
   /**
-   * Number of layout elements detected on the page
+   * *Total* number of layout elements detected on the page, including nested items
+   *
+   * @deprecated Migrate to `.nItemsTotal` for clarity.
    */
   get nItems(): number {
+    return this.nItemsTotal;
+  }
+  /**
+   * Number of *top-level* layout elements detected on the page
+   *
+   * Some LAYOUT_* blocks may point to others as children, and this count will only include
+   * top-level items.
+   */
+  get nItemsDirect(): number {
+    return this.listItems({ deep: false }).length;
+  }
+  /**
+   * *Total* number of layout elements detected on the page, including nested items
+   *
+   * Some LAYOUT_* blocks may point to others as children, and this count will include all layout
+   * items on the page, not just those at the top level.
+   */
+  get nItemsTotal(): number {
     return this._items.length;
   }
   /**
@@ -911,7 +1028,7 @@ export class LayoutGeneric<
    * Collects the plain text content of all layout items, connected by \n\n
    */
   get text(): string {
-    return this.listItems()
+    return this.listItems({ deep: false })
       .map((item) => item.text)
       .join("\n\n");
   }
@@ -923,23 +1040,35 @@ export class LayoutGeneric<
    * HTML in anything: Leave that up to `Page`, `Document`, etc.
    */
   html(): string {
-    return this.listItems()
+    return this.listItems({ deep: false })
       .map((item) => item.html())
       .join("\n");
   }
 
   /**
-   * Iterate through the Items in the Layout.
+   * Iterate through (just the top level, or all) the Items in the Layout.
    */
-  iterItems(): Iterable<LayoutItemGeneric<TPage>> {
-    return getIterable(() => this.listItems());
+  iterItems({ deep = true }: INestedListOpts = {}): Iterable<LayoutItemGeneric<TPage>> {
+    return getIterable(() => this.listItems({ deep }));
   }
 
   /**
-   * List the Items in the Layout.
+   * List (just the top level, or all) the Items in the Layout.
    */
-  listItems(): LayoutItemGeneric<TPage>[] {
-    return this._items.slice();
+  listItems({ deep = true }: INestedListOpts = {}): LayoutItemGeneric<TPage>[] {
+    const visitedIds = new Set<string>();
+    const result: LayoutItemGeneric<TPage>[] = [];
+    this._items.forEach((item) => {
+      if (visitedIds.has(item.id)) return;
+      result.push(item);
+      // PAGE children include all LAYOUT_* items, even those listed as children by each other.
+      // Therefore if the user wants `deep`, we can just return the whole _items list... But
+      // otherwise, we need to actively find and filter out the nested children:
+      if (!deep) {
+        item.listLayoutChildren({ deep: true }).forEach((child) => visitedIds.add(child.id));
+      }
+    });
+    return result;
   }
 
   /**
@@ -948,7 +1077,7 @@ export class LayoutGeneric<
    * This includes contained items' `str()`s, with bookends for clarity
    */
   str(): string {
-    const content = this.listItems()
+    const content = this.listItems({ deep: false })
       .map((item) => item.str())
       .join("\n\n");
     return [

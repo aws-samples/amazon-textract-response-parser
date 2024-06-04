@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.1 (2024-06-04)
+### Added
+- `iter/listRelatedItemsByRelType()` utility methods on all host-linked block wrapper objects, as most common use-cases for `relatedBlockIdsByRelType()` were just to then fetch the parsed wrapper for the retrieved block ID. Hope to further standardise across `childBlockIds`, `relatedBlockIdsByRelType`, and these new methods in a future release - but this might require some breaking changes to drive consistency in the handling of invalid JSONs (with missing block IDs, etc).
+- `iter/listLayoutChildren()` utility methods to generically traverse (nested?) child layout elements. We support generic & recursive access, but today the only known nesting is LAYOUT_LIST->LAYOUT_TEXT.
+### Fixed
+- `html()`, `str()` and `text` representations of page `Layout` no longer duplicate the content of `LAYOUT_TEXT` children under `LAYOUT_LIST` obects. ([#177](https://github.com/aws-samples/amazon-textract-response-parser/issues/177))
+### Deprecated
+- Page `Layout.nItems` is ambiguous: Prefer `.nItemsTotal` for previous behaviour (counting all direct and indirect children) or `.nItemsDirect` to count only top-level layout items, excluding those referenced as children by others.
+
 ## 0.4.0 (2024-02-06)
 ### Added
 - Load and navigate [Amazon Textract Layout analysis](https://aws.amazon.com/blogs/machine-learning/amazon-textracts-new-layout-feature-introduces-efficiencies-in-general-purpose-and-generative-ai-document-processing-tasks/) data. ([#164](https://github.com/aws-samples/amazon-textract-response-parser/issues/164))

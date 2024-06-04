@@ -126,6 +126,11 @@ export class QueryInstanceGeneric<TPage extends IBlockManager>
    * List this query instance's results, in raw Amazon Textract response order
    *
    * Any invalid relationship block IDs will be skipped from the list (no logs)
+   *
+   * TODO: Refactor to use list/iterRelatedItemsByRelType when ready for breaking change
+   *
+   * This refactor will require changing the handling of invalid JSONs (i.e. missing blocks) for
+   * more consistency between different modules of TRP.js.
    */
   protected _listResults(): QueryResultGeneric<TPage>[] {
     return this.relatedBlockIdsByRelType(ApiRelationshipType.Answer)

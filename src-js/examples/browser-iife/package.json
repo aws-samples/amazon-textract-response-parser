@@ -12,6 +12,6 @@
   "private": true,
   "dependencies": {
     "colors": "^1.4.0",
-    "puppeteer": "^21.7.0"
+    "puppeteer": "^22.9.0"
   }
 }

@@ -1103,7 +1103,7 @@ export class Page
    * For details see: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
    */
   get hasLayout(): boolean {
-    return this._layout.nItems > 0;
+    return this._layout.nItemsTotal > 0;
   }
   /**
    * The Textract Layout analysis result container for this page (even if the feature was disabled)

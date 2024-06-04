@@ -5,12 +5,16 @@ import {
   AggregationMethod,
   ApiBlockWrapper,
   DocumentMetadata,
+  IApiBlockWrapper,
+  IBlockManager,
+  PageHostedApiBlockWrapper,
   aggregate,
   argMax,
   escapeHtml,
   getIterable,
   indent,
   modalAvg,
+  normalizeOptionalSet,
 } from "../../src/base";
 
 // Precision limit for testing summary statistics
@@ -119,6 +123,30 @@ describe("argMax", () => {
   });
 });
 
+describe("normalizeOptionalSet", () => {
+  it("returns null for null/undefined inputs", () => {
+    expect(normalizeOptionalSet(undefined)).toBe(null);
+    expect(normalizeOptionalSet(null)).toBe(null);
+  });
+
+  it("returns the original object for set inputs", () => {
+    const demoSet = new Set([1, 2, "hi", null]);
+    expect(normalizeOptionalSet(demoSet)).toBe(demoSet);
+  });
+
+  it("converts arrays to sets", () => {
+    const demoList = [1, 2, "hi", null];
+    expect(normalizeOptionalSet(demoList)).toStrictEqual(new Set(demoList));
+  });
+
+  it("converts single values, even falsy ones, to sets", () => {
+    const testObj = { cool: "yes" };
+    expect(normalizeOptionalSet(testObj)).toStrictEqual(new Set([testObj]));
+    expect(normalizeOptionalSet(false)).toStrictEqual(new Set([false]));
+    expect(normalizeOptionalSet(0)).toStrictEqual(new Set([0]));
+  });
+});
+
 describe("documentMetadata", () => {
   it("fetches number of pages in document", () => {
     const docMetaDict = { Pages: 42 };
@@ -213,5 +241,261 @@ describe("ApiBlockWrapper", () => {
       wrapper.relatedBlockIdsByRelType([ApiRelationshipType.ComplexFeatures, ApiRelationshipType.Answer]),
     ).toStrictEqual(["DUMMY-2", "DUMMY-3", "DUMMY-7", "DUMMY-8"]);
     expect(wrapper.relatedBlockIdsByRelType(ApiRelationshipType.MergedCell)).toStrictEqual([]);
+  });
+});
+
+describe("PageHostedApiBlockWrapper", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dummyItemMap: { [id: string]: any } = {
+    "DUMMY-1": { id: "DUMMY-1", blockType: ApiBlockType.Line },
+    "DUMMY-2": { id: "DUMMY-2", blockType: ApiBlockType.QueryResult },
+    "DUMMY-3": { id: "DUMMY-3", blockType: ApiBlockType.QueryResult },
+    "DUMMY-4": { id: "DUMMY-4", blockType: ApiBlockType.Word },
+    "DUMMY-5": { id: "DUMMY-5", blockType: ApiBlockType.Word },
+    "DUMMY-6": { id: "DUMMY-6", blockType: ApiBlockType.Table },
+    "DUMMY-7": { id: "DUMMY-7", blockType: ApiBlockType.Word },
+    "DUMMY-8": { id: "DUMMY-8", blockType: ApiBlockType.Word },
+    "DUMMY-9": { id: "DUMMY-9", blockType: ApiBlockType.Key },
+    "DUMMY-0": { id: "DUMMY-0", blockType: ApiBlockType.Word },
+  };
+  const dummyHost: IBlockManager = {
+    getItemByBlockId: (
+      blockId: string,
+      allowBlockTypes?: ApiBlockType | ApiBlockType[] | null | undefined,
+    ) => {
+      const item = dummyItemMap[blockId];
+      if (allowBlockTypes) {
+        if (Array.isArray(allowBlockTypes)) {
+          if (!allowBlockTypes.includes(item.blockType)) {
+            throw new Error(`Item for block ${blockId} has unexpected type ${item.blockType}`);
+          }
+        } else if (allowBlockTypes !== item.blockType) {
+          throw new Error(`Item for block ${blockId} has unexpected type ${item.blockType}`);
+        }
+      }
+      return item;
+    },
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    registerParsedItem: (blockId: string, item: IApiBlockWrapper<ApiBlock>) => {},
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    getBlockById: (blockId: string) => undefined,
+    listBlocks: () => [],
+  };
+  const wrapper = new PageHostedApiBlockWrapper(
+    {
+      BlockType: ApiBlockType.Line,
+      Id: "DUMMY-1",
+      Relationships: [
+        {
+          Ids: ["DUMMY-2", "DUMMY-3"],
+          Type: ApiRelationshipType.Answer,
+        },
+        {
+          Ids: ["DUMMY-4", "DUMMY-5", "DUMMY-6"],
+          Type: ApiRelationshipType.Child,
+        },
+        {
+          Ids: ["DUMMY-7", "DUMMY-8"],
+          Type: ApiRelationshipType.ComplexFeatures,
+        },
+        {
+          Ids: ["DUMMY-9", "DUMMY-0"],
+          Type: ApiRelationshipType.Child,
+        },
+      ],
+    } as unknown as ApiBlock,
+    dummyHost,
+  );
+
+  it("lists and iterates related items by relationship type, ignoring others by default", () => {
+    const expectedItems = [
+      dummyItemMap["DUMMY-4"],
+      dummyItemMap["DUMMY-5"],
+      dummyItemMap["DUMMY-6"],
+      dummyItemMap["DUMMY-9"],
+      dummyItemMap["DUMMY-0"],
+    ];
+    expect(wrapper.listRelatedItemsByRelType(ApiRelationshipType.Child)).toStrictEqual(expectedItems);
+    let ixItem = 0;
+    for (const child of wrapper.iterRelatedItemsByRelType(ApiRelationshipType.Child)) {
+      expect(child).toBe(expectedItems[ixItem]);
+      ++ixItem;
+    }
+    expect(ixItem).toStrictEqual(expectedItems.length);
+  });
+
+  it("lists and iterates related items by multiple relationship types", () => {
+    const expectedItems = [
+      dummyItemMap["DUMMY-2"],
+      dummyItemMap["DUMMY-3"],
+      dummyItemMap["DUMMY-7"],
+      dummyItemMap["DUMMY-8"],
+    ];
+    expect(
+      wrapper.listRelatedItemsByRelType([ApiRelationshipType.Answer, ApiRelationshipType.ComplexFeatures]),
+    ).toStrictEqual(expectedItems);
+    let ixItem = 0;
+    for (const child of wrapper.iterRelatedItemsByRelType([
+      ApiRelationshipType.Answer,
+      ApiRelationshipType.ComplexFeatures,
+    ])) {
+      expect(child).toBe(expectedItems[ixItem]);
+      ++ixItem;
+    }
+    expect(ixItem).toStrictEqual(expectedItems.length);
+  });
+
+  it("filters related items by optional target block type(s)", () => {
+    const expectedItems = [dummyItemMap["DUMMY-4"], dummyItemMap["DUMMY-5"], dummyItemMap["DUMMY-0"]];
+    expect(
+      wrapper.listRelatedItemsByRelType(ApiRelationshipType.Child, { includeBlockTypes: ApiBlockType.Word }),
+    ).toStrictEqual(expectedItems);
+    expect(
+      wrapper.listRelatedItemsByRelType(ApiRelationshipType.Child, {
+        includeBlockTypes: [ApiBlockType.Word],
+      }),
+    ).toStrictEqual(expectedItems);
+    let ixItem = 0;
+    for (const child of wrapper.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
+      includeBlockTypes: ApiBlockType.Word,
+    })) {
+      expect(child).toBe(expectedItems[ixItem]);
+      ++ixItem;
+    }
+    expect(ixItem).toStrictEqual(expectedItems.length);
+    ixItem = 0;
+    for (const child of wrapper.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
+      includeBlockTypes: new Set([ApiBlockType.Word]),
+    })) {
+      expect(child).toBe(expectedItems[ixItem]);
+      ++ixItem;
+    }
+    expect(ixItem).toStrictEqual(expectedItems.length);
+  });
+
+  it("optionally raises errors for unexpected related item types", () => {
+    // Creating iterators should not throw:
+    let iter = wrapper.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
+      includeBlockTypes: ApiBlockType.Word,
+      onUnexpectedBlockType: "error",
+    });
+    // But running them should:
+    expect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for (const item of iter) {
+        // Consume the iterator to force error
+      }
+    }).toThrow(/DUMMY-6.*TABLE/);
+    iter = wrapper.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
+      includeBlockTypes: new Set([ApiBlockType.Word]),
+      onUnexpectedBlockType: "error",
+    });
+    expect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for (const item of iter) {
+        // Consume the iterator to force error
+      }
+    }).toThrow(/DUMMY-6.*TABLE/);
+    expect(() =>
+      wrapper.listRelatedItemsByRelType(ApiRelationshipType.Child, {
+        includeBlockTypes: ApiBlockType.Word,
+        onUnexpectedBlockType: "error",
+      }),
+    ).toThrow(/DUMMY-6.*TABLE/);
+    expect(() =>
+      wrapper.listRelatedItemsByRelType(ApiRelationshipType.Child, {
+        includeBlockTypes: [ApiBlockType.Word],
+        onUnexpectedBlockType: "error",
+      }),
+    ).toThrow(/DUMMY-6.*TABLE/);
+  });
+
+  it("can ignore a subset of unexpected related item types", () => {
+    let iter = wrapper.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
+      includeBlockTypes: ApiBlockType.Word,
+      onUnexpectedBlockType: "error",
+      skipBlockTypes: [ApiBlockType.Table],
+    });
+    expect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for (const item of iter) {
+        // Consume the iterator to force error
+      }
+    }).toThrow(/DUMMY-9.*KEY/);
+    iter = wrapper.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
+      includeBlockTypes: [ApiBlockType.Word],
+      onUnexpectedBlockType: "error",
+      skipBlockTypes: [ApiBlockType.Table],
+    });
+    expect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for (const item of iter) {
+        // Consume the iterator to force error
+      }
+    }).toThrow(/DUMMY-9.*KEY/);
+    expect(() =>
+      wrapper.listRelatedItemsByRelType(ApiRelationshipType.Child, {
+        includeBlockTypes: ApiBlockType.Word,
+        onUnexpectedBlockType: "error",
+        skipBlockTypes: [ApiBlockType.Table],
+      }),
+    ).toThrow(/DUMMY-9.*KEY/);
+    expect(() =>
+      wrapper.listRelatedItemsByRelType(ApiRelationshipType.Child, {
+        includeBlockTypes: [ApiBlockType.Word],
+        onUnexpectedBlockType: "error",
+        skipBlockTypes: [ApiBlockType.Table],
+      }),
+    ).toThrow(/DUMMY-9.*KEY/);
+
+    // Exceptions should only be thrown for blocks in the relevant identity type(s):
+    iter = wrapper.iterRelatedItemsByRelType(
+      [ApiRelationshipType.Answer, ApiRelationshipType.ComplexFeatures],
+      {
+        includeBlockTypes: [ApiBlockType.QueryResult, ApiBlockType.Word],
+        onUnexpectedBlockType: "error",
+      },
+    );
+    expect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for (const item of iter) {
+        // Consume the iterator to force error
+      }
+    }).not.toThrow();
+    expect(() =>
+      wrapper.listRelatedItemsByRelType([ApiRelationshipType.Answer, ApiRelationshipType.ComplexFeatures], {
+        includeBlockTypes: [ApiBlockType.QueryResult, ApiBlockType.Word],
+        onUnexpectedBlockType: "error",
+      }),
+    ).not.toThrow();
+  });
+
+  it("optionally logs warnings for unexpected related item types", () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
+
+    // We rely on the other tests for full coverage, so this one just explores a range of scenarios:
+
+    wrapper.listRelatedItemsByRelType(ApiRelationshipType.Child, {
+      includeBlockTypes: ApiBlockType.Word,
+      onUnexpectedBlockType: "warn",
+    });
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(warn.mock.calls[0][0]).toMatch(/DUMMY-6.*TABLE/);
+    expect(warn.mock.calls[1][0]).toMatch(/DUMMY-9.*KEY/);
+    warn.mockClear();
+
+    const iter = wrapper.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
+      includeBlockTypes: new Set([ApiBlockType.Word]),
+      onUnexpectedBlockType: "warn",
+      skipBlockTypes: [ApiBlockType.Key],
+    });
+    expect(warn).toHaveBeenCalledTimes(0);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for (const item of iter) {
+      // Consume the iterator
+    }
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toMatch(/DUMMY-6.*TABLE/);
+    warn.mockClear();
   });
 });

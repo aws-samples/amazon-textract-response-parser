@@ -139,6 +139,16 @@ export class DocumentMetadata extends ApiObjectWrapper<ApiDocumentMetadata> {
 }
 
 /**
+ * Configuration options for iterating nested lists
+ */
+export interface INestedListOpts {
+  /**
+   * Include nested children (true) or top-level items only (false)
+   */
+  deep?: boolean;
+}
+
+/**
  * Utility function to create an iterable from a collection
  *
  * Input is a collection *fetching function*, rather than a direct collection, in case a user
@@ -334,6 +344,38 @@ export function argMax(arr: number[]): { maxValue: number; maxIndex: number } {
 }
 
 /**
+ * Configuration options for filtering collections of Textract API "Block"s by type
+ */
+export interface IBlockTypeFilterOpts {
+  /**
+   * Only return API Blocks of the given type(s)
+   *
+   * By default, all blocks are returned unless otherwise documented.
+   */
+  includeBlockTypes?: ApiBlockType | ApiBlockType[] | Set<ApiBlockType> | null;
+  /**
+   * Action to take on encountering a Block of unexpected BlockType
+   *
+   * Set "error" to throw an error, "warn" to log a warning, or falsy to skip silently.
+   */
+  onUnexpectedBlockType?: "error" | "warn" | null;
+  /**
+   * Block types to silently skip/ignore in the results
+   */
+  skipBlockTypes?: ApiBlockType[] | Set<ApiBlockType> | null;
+}
+
+/**
+ * Normalize an optional Set-like or individual-object parameter to a Set
+ */
+export function normalizeOptionalSet<T>(raw: T | T[] | Set<T> | null | undefined): Set<T> | null {
+  if (raw instanceof Set) return raw;
+  if (raw === null || typeof raw === "undefined") return null;
+  if (Array.isArray(raw)) return new Set(raw);
+  return new Set([raw]);
+}
+
+/**
  * Interface for a (TextractDocument-like) object that can query Textract Blocks
  *
  * Unlike `IBlockManager` (below), implementers of `IDocBlocks` can only query underlying API Block
@@ -400,13 +442,56 @@ export interface IWithParentPage<TPage extends IBlockManager> {
 }
 
 /**
+ * Base interface for classes which wrap over a Textract API `Block` *and* are parent doc/page-aware
+ *
+ * Holding a reference to the hosting page/document allows direct lookup of related parsed objects.
+ */
+export interface IHostedApiBlockWrapper<TBlock extends ApiBlock, TPage extends IBlockManager>
+  extends ApiBlockWrapper<TBlock>,
+    IWithParentPage<TPage> {
+  /**
+   * Iterate through directly related Blocks' parsed wrapper items, with optional filters
+   *
+   * This low-level method traverses the `Relationships` of the wrapped block, but looks up the
+   * linked block IDs to return the actual parsed wrapper items for each target - since that's
+   * usually what you'll want to work with anyway.
+   *
+   * TODO: Can we guarantee returned items are also `IHostedApiBlockWrapper`s?
+   *
+   * @param relType Type(s) of relationships to consider
+   * @param opts Options for filtering the returned items
+   */
+  iterRelatedItemsByRelType(
+    relType: ApiRelationshipType | ApiRelationshipType[],
+    opts?: IBlockTypeFilterOpts,
+  ): Iterable<IApiBlockWrapper<ApiBlock>>;
+
+  /**
+   * List directly related Blocks' parsed wrapper items, with optional filters
+   *
+   * This low-level method traverses the `Relationships` of the wrapped block, but looks up the
+   * linked block IDs to return the actual parsed wrapper items for each target - since that's
+   * usually what you'll want to work with anyway.
+   *
+   * TODO: Can we guarantee returned items are also `IHostedApiBlockWrapper`s?
+   *
+   * @param relType Type(s) of relationships to consider
+   * @param opts Options for filtering the returned items
+   */
+  listRelatedItemsByRelType(
+    relType: ApiRelationshipType | ApiRelationshipType[],
+    opts?: IBlockTypeFilterOpts,
+  ): IApiBlockWrapper<ApiBlock>[];
+}
+
+/**
  * Base class for an item parser wrapping Textract `Block` object, that tracks its parent page
  *
  * Items derived from this base automatically register themselves with the parent page on construct
  */
 export class PageHostedApiBlockWrapper<TBlock extends ApiBlock, TPage extends IBlockManager>
   extends ApiBlockWrapper<TBlock>
-  implements IWithParentPage<TPage>
+  implements IHostedApiBlockWrapper<TBlock, TPage>
 {
   _parentPage: TPage;
 
@@ -418,5 +503,87 @@ export class PageHostedApiBlockWrapper<TBlock extends ApiBlock, TPage extends IB
 
   get parentPage(): TPage {
     return this._parentPage;
+  }
+
+  iterRelatedItemsByRelType(
+    relType: ApiRelationshipType | ApiRelationshipType[],
+    {
+      includeBlockTypes = null,
+      onUnexpectedBlockType = null,
+      skipBlockTypes = null,
+    }: IBlockTypeFilterOpts = {},
+  ): Iterable<IApiBlockWrapper<ApiBlock>> {
+    // Normalize optional set parameters:
+    includeBlockTypes = normalizeOptionalSet(includeBlockTypes);
+    skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
+
+    const getIterator = (): Iterator<IApiBlockWrapper<ApiBlock>> => {
+      const blockIds = this.relatedBlockIdsByRelType(relType);
+      let ixItem = 0;
+      return {
+        next: (): IteratorResult<IApiBlockWrapper<ApiBlock>> => {
+          while (ixItem < blockIds.length) {
+            const blockId = blockIds[ixItem++];
+            // TODO: Directly support IBlockTypeFilterOpts in getItemByBlockId maybe?
+            const item = this.parentPage.getItemByBlockId(blockId);
+            if (skipBlockTypes && skipBlockTypes.has(item.blockType)) continue;
+            if (includeBlockTypes && !includeBlockTypes.has(item.blockType)) {
+              if (!onUnexpectedBlockType) continue;
+              const msg = `(While iterating ${relType} relations of parent ${this.id}) Found unexpected block ID ${blockId} of type ${item.blockType} not in set ${Array.from(includeBlockTypes)}`;
+              if (onUnexpectedBlockType === "warn") {
+                console.warn(msg);
+                continue;
+              } else {
+                throw new Error(msg);
+              }
+            }
+            return {
+              done: false,
+              value: item,
+            };
+          }
+          return {
+            done: true,
+            value: undefined,
+          };
+        },
+      };
+    };
+    return {
+      [Symbol.iterator]: getIterator,
+    };
+  }
+
+  listRelatedItemsByRelType(
+    relType: ApiRelationshipType | ApiRelationshipType[],
+    {
+      includeBlockTypes = null,
+      onUnexpectedBlockType = null,
+      skipBlockTypes = null,
+    }: IBlockTypeFilterOpts = {},
+  ): IApiBlockWrapper<ApiBlock>[] {
+    // Normalize optional set parameters:
+    includeBlockTypes = normalizeOptionalSet(includeBlockTypes);
+    skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
+
+    const blockIds = this.relatedBlockIdsByRelType(relType);
+    // TODO: Directly support IBlockFilterOpts in getItemByBlockId maybe?
+    let items = blockIds.map((blockId) => this.parentPage.getItemByBlockId(blockId));
+    if (skipBlockTypes) items = items.filter((item) => !skipBlockTypes.has(item.blockType));
+    if (includeBlockTypes) {
+      items = items.filter((item) => {
+        if (includeBlockTypes.has(item.blockType)) return true;
+        if (!onUnexpectedBlockType) return false;
+        // Otherwise need to take action on this unexpected block:
+        const msg = `(While iterating ${relType} relations of parent ${this.id}) Found unexpected block ID ${item.id} of type ${item.blockType} not in set ${Array.from(includeBlockTypes)}`;
+        if (onUnexpectedBlockType === "warn") {
+          console.warn(msg);
+          return false;
+        } else {
+          throw new Error(msg);
+        }
+      });
+    }
+    return items;
   }
 }

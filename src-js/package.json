@@ -1,6 +1,6 @@
 {
   "name": "amazon-textract-response-parser",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Parse API responses from Amazon Textract with higher-level helpers",
   "keywords": [
     "aws",
@@ -19,6 +19,7 @@
     "/dist"
   ],
   "scripts": {
+    "audit:examples": "(set -e && for ex in examples/*; do if [ $ex == 'examples/README.md' ]; then continue; fi; (cd $ex && npm audit fix); done)",
     "build:browser": "rollup -c",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build:es": "tsc -p tsconfig.es.json",
@@ -36,7 +37,8 @@
     "test": "jest --coverage",
     "//": "# TODO: test:examples command is not yet cross-platform - requires bash-like shell",
     "test:examples": "(set -e && for ex in examples/*; do if [ $ex == 'examples/README.md' ]; then continue; fi; (cd $ex && npm install && npm run test); done)",
-    "test:unit": "jest --coverage --testPathPattern=test/unit"
+    "test:unit": "jest --coverage --testPathPattern=test/unit",
+    "update:examples": "(set -e && for ex in examples/*; do if [ $ex == 'examples/README.md' ]; then continue; fi; (cd $ex && npm update); done)"
   },
   "repository": {
     "directory": "src-js",
