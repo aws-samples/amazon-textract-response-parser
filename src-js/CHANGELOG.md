@@ -2,9 +2,11 @@
 
 ## In Development (targeting 0.4.2?)
 ### Added
-- `iter/listContent()` methods now support Block type filtering with `includeBlockTypes` (allow-list) and/or `skipBlockTypes` (deny-list) options.
+- `iter/listContent()`, `Layout.iter/listItems()`, and `LayoutItem.iter/ListLayoutChildren()` methods now support Block type filtering with `includeBlockTypes` (allow-list) and/or `skipBlockTypes` (deny-list) options.
+- Low-level relationship traversal via `iter/listRelatedItemsByRelType()` is now supported from `Page`s (PAGE blocks)
 ### Changed
 - `WithContent` mixin options refactored to more closely mirror `IBlockTypeFilterOpts`, because WithContent now aligns to `iter/listRelatedItemsByRelType()` under the hood. This will give us more fine-grained but standardised control of unexpected non-content child block type handling, per item class.
+- A page's `Layout` no longer keeps any internal list-of-items state, instead referring to the parent `PAGE` block's child relationships directly.
 
 ## 0.4.1 (2024-06-04)
 ### Added

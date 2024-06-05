@@ -26,11 +26,15 @@ import {
   getIterable,
   IApiBlockWrapper,
   IBlockManager,
+  IBlockTypeFilterOpts,
   indent,
   INestedListOpts,
   IRenderable,
   IWithParentPage,
+  IWithRelatedItems,
+  normalizeOptionalSet,
   PageHostedApiBlockWrapper,
+  setIntersection,
 } from "./base";
 import { buildWithContent, IWithContent, LineGeneric } from "./content";
 import { FieldGeneric, IWithForm } from "./form";
@@ -43,7 +47,10 @@ import { IWithTables, TableGeneric } from "./table";
 export interface ILayoutItem<
   TBlock extends ApiLayoutBlock,
   TContent extends IApiBlockWrapper<ApiBlock> & IRenderable,
-  TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+  TPage extends IBlockManager &
+    IWithForm<IBlockManager> &
+    IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+    IWithTables<IBlockManager>,
   TGeometryHost extends ApiObjectWrapper<TBlock>,
 > extends IApiBlockWrapper<TBlock>,
     IRenderable,
@@ -87,7 +94,7 @@ export interface ILayoutItem<
    * LAYOUT_TEXT children - so no nesting should be present anyway.
    */
   iterLayoutChildren(
-    opts: INestedListOpts,
+    opts: IBlockTypeFilterOpts & INestedListOpts,
   ): Iterable<
     ILayoutItem<
       ApiLayoutBlock,
@@ -115,7 +122,7 @@ export interface ILayoutItem<
    * LAYOUT_TEXT children - so no nesting should be present anyway.
    */
   listLayoutChildren(
-    opts?: INestedListOpts,
+    opts?: IBlockTypeFilterOpts & INestedListOpts,
   ): Array<
     ILayoutItem<
       ApiLayoutBlock,
@@ -135,7 +142,10 @@ export interface ILayoutItem<
  */
 class LayoutItemBaseGeneric<
     TBlock extends ApiLayoutBlock,
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends PageHostedApiBlockWrapper<TBlock, TPage>
   implements IWithGeometry<TBlock, LayoutItemBaseGeneric<TBlock, TPage>>, IWithParentPage<TPage>
@@ -165,7 +175,7 @@ class LayoutItemBaseGeneric<
     return this._parentLayout;
   }
   iterLayoutChildren(
-    opts: INestedListOpts = {},
+    opts: IBlockTypeFilterOpts & INestedListOpts = {},
   ): Iterable<
     ILayoutItem<
       ApiLayoutBlock,
@@ -176,9 +186,12 @@ class LayoutItemBaseGeneric<
   > {
     return getIterable(() => this.listLayoutChildren(opts));
   }
-  listLayoutChildren(
-    opts: INestedListOpts = {},
-  ): Array<
+  listLayoutChildren({
+    deep = false,
+    includeBlockTypes = null,
+    onUnexpectedBlockType = null,
+    skipBlockTypes = null,
+  }: IBlockTypeFilterOpts & INestedListOpts = {}): Array<
     ILayoutItem<
       ApiLayoutBlock,
       IApiBlockWrapper<ApiBlock> & IRenderable,
@@ -194,8 +207,15 @@ class LayoutItemBaseGeneric<
         ApiObjectWrapper<ApiLayoutBlock>
       >
     > = [];
+    if (includeBlockTypes) {
+      includeBlockTypes = setIntersection(LAYOUT_BLOCK_TYPES, normalizeOptionalSet(includeBlockTypes));
+    } else {
+      includeBlockTypes = LAYOUT_BLOCK_TYPES;
+    }
     for (const childRaw of this.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
-      includeBlockTypes: LAYOUT_BLOCK_TYPES,
+      includeBlockTypes,
+      onUnexpectedBlockType,
+      skipBlockTypes,
     })) {
       const child = childRaw as ILayoutItem<
         ApiLayoutBlock,
@@ -204,7 +224,15 @@ class LayoutItemBaseGeneric<
         ApiObjectWrapper<ApiLayoutBlock>
       >;
       result.push(child);
-      if (opts.deep) result = result.concat(child.listLayoutChildren(opts));
+      if (deep)
+        result = result.concat(
+          child.listLayoutChildren({
+            deep,
+            includeBlockTypes,
+            onUnexpectedBlockType,
+            skipBlockTypes,
+          }),
+        );
     }
     return result;
   }
@@ -220,7 +248,10 @@ class LayoutItemBaseGeneric<
  */
 class LayoutLineContainerItem<
   TBlock extends ApiLayoutBlock,
-  TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+  TPage extends IBlockManager &
+    IWithForm<IBlockManager> &
+    IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+    IWithTables<IBlockManager>,
 > extends buildWithContent<LineGeneric<IBlockManager>>({ contentTypes: [ApiBlockType.Line] })(
   LayoutItemBaseGeneric,
 )<TBlock, TPage> {
@@ -279,7 +310,10 @@ class LayoutLineContainerItem<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutFigure`.
  */
 export class LayoutFigureGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutFigureBlock, TPage>
   implements
@@ -314,7 +348,10 @@ export class LayoutFigureGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutFooter`.
  */
 export class LayoutFooterGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutFooterBlock, TPage>
   implements
@@ -345,7 +382,10 @@ export class LayoutFooterGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutHeader`.
  */
 export class LayoutHeaderGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutHeaderBlock, TPage>
   implements
@@ -376,7 +416,10 @@ export class LayoutHeaderGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutKeyValue`.
  */
 export class LayoutKeyValueGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutKeyValueBlock, TPage>
   implements
@@ -518,7 +561,10 @@ export class LayoutKeyValueGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutPageNumber`.
  */
 export class LayoutPageNumberGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutPageNumberBlock, TPage>
   implements
@@ -547,7 +593,10 @@ export class LayoutPageNumberGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutSectionHeader`.
  */
 export class LayoutSectionHeaderGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutSectionHeaderBlock, TPage>
   implements
@@ -576,7 +625,10 @@ export class LayoutSectionHeaderGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutTable`.
  */
 export class LayoutTableGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutTableBlock, TPage>
   implements
@@ -750,7 +802,10 @@ export class LayoutTableGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutText`.
  */
 export class LayoutTextGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutTextBlock, TPage>
   implements
@@ -782,7 +837,10 @@ export class LayoutTextGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutTitle`.
  */
 export class LayoutTitleGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutTitleBlock, TPage>
   implements
@@ -811,15 +869,28 @@ export class LayoutTitleGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutList`.
  */
 export class LayoutListGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends buildWithContent<
-    LayoutTextGeneric<IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>>
+    LayoutTextGeneric<
+      IBlockManager &
+        IWithForm<IBlockManager> &
+        IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+        IWithTables<IBlockManager>
+    >
   >({ contentTypes: [ApiBlockType.LayoutText] })(LayoutItemBaseGeneric)<ApiLayoutListBlock, TPage>
   implements
     ILayoutItem<
       ApiLayoutListBlock,
-      LayoutTextGeneric<IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>>,
+      LayoutTextGeneric<
+        IBlockManager &
+          IWithForm<IBlockManager> &
+          IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+          IWithTables<IBlockManager>
+      >,
       TPage,
       LayoutItemBaseGeneric<ApiLayoutListBlock, TPage>
     >
@@ -919,7 +990,10 @@ export class LayoutListGeneric<
  * TypeScript type collecting all possible TRP parsed objects corresponding to layout elements
  */
 export type LayoutItemGeneric<
-  TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+  TPage extends IBlockManager &
+    IWithForm<IBlockManager> &
+    IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+    IWithTables<IBlockManager>,
 > =
   | LayoutFigureGeneric<TPage>
   | LayoutFooterGeneric<TPage>
@@ -938,48 +1012,50 @@ export type LayoutItemGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/Layout`.
  */
 export class LayoutGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   implements IRenderable, IWithParentPage<TPage>
 {
-  _items: LayoutItemGeneric<TPage>[];
   _parentPage: TPage;
 
   constructor(layoutBlocks: ApiLayoutBlock[], parentPage: TPage) {
-    this._items = [];
     this._parentPage = parentPage;
 
     layoutBlocks.forEach((block) => {
+      // The PageHostedBlockWrappers will automatically self-register with the manager (page):
       switch (block.BlockType) {
         case ApiBlockType.LayoutFigure:
-          this._items.push(new LayoutFigureGeneric(block, this));
+          new LayoutFigureGeneric(block, this);
           break;
         case ApiBlockType.LayoutHeader:
-          this._items.push(new LayoutHeaderGeneric(block, this));
+          new LayoutHeaderGeneric(block, this);
           break;
         case ApiBlockType.LayoutFooter:
-          this._items.push(new LayoutFooterGeneric(block, this));
+          new LayoutFooterGeneric(block, this);
           break;
         case ApiBlockType.LayoutKeyValue:
-          this._items.push(new LayoutKeyValueGeneric(block, this));
+          new LayoutKeyValueGeneric(block, this);
           break;
         case ApiBlockType.LayoutList:
-          this._items.push(new LayoutListGeneric(block, this));
+          new LayoutListGeneric(block, this);
           break;
         case ApiBlockType.LayoutPageNumber:
-          this._items.push(new LayoutPageNumberGeneric(block, this));
+          new LayoutPageNumberGeneric(block, this);
           break;
         case ApiBlockType.LayoutSectionHeader:
-          this._items.push(new LayoutSectionHeaderGeneric(block, this));
+          new LayoutSectionHeaderGeneric(block, this);
           break;
         case ApiBlockType.LayoutTable:
-          this._items.push(new LayoutTableGeneric(block, this));
+          new LayoutTableGeneric(block, this);
           break;
         case ApiBlockType.LayoutText:
-          this._items.push(new LayoutTextGeneric(block, this));
+          new LayoutTextGeneric(block, this);
           break;
         case ApiBlockType.LayoutTitle:
-          this._items.push(new LayoutTitleGeneric(block, this));
+          new LayoutTitleGeneric(block, this);
           break;
         default:
           console.warn(
@@ -1015,7 +1091,7 @@ export class LayoutGeneric<
    * items on the page, not just those at the top level.
    */
   get nItemsTotal(): number {
-    return this._items.length;
+    return this.listItems({ deep: true }).length;
   }
   /**
    * Parsed TRP.js page to which this Layout corresponds
@@ -1047,26 +1123,58 @@ export class LayoutGeneric<
   /**
    * Iterate through (just the top level, or all) the Items in the Layout.
    */
-  iterItems({ deep = true }: INestedListOpts = {}): Iterable<LayoutItemGeneric<TPage>> {
-    return getIterable(() => this.listItems({ deep }));
+  iterItems({
+    deep = true,
+    includeBlockTypes = null,
+    onUnexpectedBlockType = null,
+    skipBlockTypes = null,
+  }: IBlockTypeFilterOpts & INestedListOpts = {}): Iterable<LayoutItemGeneric<TPage>> {
+    return getIterable(() =>
+      this.listItems({ deep, includeBlockTypes, onUnexpectedBlockType, skipBlockTypes }),
+    );
   }
 
   /**
    * List (just the top level, or all) the Items in the Layout.
    */
-  listItems({ deep = true }: INestedListOpts = {}): LayoutItemGeneric<TPage>[] {
+  listItems({
+    deep = true,
+    includeBlockTypes = null,
+    onUnexpectedBlockType = null,
+    skipBlockTypes = null,
+  }: IBlockTypeFilterOpts & INestedListOpts = {}): LayoutItemGeneric<TPage>[] {
+    let normIncludeBlockTypes = includeBlockTypes;
+    if (normIncludeBlockTypes) {
+      normIncludeBlockTypes = normalizeOptionalSet(normIncludeBlockTypes);
+      normIncludeBlockTypes = setIntersection(LAYOUT_BLOCK_TYPES, normIncludeBlockTypes);
+    } else {
+      normIncludeBlockTypes = LAYOUT_BLOCK_TYPES;
+    }
+
     const visitedIds = new Set<string>();
     const result: LayoutItemGeneric<TPage>[] = [];
-    this._items.forEach((item) => {
-      if (visitedIds.has(item.id)) return;
+
+    for (const item of this.parentPage.listRelatedItemsByRelType(ApiRelationshipType.Child, {
+      includeBlockTypes: normIncludeBlockTypes,
+      onUnexpectedBlockType,
+      skipBlockTypes, // TODO: Specify base PAGE skipBlockTypes for better warn/error behaviour
+    }) as Iterable<LayoutItemGeneric<TPage>>) {
+      if (visitedIds.has(item.id)) continue;
       result.push(item);
       // PAGE children include all LAYOUT_* items, even those listed as children by each other.
       // Therefore if the user wants `deep`, we can just return the whole _items list... But
       // otherwise, we need to actively find and filter out the nested children:
       if (!deep) {
-        item.listLayoutChildren({ deep: true }).forEach((child) => visitedIds.add(child.id));
+        item
+          .listLayoutChildren({
+            deep: true,
+            includeBlockTypes,
+            onUnexpectedBlockType,
+            skipBlockTypes,
+          })
+          .forEach((child) => visitedIds.add(child.id));
       }
-    });
+    }
     return result;
   }
 

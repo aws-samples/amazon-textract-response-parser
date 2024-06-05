@@ -3,7 +3,7 @@
  */
 
 // Local Dependencies:
-import { ApiBlockType, isLayoutBlockType } from "./api-models/base";
+import { ApiBlockType, ApiRelationshipType, isLayoutBlockType } from "./api-models/base";
 import { ApiLineBlock } from "./api-models/content";
 import { ApiBlock, ApiPageBlock } from "./api-models/document";
 import { ApiKeyBlock, ApiKeyValueEntityType, ApiKeyValueSetBlock } from "./api-models/form";
@@ -26,6 +26,10 @@ import {
   IBlockManager,
   IRenderable,
   IApiBlockWrapper,
+  IWithRelatedItems,
+  IBlockTypeFilterOpts,
+  _implIterRelatedItemsByRelType,
+  _implListRelatedItemsByRelType,
 } from "./base";
 import { LineGeneric, SelectionElement, Signature, Word } from "./content";
 import {
@@ -173,10 +177,17 @@ export interface HeaderFooterSegmentModelParams {
  *
  * Wraps an Amazon Textract API `PAGE` Block, with utilities for analysis. You'll usually create
  * this via a `TextractDocument`, rather than directly.
+ *
+ * TODO: Should we be making TextractDocument the block manager, rather than Page?
  */
 export class Page
   extends ApiBlockWrapper<ApiPageBlock>
-  implements IBlockManager, IRenderable, IWithForm<Page>, IWithTables<Page>
+  implements
+    IBlockManager,
+    IRenderable,
+    IWithForm<Page>,
+    IWithRelatedItems<IApiBlockWrapper<ApiBlock>>,
+    IWithTables<Page>
 {
   _blocks: ApiBlock[];
   _content: Array<LineGeneric<Page> | TableGeneric<Page> | FieldGeneric<Page>>;
@@ -957,6 +968,13 @@ export class Page
     return getIterable(() => this._lines);
   }
 
+  iterRelatedItemsByRelType(
+    relType: ApiRelationshipType | ApiRelationshipType[],
+    opts: IBlockTypeFilterOpts = {},
+  ): Iterable<IApiBlockWrapper<ApiBlock>> {
+    return _implIterRelatedItemsByRelType(relType, opts, this, this);
+  }
+
   /**
    * Iterate through any signatures detected on the page
    *
@@ -1021,6 +1039,13 @@ export class Page
    */
   listLines(): LineGeneric<Page>[] {
     return this._lines.slice();
+  }
+
+  listRelatedItemsByRelType(
+    relType: ApiRelationshipType | ApiRelationshipType[],
+    opts: IBlockTypeFilterOpts = {},
+  ): IApiBlockWrapper<ApiBlock>[] {
+    return _implListRelatedItemsByRelType(relType, opts, this, this);
   }
 
   /**

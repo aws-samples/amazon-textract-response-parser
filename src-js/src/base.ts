@@ -471,13 +471,11 @@ export interface IWithParentPage<TPage extends IBlockManager> {
 }
 
 /**
- * Base interface for classes which wrap over a Textract API `Block` *and* are parent doc/page-aware
+ * Interface for usually (API block wrapper) objects that can traverse related parsed objects
  *
- * Holding a reference to the hosting page/document allows direct lookup of related parsed objects.
+ * TODO: Should we enforce/guarantee related items are also `I{Hosted?}ApiBlockWrapper`s?
  */
-export interface IHostedApiBlockWrapper<TBlock extends ApiBlock, TPage extends IBlockManager>
-  extends ApiBlockWrapper<TBlock>,
-    IWithParentPage<TPage> {
+export interface IWithRelatedItems<TRelated extends IApiBlockWrapper<ApiBlock>> {
   /**
    * Iterate through directly related Blocks' parsed wrapper items, with optional filters
    *
@@ -485,15 +483,13 @@ export interface IHostedApiBlockWrapper<TBlock extends ApiBlock, TPage extends I
    * linked block IDs to return the actual parsed wrapper items for each target - since that's
    * usually what you'll want to work with anyway.
    *
-   * TODO: Can we guarantee returned items are also `IHostedApiBlockWrapper`s?
-   *
    * @param relType Type(s) of relationships to consider
    * @param opts Options for filtering the returned items
    */
   iterRelatedItemsByRelType(
     relType: ApiRelationshipType | ApiRelationshipType[],
     opts?: IBlockTypeFilterOpts,
-  ): Iterable<IApiBlockWrapper<ApiBlock>>;
+  ): Iterable<TRelated>;
 
   /**
    * List directly related Blocks' parsed wrapper items, with optional filters
@@ -502,16 +498,134 @@ export interface IHostedApiBlockWrapper<TBlock extends ApiBlock, TPage extends I
    * linked block IDs to return the actual parsed wrapper items for each target - since that's
    * usually what you'll want to work with anyway.
    *
-   * TODO: Can we guarantee returned items are also `IHostedApiBlockWrapper`s?
-   *
    * @param relType Type(s) of relationships to consider
    * @param opts Options for filtering the returned items
    */
   listRelatedItemsByRelType(
     relType: ApiRelationshipType | ApiRelationshipType[],
     opts?: IBlockTypeFilterOpts,
-  ): IApiBlockWrapper<ApiBlock>[];
+  ): TRelated[];
 }
+
+/**
+ * INTERNAL shared implementation for iterRelatedItemsByRelType
+ *
+ * Most block wrappers will inherit this method via `PageHostedApiBlockWrapper`, but `Page` itself
+ * cannot: Because currently `Page` is the block manager for its own block. This layer lets us
+ * provide the `IWithRelatedItems` interface on `Page` without duplication.
+ *
+ * TODO: Maybe we should make Page more like a regular block, and TextractDocument the manager?
+ *
+ * @param me Block wrapper from which relations should be traversed
+ * @param host IBlockManager that can be used to look up related blocks + parsed items
+ */
+export function _implIterRelatedItemsByRelType(
+  relType: ApiRelationshipType | ApiRelationshipType[],
+  {
+    includeBlockTypes = null,
+    onUnexpectedBlockType = null,
+    skipBlockTypes = null,
+  }: IBlockTypeFilterOpts = {},
+  me: IApiBlockWrapper<ApiBlock>,
+  host: IBlockManager,
+): Iterable<IApiBlockWrapper<ApiBlock>> {
+  // Normalize optional set parameters:
+  includeBlockTypes = normalizeOptionalSet(includeBlockTypes);
+  skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
+
+  const getIterator = (): Iterator<IApiBlockWrapper<ApiBlock>> => {
+    const blockIds = me.relatedBlockIdsByRelType(relType);
+    let ixItem = 0;
+    return {
+      next: (): IteratorResult<IApiBlockWrapper<ApiBlock>> => {
+        while (ixItem < blockIds.length) {
+          const blockId = blockIds[ixItem++];
+          // TODO: Directly support IBlockTypeFilterOpts in getItemByBlockId maybe?
+          const item = host.getItemByBlockId(blockId);
+          if (skipBlockTypes && skipBlockTypes.has(item.blockType)) continue;
+          if (includeBlockTypes && !includeBlockTypes.has(item.blockType)) {
+            if (!onUnexpectedBlockType) continue;
+            const msg = `(While iterating ${relType} relations of parent ${me.id}) Found unexpected block ID ${blockId} of type ${item.blockType} not in set ${Array.from(includeBlockTypes)}`;
+            if (onUnexpectedBlockType === "warn") {
+              console.warn(msg);
+              continue;
+            } else {
+              throw new Error(msg);
+            }
+          }
+          return {
+            done: false,
+            value: item,
+          };
+        }
+        return {
+          done: true,
+          value: undefined,
+        };
+      },
+    };
+  };
+  return {
+    [Symbol.iterator]: getIterator,
+  };
+}
+
+/**
+ * INTERNAL shared implementation for listRelatedItemsByRelType
+ *
+ * Most block wrappers will inherit this method via `PageHostedApiBlockWrapper`, but `Page` itself
+ * cannot: Because currently `Page` is the block manager for its own block. This layer lets us
+ * provide the `IWithRelatedItems` interface on `Page` without duplication.
+ *
+ * TODO: Maybe we should make Page more like a regular block, and TextractDocument the manager?
+ *
+ * @param me Block wrapper from which relations should be traversed
+ * @param host IBlockManager that can be used to look up related blocks + parsed items
+ */
+export function _implListRelatedItemsByRelType(
+  relType: ApiRelationshipType | ApiRelationshipType[],
+  {
+    includeBlockTypes = null,
+    onUnexpectedBlockType = null,
+    skipBlockTypes = null,
+  }: IBlockTypeFilterOpts = {},
+  me: IApiBlockWrapper<ApiBlock>,
+  host: IBlockManager,
+): IApiBlockWrapper<ApiBlock>[] {
+  // Normalize optional set parameters:
+  includeBlockTypes = normalizeOptionalSet(includeBlockTypes);
+  skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
+
+  const blockIds = me.relatedBlockIdsByRelType(relType);
+  // TODO: Directly support IBlockFilterOpts in getItemByBlockId maybe?
+  let items = blockIds.map((blockId) => host.getItemByBlockId(blockId));
+  if (skipBlockTypes) items = items.filter((item) => !skipBlockTypes.has(item.blockType));
+  if (includeBlockTypes) {
+    items = items.filter((item) => {
+      if (includeBlockTypes.has(item.blockType)) return true;
+      if (!onUnexpectedBlockType) return false;
+      // Otherwise need to take action on this unexpected block:
+      const msg = `(While iterating ${relType} relations of parent ${me.id}) Found unexpected block ID ${item.id} of type ${item.blockType} not in set ${Array.from(includeBlockTypes)}`;
+      if (onUnexpectedBlockType === "warn") {
+        console.warn(msg);
+        return false;
+      } else {
+        throw new Error(msg);
+      }
+    });
+  }
+  return items;
+}
+
+/**
+ * Base interface for classes which wrap over a Textract API `Block` *and* are parent doc/page-aware
+ *
+ * Holding a reference to the hosting page/document allows direct lookup of related parsed objects.
+ */
+export interface IHostedApiBlockWrapper<TBlock extends ApiBlock, TPage extends IBlockManager>
+  extends ApiBlockWrapper<TBlock>,
+    IWithParentPage<TPage>,
+    IWithRelatedItems<IApiBlockWrapper<ApiBlock>> {}
 
 /**
  * Base class for an item parser wrapping Textract `Block` object, that tracks its parent page
@@ -536,83 +650,15 @@ export class PageHostedApiBlockWrapper<TBlock extends ApiBlock, TPage extends IB
 
   iterRelatedItemsByRelType(
     relType: ApiRelationshipType | ApiRelationshipType[],
-    {
-      includeBlockTypes = null,
-      onUnexpectedBlockType = null,
-      skipBlockTypes = null,
-    }: IBlockTypeFilterOpts = {},
+    opts: IBlockTypeFilterOpts = {},
   ): Iterable<IApiBlockWrapper<ApiBlock>> {
-    // Normalize optional set parameters:
-    includeBlockTypes = normalizeOptionalSet(includeBlockTypes);
-    skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
-
-    const getIterator = (): Iterator<IApiBlockWrapper<ApiBlock>> => {
-      const blockIds = this.relatedBlockIdsByRelType(relType);
-      let ixItem = 0;
-      return {
-        next: (): IteratorResult<IApiBlockWrapper<ApiBlock>> => {
-          while (ixItem < blockIds.length) {
-            const blockId = blockIds[ixItem++];
-            // TODO: Directly support IBlockTypeFilterOpts in getItemByBlockId maybe?
-            const item = this.parentPage.getItemByBlockId(blockId);
-            if (skipBlockTypes && skipBlockTypes.has(item.blockType)) continue;
-            if (includeBlockTypes && !includeBlockTypes.has(item.blockType)) {
-              if (!onUnexpectedBlockType) continue;
-              const msg = `(While iterating ${relType} relations of parent ${this.id}) Found unexpected block ID ${blockId} of type ${item.blockType} not in set ${Array.from(includeBlockTypes)}`;
-              if (onUnexpectedBlockType === "warn") {
-                console.warn(msg);
-                continue;
-              } else {
-                throw new Error(msg);
-              }
-            }
-            return {
-              done: false,
-              value: item,
-            };
-          }
-          return {
-            done: true,
-            value: undefined,
-          };
-        },
-      };
-    };
-    return {
-      [Symbol.iterator]: getIterator,
-    };
+    return _implIterRelatedItemsByRelType(relType, opts, this, this.parentPage);
   }
 
   listRelatedItemsByRelType(
     relType: ApiRelationshipType | ApiRelationshipType[],
-    {
-      includeBlockTypes = null,
-      onUnexpectedBlockType = null,
-      skipBlockTypes = null,
-    }: IBlockTypeFilterOpts = {},
+    opts: IBlockTypeFilterOpts = {},
   ): IApiBlockWrapper<ApiBlock>[] {
-    // Normalize optional set parameters:
-    includeBlockTypes = normalizeOptionalSet(includeBlockTypes);
-    skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
-
-    const blockIds = this.relatedBlockIdsByRelType(relType);
-    // TODO: Directly support IBlockFilterOpts in getItemByBlockId maybe?
-    let items = blockIds.map((blockId) => this.parentPage.getItemByBlockId(blockId));
-    if (skipBlockTypes) items = items.filter((item) => !skipBlockTypes.has(item.blockType));
-    if (includeBlockTypes) {
-      items = items.filter((item) => {
-        if (includeBlockTypes.has(item.blockType)) return true;
-        if (!onUnexpectedBlockType) return false;
-        // Otherwise need to take action on this unexpected block:
-        const msg = `(While iterating ${relType} relations of parent ${this.id}) Found unexpected block ID ${item.id} of type ${item.blockType} not in set ${Array.from(includeBlockTypes)}`;
-        if (onUnexpectedBlockType === "warn") {
-          console.warn(msg);
-          return false;
-        } else {
-          throw new Error(msg);
-        }
-      });
-    }
-    return items;
+    return _implListRelatedItemsByRelType(relType, opts, this, this.parentPage);
   }
 }

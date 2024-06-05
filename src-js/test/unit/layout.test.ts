@@ -130,6 +130,28 @@ describe("LayoutItemBase and LayoutText", () => {
     }
   });
 
+  it("filters nested layout items", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    // LAYOUT_LIST items should link to LAYOUT_TEXT children:
+    const lsBlock = finDocResponseJson.Blocks.find(
+      (block) => block.BlockType === ApiBlockType.LayoutList,
+    ) as ApiLayoutListBlock;
+    const lsBlockCids = (lsBlock.Relationships || [])[0].Ids;
+    expect(lsBlockCids.length).toBeGreaterThan(0);
+    const ls = page.layout
+      .listItems()
+      .find((ls) => ls.blockType === ApiBlockType.LayoutList) as LayoutListGeneric<Page>;
+    expect(ls).toBeTruthy();
+    expect(ls.listLayoutChildren().map((c) => c.id)).toStrictEqual(lsBlockCids);
+    expect(
+      ls.listLayoutChildren({ includeBlockTypes: [ApiBlockType.LayoutText] }).map((c) => c.id),
+    ).toStrictEqual(lsBlockCids);
+    expect(ls.listLayoutChildren({ includeBlockTypes: [ApiBlockType.LayoutTable] }).length).toStrictEqual(0);
+    expect(ls.listLayoutChildren({ skipBlockTypes: [ApiBlockType.LayoutText] }).length).toStrictEqual(0);
+  });
+
   it("renders semantic representations", () => {
     const doc = new TextractDocument(finDocResponseJson);
     const page = doc.pageNumber(1);
@@ -454,6 +476,40 @@ describe("Layout", () => {
     expect(layoutItem.parentPage).toBe(page);
     expect(layoutItem.confidence).toBeGreaterThan(1); // (<1% very unlikely)
     expect(layoutItem.confidence).toBeLessThanOrEqual(100);
+  });
+
+  it("filters layout items by allow-listing block types", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const iterItems = [...page.layout.iterItems({ includeBlockTypes: ApiBlockType.LayoutHeader })];
+    const listItems = page.layout.listItems({ includeBlockTypes: ApiBlockType.LayoutHeader });
+    expect(iterItems.length).toStrictEqual(listItems.length);
+    expect(listItems.length).toStrictEqual(2);
+  });
+
+  it("filters layout items by skipping block types", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const iterItems = [
+      ...page.layout.iterItems({ skipBlockTypes: [ApiBlockType.LayoutHeader, ApiBlockType.LayoutFooter] }),
+    ];
+    const listItems = page.layout.listItems({
+      skipBlockTypes: [ApiBlockType.LayoutHeader, ApiBlockType.LayoutFooter],
+    });
+    expect(iterItems.length).toStrictEqual(listItems.length);
+    expect(listItems.length).toStrictEqual(12);
+  });
+
+  it("cannot broaden filters beyond Layout* elements", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const iterItems = [...page.layout.iterItems({ includeBlockTypes: [ApiBlockType.Line] })];
+    const listItems = page.layout.listItems({ includeBlockTypes: [ApiBlockType.Line] });
+    expect(iterItems.length).toStrictEqual(0);
+    expect(listItems.length).toStrictEqual(0);
   });
 
   it("loads and navigates top-level layout elements per page", () => {
