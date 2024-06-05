@@ -1,5 +1,11 @@
 # Changelog
 
+## In Development (targeting 0.4.2?)
+### Added
+- `iter/listContent()` methods now support Block type filtering with `includeBlockTypes` (allow-list) and/or `skipBlockTypes` (deny-list) options.
+### Changed
+- `WithContent` mixin options refactored to more closely mirror `IBlockTypeFilterOpts`, because WithContent now aligns to `iter/listRelatedItemsByRelType()` under the hood. This will give us more fine-grained but standardised control of unexpected non-content child block type handling, per item class.
+
 ## 0.4.1 (2024-06-04)
 ### Added
 - `iter/listRelatedItemsByRelType()` utility methods on all host-linked block wrapper objects, as most common use-cases for `relatedBlockIdsByRelType()` were just to then fetch the parsed wrapper for the retrieved block ID. Hope to further standardise across `childBlockIds`, `relatedBlockIdsByRelType`, and these new methods in a future release - but this might require some breaking changes to drive consistency in the handling of invalid JSONs (with missing block IDs, etc).

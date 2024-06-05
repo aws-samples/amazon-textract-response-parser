@@ -15,6 +15,8 @@ import {
   indent,
   modalAvg,
   normalizeOptionalSet,
+  setIntersection,
+  setUnion,
 } from "../../src/base";
 
 // Precision limit for testing summary statistics
@@ -144,6 +146,50 @@ describe("normalizeOptionalSet", () => {
     expect(normalizeOptionalSet(testObj)).toStrictEqual(new Set([testObj]));
     expect(normalizeOptionalSet(false)).toStrictEqual(new Set([false]));
     expect(normalizeOptionalSet(0)).toStrictEqual(new Set([0]));
+  });
+});
+
+describe("setIntersection", () => {
+  it("returns a new empty set for empty inputs", () => {
+    const [a, b] = [new Set(), new Set()];
+    const result = setIntersection(a, b);
+    expect(result).toStrictEqual(new Set());
+    expect(result).not.toBe(a);
+    expect(result).not.toBe(b);
+  });
+
+  it("intersects sets with diverse inputs", () => {
+    const [a, b] = [new Set([null, undefined, 0, 1, false, true, ""]), new Set([0, true, "", {}, "hi"])];
+    const result = setIntersection(a, b);
+    expect(result).toStrictEqual(new Set([0, true, ""]));
+  });
+
+  it("intersects disjoint sets to empty", () => {
+    const [a, b] = [new Set([null, undefined, 0, 1, false, true, ""]), new Set([{}, "hi"])];
+    const result = setIntersection(a, b);
+    expect(result).toStrictEqual(new Set());
+  });
+});
+
+describe("setUnion", () => {
+  it("returns a new empty set for empty inputs", () => {
+    const [a, b] = [new Set(), new Set()];
+    const result = setUnion(a, b);
+    expect(result).toStrictEqual(new Set());
+    expect(result).not.toBe(a);
+    expect(result).not.toBe(b);
+  });
+
+  it("unions sets with diverse inputs", () => {
+    const [a, b] = [new Set([null, undefined, 0, 1, false, true, ""]), new Set([0, true, "", {}, "hi"])];
+    const result = setUnion(a, b);
+    expect(result).toStrictEqual(new Set([null, undefined, 0, 1, false, true, "", {}, "hi"]));
+  });
+
+  it("unions disjoint sets", () => {
+    const [a, b] = [new Set([null, undefined, 0, 1, false, true, ""]), new Set([{}, "hi"])];
+    const result = setUnion(a, b);
+    expect(result).toStrictEqual(new Set([null, undefined, 0, 1, false, true, "", {}, "hi"]));
   });
 });
 

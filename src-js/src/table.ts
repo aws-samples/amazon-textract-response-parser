@@ -24,9 +24,10 @@ import {
   IRenderable,
   PageHostedApiBlockWrapper,
   Constructor,
-  IApiBlockWrapper,
   IWithParentPage,
   IWithText,
+  IBlockTypeFilterOpts,
+  IHostedApiBlockWrapper,
 } from "./base";
 import { buildWithContent, IWithContent, SelectionElement, Signature, WithWords, Word } from "./content";
 import { Geometry } from "./geometry";
@@ -38,7 +39,7 @@ import { Geometry } from "./geometry";
  */
 class CellBaseGeneric<TBlock extends ApiCellBlock | ApiMergedCellBlock, TPage extends IBlockManager>
   extends PageHostedApiBlockWrapper<TBlock, TPage>
-  implements IWithParentPage<TPage>
+  implements IHostedApiBlockWrapper<TBlock, TPage>
 {
   _geometry: Geometry<TBlock, CellBaseGeneric<TBlock, TPage>>;
   _parentTable: TableGeneric<TPage>;
@@ -120,7 +121,7 @@ function WithCellBaseProps<
   TBlock extends ApiCellBlock | ApiMergedCellBlock,
   TPage extends IBlockManager,
   T extends Constructor<
-    IApiBlockWrapper<TBlock> &
+    IHostedApiBlockWrapper<TBlock, TPage> &
       IWithContent<SelectionElement | Signature | Word> &
       IWithParentPage<TPage> &
       IWithText
@@ -275,12 +276,12 @@ export class MergedCellGeneric<TPage extends IBlockManager> extends WithCellBase
     return this.childBlockIds.map((cid) => this.parentTable._getSplitCellByBlockId(cid));
   }
 
-  override iterContent(): Iterable<SelectionElement | Signature | Word> {
+  override iterContent(opts: IBlockTypeFilterOpts = {}): Iterable<SelectionElement | Signature | Word> {
     // iterContent needs to traverse each child CELL in turn, instead of directly scannning current
     const getIterator = (): Iterator<SelectionElement | Signature | Word> => {
       const cells = this.listSubCells();
       const tryListCellContents = (ixCell: number) =>
-        cells.length > ixCell ? cells[ixCell].listContent() : [];
+        cells.length > ixCell ? cells[ixCell].listContent(opts) : [];
       let ixCurrCell = 0;
       let cellContents = tryListCellContents(ixCurrCell);
       let ixCurrItem = -1;
@@ -307,10 +308,10 @@ export class MergedCellGeneric<TPage extends IBlockManager> extends WithCellBase
    *
    * Concatenates content across all sub-cells
    */
-  override listContent(): Array<SelectionElement | Signature | Word> {
+  override listContent(opts: IBlockTypeFilterOpts = {}): Array<SelectionElement | Signature | Word> {
     // listContent needs to traverse each child CELL in turn, instead of directly scannning current
     return ([] as Array<SelectionElement | Signature | Word>).concat(
-      ...this.listSubCells().map((c) => c.listContent()),
+      ...this.listSubCells().map((c) => c.listContent(opts)),
     );
   }
 

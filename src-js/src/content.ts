@@ -3,7 +3,7 @@
  */
 
 // Local Dependencies:
-import { ApiBlockType } from "./api-models/base";
+import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
 import {
   ApiLineBlock,
   ApiSelectionElementBlock,
@@ -19,10 +19,15 @@ import {
   escapeHtml,
   IApiBlockWrapper,
   IBlockManager,
+  IBlockTypeFilterOpts,
+  IHostedApiBlockWrapper,
   IRenderable,
   IWithParentPage,
   IWithText,
+  normalizeOptionalSet,
   PageHostedApiBlockWrapper,
+  setIntersection,
+  setUnion,
 } from "./base";
 import { Geometry, IWithGeometry } from "./geometry";
 
@@ -114,11 +119,11 @@ export interface IWithContent<TContent extends IApiBlockWrapper<ApiBlock> & IRen
    *   (item) => console.log(item.text)
    * );
    */
-  iterContent(): Iterable<TContent>;
+  iterContent(opts?: IBlockTypeFilterOpts): Iterable<TContent>;
   /**
    * List the Content items in this object
    */
-  listContent(): Array<TContent>;
+  listContent(opts?: IBlockTypeFilterOpts): Array<TContent>;
 }
 
 /**
@@ -133,9 +138,19 @@ export interface IWithContentMixinOptions {
   contentTypes?: ApiBlockType[];
 
   /**
-   * Set `true` to throw an error if content iteration finds a child not in `contentTypes`
+   * Action to take on encountering a child Block of unexpected BlockType
+   *
+   * Set "error" to throw an error, "warn" to log a warning, or falsy to skip silently.
    */
-  strict?: boolean;
+  onUnexpectedBlockType?: "error" | "warn" | null;
+
+  /**
+   * Other types of direct child block that are expected but non-content
+   *
+   * This is optional to specify, but setting it up will provide more useful behaviour when using
+   * strict `onUnexpectedBlockType`s settings.
+   */
+  otherExpectedChildTypes?: ApiBlockType[] | null;
 }
 
 /**
@@ -157,8 +172,15 @@ export interface IWithContentMixinOptions {
  */
 export function buildWithContent<TContent extends IApiBlockWrapper<ApiBlock> & IRenderable>({
   contentTypes = [ApiBlockType.SelectionElement, ApiBlockType.Signature, ApiBlockType.Word],
-  strict = false,
+  onUnexpectedBlockType = null,
+  otherExpectedChildTypes = null,
 }: IWithContentMixinOptions = {}) {
+  // (contentTypes cannot be `undefined` or null because of the default value)
+  const contentTypesSet: Set<ApiBlockType> = new Set(contentTypes);
+  const defaultOnUnexpected = onUnexpectedBlockType; // Need to rename because it'll be shadowed
+  const otherTypesSet: Set<ApiBlockType> = otherExpectedChildTypes
+    ? new Set(otherExpectedChildTypes)
+    : new Set();
   /**
    * TypeScript mixin for a container `Block` wrapper whose `Child` blocks are actual content
    *
@@ -169,56 +191,57 @@ export function buildWithContent<TContent extends IApiBlockWrapper<ApiBlock> & I
   return function WithContent<
     TBlock extends ApiBlock,
     TPage extends IBlockManager,
-    T extends Constructor<IApiBlockWrapper<TBlock> & IWithParentPage<TPage>>,
+    T extends Constructor<IHostedApiBlockWrapper<TBlock, TPage>>,
   >(SuperClass: T) {
     return class extends SuperClass implements IWithContent<TContent> {
-      iterContent(): Iterable<TContent> {
-        const getIterator = (): Iterator<TContent> => {
-          const childBlockIds = this.childBlockIds;
-          let ixCurr = 0;
-          return {
-            next: (): IteratorResult<TContent> => {
-              let nextVal: TContent | undefined;
-              while (ixCurr < childBlockIds.length) {
-                const item = this.parentPage.getItemByBlockId(childBlockIds[ixCurr]);
-                ++ixCurr;
-                if (!contentTypes.length || contentTypes.indexOf(item.blockType) >= 0) {
-                  nextVal = item as TContent;
-                  break;
-                } else if (strict) {
-                  throw new Error(
-                    `Child ${item.id} of parent ${this.id} has unexpected non-content block type ${item.blockType}`,
-                  );
-                }
-              }
-              return nextVal ? { done: false, value: nextVal } : { done: true, value: undefined };
-            },
-          };
-        };
-        return {
-          [Symbol.iterator]: getIterator,
-        };
+      iterContent({
+        includeBlockTypes = null,
+        onUnexpectedBlockType = defaultOnUnexpected,
+        skipBlockTypes = null,
+      }: IBlockTypeFilterOpts = {}): Iterable<TContent> {
+        if (includeBlockTypes) {
+          includeBlockTypes = normalizeOptionalSet(includeBlockTypes);
+          includeBlockTypes = setIntersection(contentTypesSet, includeBlockTypes);
+        } else {
+          includeBlockTypes = contentTypesSet;
+        }
+        if (skipBlockTypes) {
+          skipBlockTypes;
+          skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
+          skipBlockTypes = setUnion(skipBlockTypes, otherTypesSet);
+        } else {
+          skipBlockTypes = otherTypesSet;
+        }
+        return this.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
+          includeBlockTypes,
+          onUnexpectedBlockType,
+          skipBlockTypes,
+        }) as Iterable<TContent>;
       }
 
-      listContent(): Array<TContent> {
-        if (!this.dict.Relationships) {
-          // Many block types will simply omit the Relationships key if no content or other links
-          // present - so this is not worth raising a warning over.
-          return [];
+      listContent({
+        includeBlockTypes = null,
+        onUnexpectedBlockType = defaultOnUnexpected,
+        skipBlockTypes = null,
+      }: IBlockTypeFilterOpts = {}): Array<TContent> {
+        if (includeBlockTypes) {
+          includeBlockTypes = normalizeOptionalSet(includeBlockTypes);
+          includeBlockTypes = setIntersection(contentTypesSet, includeBlockTypes);
+        } else {
+          includeBlockTypes = contentTypesSet;
         }
-
-        const result: Array<TContent> = [];
-        for (const cid of this.childBlockIds) {
-          const item = this.parentPage.getItemByBlockId(cid);
-          if (!contentTypes.length || contentTypes.indexOf(item.blockType) >= 0) {
-            result.push(item as TContent);
-          } else if (strict) {
-            throw new Error(
-              `Child ${item.id} of parent ${this.id} has unexpected non-content block type ${item.blockType}`,
-            );
-          }
+        if (skipBlockTypes) {
+          skipBlockTypes;
+          skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
+          skipBlockTypes = setUnion(skipBlockTypes, otherTypesSet);
+        } else {
+          skipBlockTypes = otherTypesSet;
         }
-        return result;
+        return this.listRelatedItemsByRelType(ApiRelationshipType.Child, {
+          includeBlockTypes,
+          onUnexpectedBlockType,
+          skipBlockTypes,
+        }) as TContent[];
       }
 
       get nContentItems(): number {

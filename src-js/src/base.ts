@@ -368,11 +368,40 @@ export interface IBlockTypeFilterOpts {
 /**
  * Normalize an optional Set-like or individual-object parameter to a Set
  */
+export function normalizeOptionalSet<T, TArg extends T | T[] | Set<T> | null | undefined>(
+  raw: TArg,
+): T extends null ? null : T extends undefined ? undefined : Set<T>;
 export function normalizeOptionalSet<T>(raw: T | T[] | Set<T> | null | undefined): Set<T> | null {
   if (raw instanceof Set) return raw;
   if (raw === null || typeof raw === "undefined") return null;
   if (Array.isArray(raw)) return new Set(raw);
   return new Set([raw]);
+}
+
+/**
+ * Polyfill for Set.intersection() which is not available in all our target runtimes
+ *
+ * See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set/intersection
+ */
+export function setIntersection<T>(a: Set<T>, b: Set<T>) {
+  const result = new Set(a);
+  for (const entry of result) {
+    if (!b.has(entry)) result.delete(entry);
+  }
+  return result;
+}
+
+/**
+ * Polyfill for Set.union() which is not available in all our target runtimes
+ *
+ * See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set/union
+ */
+export function setUnion<T>(a: Set<T>, b: Set<T>) {
+  const result = new Set(a);
+  for (const entry of b) {
+    result.add(entry);
+  }
+  return result;
 }
 
 /**

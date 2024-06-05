@@ -138,7 +138,6 @@ class LayoutItemBaseGeneric<
     TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
   >
   extends PageHostedApiBlockWrapper<TBlock, TPage>
-  // extends buildWithContent<IApiBlockWrapper<ApiBlock> & IRenderable>()(PageHostedApiBlockWrapper)<TBlock, TPage>
   implements IWithGeometry<TBlock, LayoutItemBaseGeneric<TBlock, TPage>>, IWithParentPage<TPage>
 {
   _geometry: Geometry<ApiLayoutBlock, LayoutItemBaseGeneric<TBlock, TPage>>;

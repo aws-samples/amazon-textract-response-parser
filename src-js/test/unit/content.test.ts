@@ -9,7 +9,7 @@ import {
 } from "../../src/api-models/content";
 import { ApiBlock } from "../../src/api-models/document";
 import { IApiBlockWrapper, IBlockManager } from "../../src/base";
-import { LineGeneric, SelectionElement, Signature, Word } from "../../src/content";
+import { LineGeneric, SelectionElement, Signature, Word, buildWithContent } from "../../src/content";
 
 const EXAMPLE_WORD_BLOCK: ApiWordBlock = {
   BlockType: "WORD" as ApiBlockType.Word,
@@ -144,7 +144,10 @@ const EXAMPLE_LINE_BLOCK: ApiLineBlock = {
   Relationships: [
     {
       Type: "CHILD" as ApiRelationshipType.Child,
-      Ids: ["8026a7ef-b929-4154-b805-1d21411b4863"],
+      Ids: [
+        "8026a7ef-b929-4154-b805-1d21411b4863", // EXAMPLE_WORD_BLOCK
+        "e6f55d8a-eaed-467d-9235-92d869bb71df", // EXAMPLE_SELECT_BLOCK
+      ],
     },
   ],
 };
@@ -355,7 +358,11 @@ describe("Signature", () => {
 describe("LineGeneric", () => {
   it("correctly stores raw dict properties", () => {
     const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
-    const dummyPage = new DummyPage([EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK], [dummyWord]);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
     const line = new LineGeneric(EXAMPLE_LINE_BLOCK, dummyPage);
     expect(line.blockType).toStrictEqual(ApiBlockType.Line);
     expect(line.confidence).toStrictEqual(EXAMPLE_LINE_BLOCK.Confidence);
@@ -380,14 +387,22 @@ describe("LineGeneric", () => {
 
   it("renders plain line text for HTML", () => {
     const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
-    const dummyPage = new DummyPage([EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK], [dummyWord]);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
     const line = new LineGeneric(EXAMPLE_LINE_BLOCK, dummyPage);
     expect(line.html()).toStrictEqual(line.text);
   });
 
   it("escapes forbidden entities in line text for html()", () => {
     const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
-    const dummyPage = new DummyPage([EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK], [dummyWord]);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
     const customBlock = JSON.parse(JSON.stringify(EXAMPLE_WORD_BLOCK));
     const line = new LineGeneric(customBlock, dummyPage);
     customBlock.Text = `Text-with-<html>-&-'quote-marks"`;
@@ -402,7 +417,11 @@ describe("LineGeneric", () => {
 
   it("renders debug info for str()", () => {
     const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
-    const dummyPage = new DummyPage([EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK], [dummyWord]);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
     const line = new LineGeneric(EXAMPLE_LINE_BLOCK, dummyPage);
     const strRep = line.str();
     expect(strRep.startsWith("Line\n==========\n")).toBeTruthy();
@@ -419,7 +438,11 @@ describe("LineGeneric", () => {
     lineBlockCopy.Relationships[0].Ids.push("DOESNOTEXIST");
     const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
     const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
-    const dummyPage = new DummyPage([lineBlockCopy, EXAMPLE_WORD_BLOCK], [dummyWord]);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [lineBlockCopy, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
     const line = new LineGeneric(lineBlockCopy, dummyPage);
     expect(warn).toHaveBeenCalledTimes(0);
     warn.mockReset();
@@ -429,7 +452,11 @@ describe("LineGeneric", () => {
   it("propagates confidence updates to underlying dict", () => {
     const lineBlockCopy: ApiLineBlock = JSON.parse(JSON.stringify(EXAMPLE_LINE_BLOCK));
     const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
-    const dummyPage = new DummyPage([lineBlockCopy, EXAMPLE_WORD_BLOCK], [dummyWord]);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [lineBlockCopy, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
     const line = new LineGeneric(lineBlockCopy, dummyPage);
     line.confidence = 13.4;
     expect(line.confidence).toStrictEqual(13.4);
@@ -438,12 +465,16 @@ describe("LineGeneric", () => {
 });
 
 /**
- * The mixins are tricky to test alone, so we use LineGeneric for WithWords, tables for WithContent
+ * The mixins are tricky to test alone, so we use LineGeneric as a base
  */
 describe("WithWords (via LineGeneric)", () => {
   it("iterates, lists, and counts contained Words", () => {
     const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
-    const dummyPage = new DummyPage([EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK], [dummyWord]);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_SELECT_BLOCK, EXAMPLE_WORD_BLOCK],
+      [dummyWord, dummySel],
+    );
     const line = new LineGeneric(EXAMPLE_LINE_BLOCK, dummyPage);
     const wordList = line.listWords();
     let nWords = 0;
@@ -467,5 +498,265 @@ describe("WithWords (via LineGeneric)", () => {
     expect(line.listWords().length).toStrictEqual(0);
     expect(warn).toHaveBeenCalledTimes(2); // Warn on each attempt to access
     warn.mockReset();
+  });
+});
+
+describe("WithContent (via LineGeneric)", () => {
+  it("iterates, lists, and counts contained content Words and SelectionElements by default", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const LineWithDefaultContent = buildWithContent<SelectionElement | Signature | Word>()(LineGeneric);
+    const line = new LineWithDefaultContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    const itemList = line.listContent();
+    let nItems = 0;
+    for (const item of line.iterContent()) {
+      expect(item).toBe(itemList[nItems]);
+      ++nItems;
+    }
+    expect(nItems).toStrictEqual(line.nContentItems);
+    expect(nItems).toStrictEqual(itemList.length);
+    expect(nItems).toStrictEqual(2);
+  });
+
+  it("can be explicitly instantiated with no content types, if you insist", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    // Setting `[]` should do this:
+    const LineWithNoContent = buildWithContent<never>({ contentTypes: [] })(LineGeneric);
+    const emptyLine = new LineWithNoContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    const emptyItemList = emptyLine.listContent();
+    expect(emptyItemList.length).toStrictEqual(0);
+    expect([...emptyLine.iterContent()].length).toStrictEqual(0);
+
+    // ...But `undefined` should just return default content:
+    const LineWithDefaultContent = buildWithContent<SelectionElement | Signature | Word>({
+      contentTypes: undefined,
+    })(LineGeneric);
+    const line = new LineWithDefaultContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    const itemList = line.listContent();
+    expect(itemList.length).toStrictEqual(2);
+    expect([...line.iterContent()].length).toStrictEqual(2);
+  });
+
+  it("filters specific content block types configured by Mixin", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const LineWithContent = buildWithContent<Word>({
+      contentTypes: [ApiBlockType.Word],
+    })(LineGeneric);
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
+    const line = new LineWithContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    const itemList = line.listContent();
+    expect(itemList.length).toStrictEqual(1);
+    expect(itemList[0].dict).toBe(EXAMPLE_WORD_BLOCK);
+    let nItems = 0;
+    for (const item of line.iterContent()) {
+      expect(item).toBe(itemList[nItems]);
+      ++nItems;
+    }
+    expect(nItems).toStrictEqual(line.nContentItems);
+    expect(nItems).toStrictEqual(itemList.length);
+    expect(warn).toHaveBeenCalledTimes(0);
+  });
+
+  it("warns on unexpected content types if configured by Mixin", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const LineWithContent = buildWithContent<SelectionElement>({
+      contentTypes: [ApiBlockType.SelectionElement],
+      onUnexpectedBlockType: "warn",
+    })(LineGeneric);
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
+    const line = new LineWithContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(warn).toHaveBeenCalledTimes(0);
+    const itemList = line.listContent();
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockClear();
+    expect(itemList.length).toStrictEqual(1);
+    expect(itemList[0].dict).toBe(EXAMPLE_SELECT_BLOCK);
+    let nItems = 0;
+    for (const item of line.iterContent()) {
+      expect(item).toBe(itemList[nItems]);
+      ++nItems;
+    }
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockClear();
+    expect(nItems).toStrictEqual(line.nContentItems);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(nItems).toStrictEqual(itemList.length);
+    warn.mockReset();
+  });
+
+  it("suppresses warnings for known other block types configured by Mixin", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const LineWithContent = buildWithContent<SelectionElement>({
+      contentTypes: [ApiBlockType.SelectionElement],
+      onUnexpectedBlockType: "warn",
+      otherExpectedChildTypes: [ApiBlockType.Word],
+    })(LineGeneric);
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
+    const line = new LineWithContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(warn).toHaveBeenCalledTimes(0);
+    const itemList = line.listContent();
+    expect(warn).toHaveBeenCalledTimes(0);
+    expect(itemList.length).toStrictEqual(1);
+    expect(itemList[0].dict).toBe(EXAMPLE_SELECT_BLOCK);
+    let nItems = 0;
+    for (const item of line.iterContent()) {
+      expect(item).toBe(itemList[nItems]);
+      ++nItems;
+    }
+    expect(warn).toHaveBeenCalledTimes(0);
+    expect(nItems).toStrictEqual(line.nContentItems);
+    expect(warn).toHaveBeenCalledTimes(0);
+    expect(nItems).toStrictEqual(itemList.length);
+    warn.mockReset();
+  });
+
+  it("errors on unexpected content types if configured by Mixin", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const LineWithContent = buildWithContent<Word>({
+      contentTypes: [ApiBlockType.Word],
+      onUnexpectedBlockType: "error",
+    })(LineGeneric);
+    const line = new LineWithContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(() => line.listContent()).toThrow(/SELECTION_ELEMENT/);
+  });
+
+  it("suppresses errors on other content types if configured by Mixin", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const LineWithContent = buildWithContent<Word>({
+      contentTypes: [ApiBlockType.Word],
+      onUnexpectedBlockType: "error",
+      otherExpectedChildTypes: [ApiBlockType.SelectionElement],
+    })(LineGeneric);
+    const line = new LineWithContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(() => line.listContent()).not.toThrow();
+  });
+
+  it("filters specific content block types configured at runtime", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const LineWithContent = buildWithContent<SelectionElement | Signature | Word>()(LineGeneric);
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
+    const line = new LineWithContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    const itemList = line.listContent({ includeBlockTypes: [ApiBlockType.SelectionElement] });
+    expect(itemList.length).toStrictEqual(1);
+    expect(itemList[0].dict).toBe(EXAMPLE_SELECT_BLOCK);
+    let nItems = 0;
+    for (const item of line.iterContent({ includeBlockTypes: [ApiBlockType.SelectionElement] })) {
+      expect(item).toBe(itemList[nItems]);
+      ++nItems;
+    }
+    expect(nItems).toBeLessThan(line.nContentItems);
+    expect(nItems).toStrictEqual(itemList.length);
+    expect(warn).toHaveBeenCalledTimes(0);
+  });
+
+  it("skips specific content block types configured at runtime", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const LineWithContent = buildWithContent<SelectionElement | Signature | Word>()(LineGeneric);
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
+    const line = new LineWithContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    const itemList = line.listContent({ skipBlockTypes: [ApiBlockType.SelectionElement] });
+    expect(itemList.length).toStrictEqual(1);
+    expect(itemList[0].dict).toBe(EXAMPLE_WORD_BLOCK);
+    let nItems = 0;
+    for (const item of line.iterContent({ skipBlockTypes: [ApiBlockType.SelectionElement] })) {
+      expect(item).toBe(itemList[nItems]);
+      ++nItems;
+    }
+    expect(nItems).toBeLessThan(line.nContentItems);
+    expect(nItems).toStrictEqual(itemList.length);
+    expect(warn).toHaveBeenCalledTimes(0);
+  });
+
+  it("cannot request runtime blocks outside the mixin-configured scope", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const LineWithContent = buildWithContent<Word>({ contentTypes: [ApiBlockType.Word] })(LineGeneric);
+    const line = new LineWithContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    const itemList = line.listContent({ includeBlockTypes: [ApiBlockType.SelectionElement] });
+    expect(itemList.length).toStrictEqual(0);
+    expect(
+      [...line.iterContent({ includeBlockTypes: [ApiBlockType.SelectionElement] })].length,
+    ).toStrictEqual(0);
+  });
+
+  it("cannot prevent ignoring mixin-configured skip block types at runtime", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const LineWithContent = buildWithContent<Word>({
+      contentTypes: [ApiBlockType.Word],
+      onUnexpectedBlockType: "error",
+      otherExpectedChildTypes: [ApiBlockType.SelectionElement],
+    })(LineGeneric);
+    const line = new LineWithContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(() => line.listContent({ skipBlockTypes: [] })).not.toThrow();
+    expect(() => [...line.iterContent({ skipBlockTypes: [] })]).not.toThrow();
+  });
+
+  it("can override mixin-configured unexpected block handling at run-time", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const LineWithContent = buildWithContent<Word>({
+      contentTypes: [ApiBlockType.Word],
+    })(LineGeneric);
+    const line = new LineWithContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(() => line.listContent()).not.toThrow();
+    expect(() => line.listContent({ onUnexpectedBlockType: "error" })).toThrow(/SELECTION_ELEMENT/);
+    expect(() => [...line.iterContent({ onUnexpectedBlockType: "error" })]).toThrow(/SELECTION_ELEMENT/);
   });
 });
