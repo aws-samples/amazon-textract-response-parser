@@ -2,6 +2,7 @@
 
 ## In Development (targeting 0.4.2?)
 ### Added
+- Experimental support for filtering `layout.html(opts)` by block types with `includeBlockTypes` and `skipBlockTypes` options: For example to remove page headers, footers, and page numbers. Hoping to broaden this support across more `IRenderable` objects and block types in future if possible. ([#179](https://github.com/aws-samples/amazon-textract-response-parser/issues/179))
 - `iter/listContent()`, `Layout.iter/listItems()`, and `LayoutItem.iter/ListLayoutChildren()` methods now support Block type filtering with `includeBlockTypes` (allow-list) and/or `skipBlockTypes` (deny-list) options.
 - Low-level relationship traversal via `iter/listRelatedItemsByRelType()` is now supported from `Page`s (PAGE blocks)
 ### Changed

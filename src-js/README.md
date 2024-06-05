@@ -299,7 +299,17 @@ Some caveats to be aware of:
 - Top-level `Page.html()` and `TextractDocument.html()` currently depend on Layout analysis being enabled, because the Layout results are used to sequence all the elements together.
 - Only HTML is supported currently, but we're keen to add `.markdown()` if there's interest
 
-If either of these affects your planned use-cases, please let us know in the GitHub issues to help prioritise!
+*Experimentally*, you can also filter out types of Layout* element you don't want to include in your HTML. Today this is only supported for layout elements and whole pages/documents (which depend on layout anyway):
+
+```typescript
+const docHtml = doc.html({
+  skipBlockTypes: [
+    ApiBlockType.LayoutHeader, ApiBlockType.LayoutFooter, ApiBlockType.LayoutPageNumber
+  ],
+});
+```
+
+If you have feedback about these restrictions and experimental features, please let us know in the GitHub issues to help prioritise!
 
 
 ### Segment headers and footers from main content

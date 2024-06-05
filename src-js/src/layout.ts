@@ -5,7 +5,7 @@
  */
 
 // Local Dependencies:
-import { ApiBlockType, ApiRelationshipType, LAYOUT_BLOCK_TYPES } from "./api-models/base";
+import { ApiBlockType, ApiLayoutBlockType, ApiRelationshipType, LAYOUT_BLOCK_TYPES } from "./api-models/base";
 import { ApiBlock } from "./api-models/document";
 import {
   ApiLayoutBlock,
@@ -40,6 +40,42 @@ import { buildWithContent, IWithContent, LineGeneric } from "./content";
 import { FieldGeneric, IWithForm } from "./form";
 import { Geometry, IWithGeometry } from "./geometry";
 import { IWithTables, TableGeneric } from "./table";
+
+/**
+ * Configurations for filtering layout .html() rendering by block type
+ *
+ * This interface is designed for compatibility with `IBlockTypeFilterOpts`, but our HTML renderers
+ * can currently only support filtering by Layout* block types: Not all block types.
+ *
+ * TODO: Can we support broaden support to other block types and outside of Layout?
+ *
+ * @experimental
+ */
+export interface ILayoutHtmlBlockTypeFilterOpts {
+  /**
+   * Only render layout blocks of the given type(s)
+   *
+   * By default, all blocks are returned unless otherwise documented. If you specify this filter,
+   * you probably want to include ApiBlockType.Line.
+   *
+   * @experimental Only LINE and LAYOUT_* block types are currently supported
+   */
+  includeBlockTypes?:
+    | ApiLayoutBlockType
+    | ApiBlockType.Line
+    | Array<ApiLayoutBlockType | ApiBlockType.Line>
+    | Set<ApiLayoutBlockType | ApiBlockType.Line>
+    | null;
+  /**
+   * Block types to silently skip/ignore in the results
+   *
+   * @experimental Only LINE LAYOUT_* block types are currently supported
+   */
+  skipBlockTypes?:
+    | Array<ApiLayoutBlockType>
+    | Set<ApiLayoutBlockType>
+    | null;
+}
 
 /**
  * Standard interface for parsed Layout items
@@ -87,6 +123,8 @@ export interface ILayoutItem<
    * Parsed page layout collection that this element belongs to
    */
   parentLayout: LayoutGeneric<TPage>;
+  // TODO: Remove this override if/when IRenderable also supports these options
+  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string;
   /**
    * Layout items (any layout block types) linked as children to this item
    *
@@ -519,12 +557,14 @@ export class LayoutKeyValueGeneric<
    * Since there's no guaranteed 1:1 correspondence between Layout K-V regions and detected form
    * fields, we loop through the plain text (from layout) but insert the semantic HTML for a whole
    * K-V Form Field at the first overlapping mention.
+   *
+   * @param opts: Experimental options to filter the output by block type, subject to change
    */
-  html(): string {
+  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string {
     const wordsToFields = this._mapPageContentToFormFields();
     const consumedIds: { [id: string]: true } = {};
     const lineReprs: string[] = [];
-    for (const line of this.iterContent()) {
+    for (const line of this.iterContent(opts)) {
       const wordReprs: string[] = [];
       for (const word of line.iterWords()) {
         const wordId = word.id;
@@ -758,12 +798,14 @@ export class LayoutTableGeneric<
    * Since there's no guaranteed 1:1 correspondence between the Layout Table regions and detected
    * Table objects, populate the div content by looping through the plain text (from layout) but
    * inserting the semantic HTML for each whole `<table>` at the first overlapping mention.
+   *
+   * @param opts: Experimental options to filter the output by block type, subject to change
    */
-  html(): string {
+  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string {
     const wordsToTables = this._mapPageContentToTables();
     const consumedIds: { [id: string]: true } = {};
     const lineReprs: string[] = [];
-    for (const line of this.iterContent()) {
+    for (const line of this.iterContent(opts)) {
       const wordReprs: string[] = [];
       for (const word of line.iterWords()) {
         const wordId = word.id;
@@ -900,10 +942,12 @@ export class LayoutListGeneric<
    *
    * TODO: Support ordered/numbered lists with <ol>, if we can infer when to use it?
    * TODO: innerHTML option on LayoutText to get rid of the <p> tags?
+   *
+   * @param opts: Experimental options to filter the output by block type, subject to change
    */
-  html(): string {
+  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string {
     return `<ul>\n${indent(
-      this.listContent()
+      this.listContent(opts)
         .map((item) => `<li>${item.html()}</li>`)
         .join("\n"),
     )}\n</ul>`;
@@ -1113,10 +1157,12 @@ export class LayoutGeneric<
    *
    * Since this class is just a collection and not an API object wrapper, we don't wrap the content
    * HTML in anything: Leave that up to `Page`, `Document`, etc.
+   *
+   * @param opts: Experimental options to filter the output by block type, subject to change
    */
-  html(): string {
-    return this.listItems({ deep: false })
-      .map((item) => item.html())
+  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string {
+    return this.listItems({ deep: false, ...opts })
+      .map((item) => item.html(opts))
       .join("\n");
   }
 

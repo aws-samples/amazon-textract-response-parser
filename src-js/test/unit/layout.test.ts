@@ -454,6 +454,20 @@ describe("LayoutList", () => {
     expect((lsHtml.match(/<li>/g) || []).length).toStrictEqual(ls.nContentItems);
     // TODO: Stricter checks?
   });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const ls = page.layout
+      .listItems()
+      .find((item) => item.blockType === ApiBlockType.LayoutList) as LayoutListGeneric<Page>;
+    expect(ls).toBeTruthy();
+    expect(ls.str()).toStrictEqual(ls.text);
+    // If filtering out LayoutText, there should be no items in the list:
+    expect(ls.html({ includeBlockTypes: [ApiBlockType.LayoutFigure] })).not.toContain("<li>");
+    expect(ls.html({ skipBlockTypes: [ApiBlockType.LayoutText] })).not.toContain("<li>");
+  });
 });
 
 describe("Layout", () => {
@@ -562,6 +576,20 @@ describe("Layout", () => {
         .map((item) => item.html())
         .join("\n"),
     );
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const origHtml = page.layout.html();
+    expect(origHtml).toContain('<div class="header-el">');
+    expect(page.layout.html({ skipBlockTypes: [ApiBlockType.LayoutHeader] })).not.toContain(
+      '<div class="header-el">',
+    );
+    const titleOnlyHtml = page.layout.html({ includeBlockTypes: [ApiBlockType.LayoutTitle] });
+    expect(titleOnlyHtml).toContain("<h1>");
+    expect(titleOnlyHtml).not.toContain("<p>");
   });
 
   it("does not duplicate content of nested layout items in semantic representations", () => {

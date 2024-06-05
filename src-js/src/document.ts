@@ -42,6 +42,7 @@ import {
 } from "./form";
 import { BoundingBox, Geometry } from "./geometry";
 import {
+  ILayoutHtmlBlockTypeFilterOpts,
   LayoutFigureGeneric,
   LayoutFooterGeneric,
   LayoutGeneric,
@@ -1206,12 +1207,14 @@ export class Page
    *
    * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
    *
+   * @param opts: Experimental options to filter the output by block type, subject to change
+   *
    * @throws If Textract Layout analysis was not enabled in the API request.
    */
-  html(): string {
+  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string {
     if (this.hasLayout) {
       // Since the Textract LAYOUT feature was enabled, we can use it to render semantic HTML
-      return this._layout.html();
+      return this._layout.html(opts);
     } else {
       // To render semantic HTML for non-Layout-analysed documents, we'd want to collect the
       // various components (plain text lines, fields, tables, etc) in approximate reading order
@@ -1749,12 +1752,14 @@ export class TextractDocument
    *
    * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
    *
+   * @param opts: Experimental options to filter the output by block type, subject to change
+   *
    * @throws If Textract Layout analysis was not enabled in the API request.
    */
-  html(): string {
+  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string {
     const bodyHtml = [
       "<body>",
-      indent(this._pages.map((page) => `<div class="page">\n${indent(page.html())}\n</div>`).join("\n")),
+      indent(this._pages.map((page) => `<div class="page">\n${indent(page.html(opts))}\n</div>`).join("\n")),
       "</body>",
     ].join("\n");
 
