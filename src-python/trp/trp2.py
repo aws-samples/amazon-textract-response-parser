@@ -668,8 +668,9 @@ class TDocument():
             self,
             block_type_enum: TextractBlockTypes = None,    #type: ignore
             page: TBlock = None) -> List[TBlock]:    #type: ignore
-        table_list: List[TBlock] = list()
-        if page and page.relationships:
+        if page:
+            if not page.relationships:
+                return list()
             block_list = list(self.relationships_recursive(page))
             if block_type_enum:
                 return self.filter_blocks_by_type(block_list=block_list, textract_block_type=[block_type_enum])
@@ -677,12 +678,13 @@ class TDocument():
                 return block_list
         else:
             if self.blocks:
+                block_list: List[TBlock] = list()
                 for b in self.blocks:
                     if block_type_enum and b.block_type == block_type_enum.name:
-                        table_list.append(b)
+                        block_list.append(b)
                     if not block_type_enum:
-                        table_list.append(b)
-                return table_list
+                        block_list.append(b)
+                return block_list
             else:
                 return list()
 

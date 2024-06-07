@@ -212,6 +212,43 @@ def test_filter_blocks_by_type():
                                               textract_block_type=[t2.TextractBlockTypes.WORD]) == block_list
 
 
+def test_empty_page_get_blocks_by_type():
+    """
+    GIVEN: an empty page
+    WHEN: get_blocks_by_type is called with the page specified
+    THEN: it should return empty, even if other pages have matching blocks
+
+    https://github.com/aws-samples/amazon-textract-response-parser/issues/155
+    """
+    p = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(p, "data/gib.json")) as f:
+        j = json.load(f)
+    j["Blocks"].insert(
+        0,
+        {
+            "BlockType": "PAGE",
+            "Geometry": {
+                "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                "Polygon": [
+                    {"X": 0, "Y": 0.0},
+                    {"X": 1.0, "Y": 0},
+                    {"X": 1.0, "Y": 1.0},
+                    {"X": 0.0, "Y": 1.0},
+                ]
+            },
+            "Id": "DUMMY-EMPTY-PAGE",
+            "Relationships": [],
+            "Page": 0,
+        }
+    )
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    t_document = add_page_orientation(t_document)
+    assert t_document.get_blocks_by_type(
+        t2.TextractBlockTypes.WORD,
+        page=t_document.pages[0]
+    ) == []
+
+
 def test_next_token_response():
     p = os.path.dirname(os.path.realpath(__file__))
     f = open(os.path.join(p, "data/gib.json"))
