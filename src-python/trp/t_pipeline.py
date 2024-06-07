@@ -141,8 +141,12 @@ def add_page_orientation(t_document: t2.TDocument) -> t2.TDocument:
         words = t2.TDocument.filter_blocks_by_type(
             block_list=t_document.get_child_relations(page=page),
             textract_block_type=[t2.TextractBlockTypes.WORD, t2.TextractBlockTypes.LINE])
-        orientation = statistics.mode(
-            [round(__get_degree_from_polygon(w.geometry.polygon)) for w in words if w.geometry and w.geometry.polygon])
+        word_orientations = [
+            round(__get_degree_from_polygon(w.geometry.polygon))
+            for w in words if w.geometry and w.geometry.polygon
+        ]
+        # (statistics.mode throws StatisticsError for empty lists)
+        orientation = statistics.mode(word_orientations) if word_orientations else 0
         if page.custom:
             page.custom['PageOrientationBasedOnWords'] = orientation
         else:

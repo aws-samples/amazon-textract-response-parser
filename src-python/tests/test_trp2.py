@@ -173,6 +173,39 @@ def test_custom_page_orientation(json_response):
         assert page.custom['PageOrientationBasedOnWords']
 
 
+def test_empty_page_orientation():
+    """
+    GIVEN: an empty page
+    WHEN: orientation is calculated
+    THEN: the tagged orientation should be 0 degrees
+
+    https://github.com/aws-samples/amazon-textract-response-parser/issues/156
+    """
+    j = {
+        "DocumentMetadata": {"Pages": 1},
+        "Blocks": [
+            {
+                "BlockType": "PAGE",
+                "Geometry": {
+                    "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                    "Polygon": [
+                        {"X": 0, "Y": 0.0},
+                        {"X": 1.0, "Y": 0},
+                        {"X": 1.0, "Y": 1.0},
+                        {"X": 0.0, "Y": 1.0},
+                    ]
+                },
+                "Id": "DUMMY-EMPTY-PAGE",
+                "Relationships": [{"Type": "CHILD", "Ids": []}],
+                "Page": 0,
+            }
+        ],
+    }
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    t_document = add_page_orientation(t_document)
+    assert t_document.pages[0].custom["PageOrientationBasedOnWords"] == 0
+
+
 def test_filter_blocks_by_type():
     block_list = [t2.TBlock(id="1", block_type=t2.TextractBlockTypes.WORD.name)]
     assert t2.TDocument.filter_blocks_by_type(block_list=block_list,
