@@ -50,13 +50,11 @@ def __compare_table_column_numbers(table_1, table_2):
 
 def __compare_table_headers(table_1, table_2):
     """
-    Step 2_2: Comparing table header (first row) values on each table
+    Step 2_2: Comparing table header (first row) text on each table
     """
-    col_num = len(table_1.rows[0].cells)
-    for i in range(0, col_num - 1):
-        if table_1.rows[0].cells[i] != table_2.rows[0].cells[i]:
-            return False
-    return True
+    headers_1 = [cell.text.strip() if cell.text else "" for cell in table_1.rows[0].cells]
+    headers_2 = [cell.text.strip() if cell.text else "" for cell in table_2.rows[0].cells]
+    return headers_1 == headers_2
 
 
 def __calculate_percentage_difference(measure_1, measure_2):
