@@ -31,6 +31,9 @@ setup(name='amazon-textract-response-parser',
       version='1.0.2',
       description='Easily parse JSON returned by Amazon Textract.',
       install_requires=requirements,
+      extras_require={
+          "dev": ["pytest", "tabulate"]
+      },
       scripts=['bin/amazon-textract-pipeline'],
       long_description_content_type='text/markdown',
       long_description=read('README.md'),

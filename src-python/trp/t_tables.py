@@ -50,13 +50,11 @@ def __compare_table_column_numbers(table_1, table_2):
 
 def __compare_table_headers(table_1, table_2):
     """
-    Step 2_2: Comparing table header (first row) values on each table
+    Step 2_2: Comparing table header (first row) text on each table
     """
-    col_num = len(table_1.rows[0].cells)
-    for i in range(0, col_num - 1):
-        if table_1.rows[0].cells[i] != table_2.rows[0].cells[i]:
-            return False
-    return True
+    headers_1 = [cell.text.strip() if cell.text else "" for cell in table_1.rows[0].cells]
+    headers_2 = [cell.text.strip() if cell.text else "" for cell in table_2.rows[0].cells]
+    return headers_1 == headers_2
 
 
 def __calculate_percentage_difference(measure_1, measure_2):
@@ -86,25 +84,17 @@ def ExecuteTableValidations(t_doc: t2.TDocument, header_footer_type: HeaderFoote
     """
     Invoke validations for first and last tables on all pages recursively
     """
-    page_compare_proc = 0
     table_ids_to_merge = {}
     table_ids_merge_list = []
     from trp.t_pipeline import order_blocks_by_geo
     ordered_doc = order_blocks_by_geo(t_doc)
     trp_doc = trp.Document(TDocumentSchema().dump(ordered_doc))
 
-    for current_page in trp_doc.pages:
-
-        if (page_compare_proc >= len(trp_doc.pages) - 1):
-            break
-        if len(current_page.tables) == 0:
-            page_compare_proc += 1
-            break
+    for ix_page, current_page in enumerate(trp_doc.pages[:-1]):
+        next_page = trp_doc.pages[ix_page + 1]
+        if not (current_page.tables and next_page.tables):  # Note in Python, bool([]) = False
+            continue
         current_page_table = current_page.tables[len(current_page.tables) - 1]
-        next_page = trp_doc.pages[page_compare_proc + 1]
-        if len(next_page.tables) == 0:
-            page_compare_proc += 1
-            break
         next_page_table = next_page.tables[0]
         result_1 = __validate_objects_between_tables(current_page, current_page_table, next_page, next_page_table,
                                                      header_footer_type)
@@ -122,5 +112,4 @@ def ExecuteTableValidations(t_doc: t2.TDocument, header_footer_type: HeaderFoote
                             table_ids_merge_list.append([current_page_table.id, next_page_table.id])
                     else:
                         table_ids_merge_list.append([current_page_table.id, next_page_table.id])
-        page_compare_proc += 1
     return table_ids_merge_list

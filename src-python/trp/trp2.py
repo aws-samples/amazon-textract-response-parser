@@ -47,6 +47,18 @@ class TextractBlockTypes(Enum):
     QUERY_RESULT = auto()
     MERGED_CELL = auto()
     SIGNATURE = auto()
+    TABLE_TITLE = auto()
+    TABLE_FOOTER = auto()
+    LAYOUT_FIGURE = auto()
+    LAYOUT_FOOTER = auto()
+    LAYOUT_HEADER = auto()
+    LAYOUT_KEY_VALUE = auto()
+    LAYOUT_LIST = auto()
+    LAYOUT_PAGE_NUMBER = auto()
+    LAYOUT_SECTION_HEADER = auto()
+    LAYOUT_TABLE = auto()
+    LAYOUT_TEXT = auto()
+    LAYOUT_TITLE = auto()
 
 
 @dataclass
@@ -462,11 +474,15 @@ class TDocument():
         '''
         self._block_id_maps: Dict[str, typing.Dict[str, int]] = dict()
         self._block_id_maps['ALL'] = dict()
+        # Initialise maps for all expected block types:
+        for block_type in TextractBlockTypes:
+            self._block_id_maps[block_type.name] = dict()
         if self.blocks != None:
             for blk_i, blk in enumerate(self.blocks):
                 try:
                     self._block_id_maps[blk.block_type][blk.id] = blk_i
                 except KeyError:
+                    # ...but catch any unexpected block types we observe also:
                     self._block_id_maps[blk.block_type] = dict()
                     self._block_id_maps[blk.block_type][blk.id] = blk_i
 
@@ -636,8 +652,15 @@ class TDocument():
 
     @property
     def pages(self) -> List[TBlock]:
-        page_blocks = self.block_map(TextractBlockTypes.PAGE).values()
-        page_blocks = sorted(page_blocks, key=lambda item: item.page)
+        page_blocks = self.filter_blocks_by_type(
+            self.blocks,
+            textract_block_type=[TextractBlockTypes.PAGE],
+        )
+        # We'd like to return pages in explicitly-specified order where appropriate, but some
+        # (e.g. older) Textract API responses may not tag every PAGE block with a `Page` number,
+        # and `sorted()` will fail if we try to compare numbers vs `None`:
+        if all(block.page is not None for block in page_blocks):
+            page_blocks = sorted(page_blocks, key=lambda item: item.page)
         return page_blocks
 
     @staticmethod
@@ -661,8 +684,9 @@ class TDocument():
             self,
             block_type_enum: TextractBlockTypes = None,    #type: ignore
             page: TBlock = None) -> List[TBlock]:    #type: ignore
-        table_list: List[TBlock] = list()
-        if page and page.relationships:
+        if page:
+            if not page.relationships:
+                return list()
             block_list = list(self.relationships_recursive(page))
             if block_type_enum:
                 return self.filter_blocks_by_type(block_list=block_list, textract_block_type=[block_type_enum])
@@ -670,12 +694,13 @@ class TDocument():
                 return block_list
         else:
             if self.blocks:
+                block_list: List[TBlock] = list()
                 for b in self.blocks:
                     if block_type_enum and b.block_type == block_type_enum.name:
-                        table_list.append(b)
+                        block_list.append(b)
                     if not block_type_enum:
-                        table_list.append(b)
-                return table_list
+                        block_list.append(b)
+                return block_list
             else:
                 return list()
 

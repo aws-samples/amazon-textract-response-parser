@@ -173,10 +173,80 @@ def test_custom_page_orientation(json_response):
         assert page.custom['PageOrientationBasedOnWords']
 
 
+def test_empty_page_orientation():
+    """
+    GIVEN: an empty page
+    WHEN: orientation is calculated
+    THEN: the tagged orientation should be 0 degrees
+
+    https://github.com/aws-samples/amazon-textract-response-parser/issues/156
+    """
+    j = {
+        "DocumentMetadata": {"Pages": 1},
+        "Blocks": [
+            {
+                "BlockType": "PAGE",
+                "Geometry": {
+                    "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                    "Polygon": [
+                        {"X": 0, "Y": 0.0},
+                        {"X": 1.0, "Y": 0},
+                        {"X": 1.0, "Y": 1.0},
+                        {"X": 0.0, "Y": 1.0},
+                    ]
+                },
+                "Id": "DUMMY-EMPTY-PAGE",
+                "Relationships": [],
+                "Page": 0,
+            }
+        ],
+    }
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    t_document = add_page_orientation(t_document)
+    assert t_document.pages[0].custom["PageOrientationBasedOnWords"] == 0
+
+
 def test_filter_blocks_by_type():
     block_list = [t2.TBlock(id="1", block_type=t2.TextractBlockTypes.WORD.name)]
     assert t2.TDocument.filter_blocks_by_type(block_list=block_list,
                                               textract_block_type=[t2.TextractBlockTypes.WORD]) == block_list
+
+
+def test_empty_page_get_blocks_by_type():
+    """
+    GIVEN: an empty page
+    WHEN: get_blocks_by_type is called with the page specified
+    THEN: it should return empty, even if other pages have matching blocks
+
+    https://github.com/aws-samples/amazon-textract-response-parser/issues/155
+    """
+    p = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(p, "data/gib.json")) as f:
+        j = json.load(f)
+    j["Blocks"].insert(
+        0,
+        {
+            "BlockType": "PAGE",
+            "Geometry": {
+                "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                "Polygon": [
+                    {"X": 0, "Y": 0.0},
+                    {"X": 1.0, "Y": 0},
+                    {"X": 1.0, "Y": 1.0},
+                    {"X": 0.0, "Y": 1.0},
+                ]
+            },
+            "Id": "DUMMY-EMPTY-PAGE",
+            "Relationships": [],
+            "Page": 0,
+        }
+    )
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    t_document = add_page_orientation(t_document)
+    assert t_document.get_blocks_by_type(
+        t2.TextractBlockTypes.WORD,
+        page=t_document.pages[0]
+    ) == []
 
 
 def test_next_token_response():
@@ -406,6 +476,44 @@ def test_block_id_map():
         assert tdoc.block_id_map(t2.TextractBlockTypes.LINE)['5ff46696-e06e-4577-ac3f-32a1ffde3290'] == 21    #a line
 
 
+def test_block_id_map_no_content():
+    """
+    GIVEN: a document that doesn't include any content of a particular block type
+    WHEN: TDocument is created
+    THEN: all BlockTypes' `block_id_map`s are still created
+    """
+    j = {
+        "DocumentMetadata": {"Pages": 1},
+        "Blocks": [
+            {
+                "BlockType": "PAGE",
+                "Geometry": {
+                    "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                    "Polygon": [
+                        {"X": 0, "Y": 0.0},
+                        {"X": 1.0, "Y": 0},
+                        {"X": 1.0, "Y": 1.0},
+                        {"X": 0.0, "Y": 1.0},
+                    ]
+                },
+                "Id": "DUMMY-PAGE-1",
+            }
+        ],
+    }
+    tdoc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.PAGE)) == 1
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.LINE)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.SELECTION_ELEMENT)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.WORD)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.SIGNATURE)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.TABLE)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.CELL)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.MERGED_CELL)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.KEY_VALUE_SET)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.QUERY)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.QUERY_RESULT)) == 0
+
+
 def test_block_map():
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/employment-application.json")) as f:
@@ -458,6 +566,96 @@ def test_pages():
         tdoc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
         pages_ids = [p.id for p in tdoc.pages]
         assert pages_ids == ["e8610e55-7a61-4bd0-a9ff-583a4dc69459", "5f146db3-4d4a-4add-8da1-e6828f1ce877"]
+
+
+def test_pages_no_pagenums():
+    """
+    GIVEN: a Textract response where `Page` numbers were not set on `PAGE` blocks
+    WHEN: listing `TDocument.pages`
+    THEN: no error is thrown and the implicit page order is used
+    """
+    j = {
+        "DocumentMetadata": {"Pages": 2},
+        "Blocks": [
+            {
+                "BlockType": "PAGE",
+                "Geometry": {
+                    "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                    "Polygon": [
+                        {"X": 0, "Y": 0.0},
+                        {"X": 1.0, "Y": 0},
+                        {"X": 1.0, "Y": 1.0},
+                        {"X": 0.0, "Y": 1.0},
+                    ]
+                },
+                "Id": "DUMMY-PAGE-1",
+                "Relationships": [],
+            },
+            {
+                "BlockType": "PAGE",
+                "Geometry": {
+                    "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                    "Polygon": [
+                        {"X": 0, "Y": 0.0},
+                        {"X": 1.0, "Y": 0},
+                        {"X": 1.0, "Y": 1.0},
+                        {"X": 0.0, "Y": 1.0},
+                    ]
+                },
+                "Id": "DUMMY-PAGE-2",
+                "Relationships": [],
+            }
+        ],
+    }
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)  #type: ignore
+    page_ids = [p.id for p in t_document.pages]
+    assert page_ids == ["DUMMY-PAGE-1", "DUMMY-PAGE-2"]
+
+
+def test_pages_out_of_order():
+    """
+    GIVEN: mismatch between the order of `PAGE` blocks and their annotated `Page` numbers
+    WHEN: listing `TDocument.pages`
+    THEN: pages are returned in their explicitly-annotated order
+    """
+    j = {
+        "DocumentMetadata": {"Pages": 2},
+        "Blocks": [
+            {
+                "BlockType": "PAGE",
+                "Geometry": {
+                    "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                    "Polygon": [
+                        {"X": 0, "Y": 0.0},
+                        {"X": 1.0, "Y": 0},
+                        {"X": 1.0, "Y": 1.0},
+                        {"X": 0.0, "Y": 1.0},
+                    ]
+                },
+                "Id": "DUMMY-PAGE-2",
+                "Page": 2,
+                "Relationships": [],
+            },
+            {
+                "BlockType": "PAGE",
+                "Geometry": {
+                    "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                    "Polygon": [
+                        {"X": 0, "Y": 0.0},
+                        {"X": 1.0, "Y": 0},
+                        {"X": 1.0, "Y": 1.0},
+                        {"X": 0.0, "Y": 1.0},
+                    ]
+                },
+                "Id": "DUMMY-PAGE-1",
+                "Page": 1,
+                "Relationships": [],
+            }
+        ],
+    }
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)  #type: ignore
+    page_ids = [p.id for p in t_document.pages]
+    assert page_ids == ["DUMMY-PAGE-1", "DUMMY-PAGE-2"]
 
 
 def test_add_ids_to_relationships(caplog):
