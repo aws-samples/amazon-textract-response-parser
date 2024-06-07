@@ -47,6 +47,18 @@ class TextractBlockTypes(Enum):
     QUERY_RESULT = auto()
     MERGED_CELL = auto()
     SIGNATURE = auto()
+    TABLE_TITLE = auto()
+    TABLE_FOOTER = auto()
+    LAYOUT_FIGURE = auto()
+    LAYOUT_FOOTER = auto()
+    LAYOUT_HEADER = auto()
+    LAYOUT_KEY_VALUE = auto()
+    LAYOUT_LIST = auto()
+    LAYOUT_PAGE_NUMBER = auto()
+    LAYOUT_SECTION_HEADER = auto()
+    LAYOUT_TABLE = auto()
+    LAYOUT_TEXT = auto()
+    LAYOUT_TITLE = auto()
 
 
 @dataclass
@@ -462,11 +474,15 @@ class TDocument():
         '''
         self._block_id_maps: Dict[str, typing.Dict[str, int]] = dict()
         self._block_id_maps['ALL'] = dict()
+        # Initialise maps for all expected block types:
+        for block_type in TextractBlockTypes:
+            self._block_id_maps[block_type.name] = dict()
         if self.blocks != None:
             for blk_i, blk in enumerate(self.blocks):
                 try:
                     self._block_id_maps[blk.block_type][blk.id] = blk_i
                 except KeyError:
+                    # ...but catch any unexpected block types we observe also:
                     self._block_id_maps[blk.block_type] = dict()
                     self._block_id_maps[blk.block_type][blk.id] = blk_i
 

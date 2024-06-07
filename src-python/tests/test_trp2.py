@@ -476,6 +476,44 @@ def test_block_id_map():
         assert tdoc.block_id_map(t2.TextractBlockTypes.LINE)['5ff46696-e06e-4577-ac3f-32a1ffde3290'] == 21    #a line
 
 
+def test_block_id_map_no_content():
+    """
+    GIVEN: a document that doesn't include any content of a particular block type
+    WHEN: TDocument is created
+    THEN: all BlockTypes' `block_id_map`s are still created
+    """
+    j = {
+        "DocumentMetadata": {"Pages": 1},
+        "Blocks": [
+            {
+                "BlockType": "PAGE",
+                "Geometry": {
+                    "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                    "Polygon": [
+                        {"X": 0, "Y": 0.0},
+                        {"X": 1.0, "Y": 0},
+                        {"X": 1.0, "Y": 1.0},
+                        {"X": 0.0, "Y": 1.0},
+                    ]
+                },
+                "Id": "DUMMY-PAGE-1",
+            }
+        ],
+    }
+    tdoc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.PAGE)) == 1
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.LINE)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.SELECTION_ELEMENT)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.WORD)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.SIGNATURE)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.TABLE)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.CELL)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.MERGED_CELL)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.KEY_VALUE_SET)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.QUERY)) == 0
+    assert len(tdoc.block_id_map(t2.TextractBlockTypes.QUERY_RESULT)) == 0
+
+
 def test_block_map():
     p = os.path.dirname(os.path.realpath(__file__))
     with open(os.path.join(p, "data/employment-application.json")) as f:
