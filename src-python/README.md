@@ -264,11 +264,8 @@ cd amazon-textract-response-parser
 python -m venv virtualenv
 virtualenv/bin/activate
 
-python -m pip install pip --upgrade
-python -m pip install pytest
-python -m pip install setuptools
-python -m pip install tabulate
-python src-python\setup.py install
+python -m pip install --upgrade pip setuptools
+python -m pip install -e .[dev]
 pytest
 ```
 
