@@ -86,25 +86,17 @@ def ExecuteTableValidations(t_doc: t2.TDocument, header_footer_type: HeaderFoote
     """
     Invoke validations for first and last tables on all pages recursively
     """
-    page_compare_proc = 0
     table_ids_to_merge = {}
     table_ids_merge_list = []
     from trp.t_pipeline import order_blocks_by_geo
     ordered_doc = order_blocks_by_geo(t_doc)
     trp_doc = trp.Document(TDocumentSchema().dump(ordered_doc))
 
-    for current_page in trp_doc.pages:
-
-        if (page_compare_proc >= len(trp_doc.pages) - 1):
-            break
-        if len(current_page.tables) == 0:
-            page_compare_proc += 1
-            break
+    for ix_page, current_page in enumerate(trp_doc.pages[:-1]):
+        next_page = trp_doc.pages[ix_page + 1]
+        if not (current_page.tables and next_page.tables):  # Note in Python, bool([]) = False
+            continue
         current_page_table = current_page.tables[len(current_page.tables) - 1]
-        next_page = trp_doc.pages[page_compare_proc + 1]
-        if len(next_page.tables) == 0:
-            page_compare_proc += 1
-            break
         next_page_table = next_page.tables[0]
         result_1 = __validate_objects_between_tables(current_page, current_page_table, next_page, next_page_table,
                                                      header_footer_type)
@@ -122,5 +114,4 @@ def ExecuteTableValidations(t_doc: t2.TDocument, header_footer_type: HeaderFoote
                             table_ids_merge_list.append([current_page_table.id, next_page_table.id])
                     else:
                         table_ids_merge_list.append([current_page_table.id, next_page_table.id])
-        page_compare_proc += 1
     return table_ids_merge_list
