@@ -196,7 +196,7 @@ def test_empty_page_orientation():
                     ]
                 },
                 "Id": "DUMMY-EMPTY-PAGE",
-                "Relationships": [{"Type": "CHILD", "Ids": []}],
+                "Relationships": [],
                 "Page": 0,
             }
         ],
@@ -491,6 +491,96 @@ def test_pages():
         tdoc: t2.TDocument = t2.TDocumentSchema().load(j)    #type: ignore
         pages_ids = [p.id for p in tdoc.pages]
         assert pages_ids == ["e8610e55-7a61-4bd0-a9ff-583a4dc69459", "5f146db3-4d4a-4add-8da1-e6828f1ce877"]
+
+
+def test_pages_no_pagenums():
+    """
+    GIVEN: a Textract response where `Page` numbers were not set on `PAGE` blocks
+    WHEN: listing `TDocument.pages`
+    THEN: no error is thrown and the implicit page order is used
+    """
+    j = {
+        "DocumentMetadata": {"Pages": 2},
+        "Blocks": [
+            {
+                "BlockType": "PAGE",
+                "Geometry": {
+                    "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                    "Polygon": [
+                        {"X": 0, "Y": 0.0},
+                        {"X": 1.0, "Y": 0},
+                        {"X": 1.0, "Y": 1.0},
+                        {"X": 0.0, "Y": 1.0},
+                    ]
+                },
+                "Id": "DUMMY-PAGE-1",
+                "Relationships": [],
+            },
+            {
+                "BlockType": "PAGE",
+                "Geometry": {
+                    "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                    "Polygon": [
+                        {"X": 0, "Y": 0.0},
+                        {"X": 1.0, "Y": 0},
+                        {"X": 1.0, "Y": 1.0},
+                        {"X": 0.0, "Y": 1.0},
+                    ]
+                },
+                "Id": "DUMMY-PAGE-2",
+                "Relationships": [],
+            }
+        ],
+    }
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)  #type: ignore
+    page_ids = [p.id for p in t_document.pages]
+    assert page_ids == ["DUMMY-PAGE-1", "DUMMY-PAGE-2"]
+
+
+def test_pages_out_of_order():
+    """
+    GIVEN: mismatch between the order of `PAGE` blocks and their annotated `Page` numbers
+    WHEN: listing `TDocument.pages`
+    THEN: pages are returned in their explicitly-annotated order
+    """
+    j = {
+        "DocumentMetadata": {"Pages": 2},
+        "Blocks": [
+            {
+                "BlockType": "PAGE",
+                "Geometry": {
+                    "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                    "Polygon": [
+                        {"X": 0, "Y": 0.0},
+                        {"X": 1.0, "Y": 0},
+                        {"X": 1.0, "Y": 1.0},
+                        {"X": 0.0, "Y": 1.0},
+                    ]
+                },
+                "Id": "DUMMY-PAGE-2",
+                "Page": 2,
+                "Relationships": [],
+            },
+            {
+                "BlockType": "PAGE",
+                "Geometry": {
+                    "BoundingBox": {"Width": 1.0, "Height": 1.0, "Left": 0.0, "Top": 0.0},
+                    "Polygon": [
+                        {"X": 0, "Y": 0.0},
+                        {"X": 1.0, "Y": 0},
+                        {"X": 1.0, "Y": 1.0},
+                        {"X": 0.0, "Y": 1.0},
+                    ]
+                },
+                "Id": "DUMMY-PAGE-1",
+                "Page": 1,
+                "Relationships": [],
+            }
+        ],
+    }
+    t_document: t2.TDocument = t2.TDocumentSchema().load(j)  #type: ignore
+    page_ids = [p.id for p in t_document.pages]
+    assert page_ids == ["DUMMY-PAGE-1", "DUMMY-PAGE-2"]
 
 
 def test_add_ids_to_relationships(caplog):

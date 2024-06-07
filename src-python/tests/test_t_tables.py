@@ -21,7 +21,7 @@ def test_execute_table_validations():
     with open(os.path.join(current_folder, "data/gib_multi_tables_multi_page_sample.json")) as f:
         j = json.load(f)
     j["Blocks"].insert(
-        1,
+        0,
         {
             "BlockType": "PAGE",
             "Geometry": {
@@ -34,7 +34,7 @@ def test_execute_table_validations():
                 ]
             },
             "Id": "DUMMY-EMPTY-PAGE",
-            "Relationships": [{"Type": "CHILD", "Ids": []}],
+            "Relationships": [],
             "Page": 0,
         },
     )

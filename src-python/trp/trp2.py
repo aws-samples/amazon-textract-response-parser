@@ -636,8 +636,15 @@ class TDocument():
 
     @property
     def pages(self) -> List[TBlock]:
-        page_blocks = self.block_map(TextractBlockTypes.PAGE).values()
-        page_blocks = sorted(page_blocks, key=lambda item: item.page)
+        page_blocks = self.filter_blocks_by_type(
+            self.blocks,
+            textract_block_type=[TextractBlockTypes.PAGE],
+        )
+        # We'd like to return pages in explicitly-specified order where appropriate, but some
+        # (e.g. older) Textract API responses may not tag every PAGE block with a `Page` number,
+        # and `sorted()` will fail if we try to compare numbers vs `None`:
+        if all(block.page is not None for block in page_blocks):
+            page_blocks = sorted(page_blocks, key=lambda item: item.page)
         return page_blocks
 
     @staticmethod
