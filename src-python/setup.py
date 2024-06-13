@@ -28,7 +28,7 @@ if sys.argv[-1] == 'publish':
 
 setup(name='amazon-textract-response-parser',
       packages=['trp', 'a2i'],
-      version='1.0.2',
+      version='1.0.3',
       description='Easily parse JSON returned by Amazon Textract.',
       install_requires=requirements,
       extras_require={
