@@ -294,6 +294,16 @@ describe("SelectionElement", () => {
     expect(selEl.text).toStrictEqual(EXAMPLE_SELECT_BLOCK.SelectionStatus);
   });
 
+  it("reports whether selected as boolean property", () => {
+    const selBlockCopy = JSON.parse(JSON.stringify(EXAMPLE_SELECT_BLOCK)) as ApiSelectionElementBlock;
+    const selEl = new SelectionElement(selBlockCopy);
+    expect(selEl.isSelected).toBe(true);
+    selBlockCopy.SelectionStatus = ApiSelectionStatus.NotSelected;
+    expect(selEl.isSelected).toBe(false);
+    selBlockCopy.SelectionStatus = "BORK BORK" as ApiSelectionStatus;
+    expect(() => selEl.isSelected).toThrow(/BORK BORK/);
+  });
+
   it("renders semantic HTML", () => {
     const selEl = new SelectionElement(EXAMPLE_SELECT_BLOCK);
     expect(selEl.html()).toStrictEqual('<input type="checkbox" disabled checked />');

@@ -561,6 +561,14 @@ export class SelectionElement
     return this._geometry;
   }
   /**
+   * `true` if SELECTED, `false` if NOT_SELECTED, or raise an error if some unexpected value
+   */
+  get isSelected(): boolean {
+    if (this.selectionStatus === ApiSelectionStatus.Selected) return true;
+    if (this.selectionStatus === ApiSelectionStatus.NotSelected) return false;
+    throw new Error(`Block ${this.id} has unexpected SelectionStatus: ${this.selectionStatus}`);
+  }
+  /**
    * Whether the element is selected/ticked/checked/etc, or not
    */
   get selectionStatus(): ApiSelectionStatus {

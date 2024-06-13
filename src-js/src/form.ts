@@ -4,6 +4,7 @@
 
 // Local Dependencies:
 import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
+import { ApiSelectionStatus } from "./api-models/content";
 import { ApiKeyBlock, ApiKeyValueSetBlock, ApiValueBlock } from "./api-models/form";
 import {
   aggregate,
@@ -129,8 +130,41 @@ export class FieldValueGeneric<TPage extends IBlockManager>
   get geometry(): Geometry<ApiKeyValueSetBlock | ApiValueBlock, FieldValueGeneric<TPage>> {
     return this._geometry;
   }
+  /**
+   * Selection status if field value is one SELECTION_ELEMENT, else null
+   *
+   * If the field value contains exactly one SELECTION_ELEMENT, this property returns `true` if
+   * it's SELECTED or `false` if it's NOT_SELECTED. Otherwise, this property returns null.
+   */
+  get isSelected(): boolean | null {
+    const selEls = this.listContent({
+      includeBlockTypes: [ApiBlockType.SelectionElement],
+    }) as SelectionElement[];
+    return selEls.length === 1 ? selEls[0].selectionStatus === ApiSelectionStatus.Selected : null;
+  }
+  /**
+   * A field value is a "selection" if it contains one SELECTION_ELEMENT
+   *
+   * Use this to check whether this field value is a checkbox/radio button/etc. Other (text)
+   * content may also be present.
+   */
+  get isSelection(): boolean {
+    return this.listContent({ includeBlockTypes: [ApiBlockType.SelectionElement] }).length == 1;
+  }
   get parentField(): FieldGeneric<TPage> {
     return this._parentField;
+  }
+  /**
+   * Selection status if field value is one SELECTION_ELEMENT, else null
+   *
+   * If the field value contains exactly one SELECTION_ELEMENT, this property returns its
+   * SelectionStatus. Otherwise, null.
+   */
+  get selectionStatus(): ApiSelectionStatus | null {
+    const selEls = this.listContent({
+      includeBlockTypes: [ApiBlockType.SelectionElement],
+    }) as SelectionElement[];
+    return selEls.length === 1 ? selEls[0].selectionStatus : null;
   }
 
   /**
@@ -253,6 +287,24 @@ export class FieldGeneric<TPage extends IBlockManager>
     // Hoisting required property from key to implement IApiBlockWrapper
     return this._key.id;
   }
+  /**
+   * Selection status if field value is one SELECTION_ELEMENT, else null
+   *
+   * If the field value contains exactly one SELECTION_ELEMENT, this property returns `true` if
+   * it's SELECTED or `false` if it's NOT_SELECTED. Otherwise, this property returns null.
+   */
+  get isSelected(): boolean | null {
+    return this.value ? this.value.isSelected : null;
+  }
+  /**
+   * A field is a "selection" if its .value contains one SELECTION_ELEMENT
+   *
+   * Use this to check whether this is a checkbox/radio button/etc field. Other (text) content may
+   * also be present.
+   */
+  get isSelection(): boolean {
+    return !!this.value?.isSelection;
+  }
   get key(): FieldKeyGeneric<TPage> {
     return this._key;
   }
@@ -261,6 +313,15 @@ export class FieldGeneric<TPage extends IBlockManager>
   }
   get parentPage(): TPage {
     return this._parentForm.parentPage;
+  }
+  /**
+   * Selection status if field value is one SELECTION_ELEMENT, else null
+   *
+   * If the field value contains exactly one SELECTION_ELEMENT, this property returns its
+   * SelectionStatus. Otherwise, null.
+   */
+  get selectionStatus(): ApiSelectionStatus | null {
+    return this.value ? this.value.selectionStatus : null;
   }
   get text(): string {
     return `${this._key.text}: ${this._value?.text || ""}`;
