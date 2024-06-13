@@ -24,6 +24,20 @@ describe("FieldKey", () => {
     expect(key.str()).toStrictEqual(key.text);
   });
 
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const key = doc.form.getFieldByKey("Phone Number:")?.key as FieldKey;
+    expect(key).toBeTruthy();
+
+    expect(key.html({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(key.html({ includeBlockTypes: [key.blockType] })).toStrictEqual("");
+    expect(key.html({ includeBlockTypes: [key.blockType, ApiBlockType.Word] })).toStrictEqual(key.text);
+    expect(key.html({ skipBlockTypes: [ApiBlockType.Value] })).toStrictEqual(key.text);
+    expect(key.html({ skipBlockTypes: [ApiBlockType.Key] })).toStrictEqual("");
+    expect(key.html({ skipBlockTypes: [ApiBlockType.KeyValueSet] })).toStrictEqual("");
+    expect(key.html({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+  });
+
   it("escapes forbidden entities in key text for html()", () => {
     const responseCopy = JSON.parse(JSON.stringify(testResponseJson));
     const doc = new TextractDocument(responseCopy);
@@ -48,6 +62,29 @@ describe("FieldValue", () => {
     expect(value.str()).toStrictEqual(value.text);
   });
 
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const value = doc.form.getFieldByKey("Phone Number:")?.value as FieldValue;
+    expect(value).toBeTruthy();
+
+    expect(value.html({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(value.html({ includeBlockTypes: [value.blockType] })).toStrictEqual("");
+    expect(value.html({ includeBlockTypes: [value.blockType, ApiBlockType.Word] })).toStrictEqual(value.text);
+    expect(value.html({ skipBlockTypes: [ApiBlockType.Key] })).toStrictEqual(value.text);
+    expect(value.html({ skipBlockTypes: [ApiBlockType.Value] })).toStrictEqual("");
+    expect(value.html({ skipBlockTypes: [ApiBlockType.KeyValueSet] })).toStrictEqual("");
+    expect(value.html({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+
+    const selValue = doc.form.getFieldByKey("Job fair")?.value as FieldValue;
+    expect(selValue).toBeTruthy();
+    expect(selValue.html()).toStrictEqual("SELECTED");
+    expect(
+      selValue.html({ includeBlockTypes: [selValue.blockType, ApiBlockType.SelectionElement] }),
+    ).toStrictEqual("SELECTED");
+    expect(selValue.html({ includeBlockTypes: [ApiBlockType.SelectionElement] })).toStrictEqual("");
+    expect(selValue.html({ skipBlockTypes: [ApiBlockType.SelectionElement] })).toStrictEqual("");
+  });
+
   it("escapes forbidden entities in value text for html()", () => {
     const responseCopy = JSON.parse(JSON.stringify(testResponseJson));
     const doc = new TextractDocument(responseCopy);
@@ -70,10 +107,9 @@ describe("FieldGeneric", () => {
     expect(field?.childBlockIds).toStrictEqual(field?.key.childBlockIds);
     expect(field?.dict).toBe(field?.key.dict);
     expect(field?.id).toStrictEqual(field?.key.id);
-    const mock = jest.spyOn(field?.key as FieldKey, "relatedBlockIdsByRelType").mockImplementation(
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      (relType: ApiRelationshipType | ApiRelationshipType[]) => [] as string[],
-    );
+    const mock = jest
+      .spyOn(field?.key as FieldKey, "relatedBlockIdsByRelType")
+      .mockImplementation(() => [] as string[]);
     expect(field?.relatedBlockIdsByRelType(ApiRelationshipType.Value).length).toStrictEqual(0);
     expect(mock).toHaveBeenCalledTimes(1);
     mock.mockReset();
@@ -140,6 +176,35 @@ describe("FieldGeneric", () => {
     expect(field.str()).toStrictEqual(REFERENCE_FIELD_STR);
     expect(field.html()).toStrictEqual(
       '<input label="Phone Number:" type="text" disabled value="555-0100" />',
+    );
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const field = doc.form.getFieldByKey("Job fair") as Field;
+    expect(field).toBeTruthy();
+    expect(field.html()).toStrictEqual('<input label="Job fair" type="text" disabled value="SELECTED" />');
+
+    expect(
+      field.html({
+        includeBlockTypes: [ApiBlockType.KeyValueSet, ApiBlockType.SelectionElement, ApiBlockType.Word],
+      }),
+    ).toStrictEqual('<input label="Job fair" type="text" disabled value="SELECTED" />');
+    expect(
+      field.html({ includeBlockTypes: [ApiBlockType.SelectionElement, ApiBlockType.Word] }),
+    ).toStrictEqual("");
+
+    expect(field.html({ skipBlockTypes: [ApiBlockType.Key] })).toStrictEqual(
+      '<input type="text" disabled value="SELECTED" />',
+    );
+    expect(field.html({ skipBlockTypes: [ApiBlockType.Value] })).toStrictEqual(
+      '<input label="Job fair" type="text" disabled />',
+    );
+    expect(field.html({ skipBlockTypes: [ApiBlockType.SelectionElement] })).toStrictEqual(
+      '<input label="Job fair" type="text" disabled value="" />',
+    );
+    expect(field.html({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual(
+      '<input label="" type="text" disabled value="SELECTED" />',
     );
   });
 
@@ -326,6 +391,14 @@ describe("Form", () => {
     expect(doc.form.html()).toMatch(
       /^<form>\n(?:\t<div class="form-page" id="form-page-\d+">\n(?:\t\t<input label=".*" type="text" disabled value=".*" \/>\n)*\t<\/div>\n)*<\/form>$/g,
     );
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(testResponseJson);
+    const page = doc.listPages()[0];
+    expect(page.form.html({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual("<form></form>");
+    expect(page.form.html({ skipBlockTypes: [ApiBlockType.Value] })).not.toContain("value=");
+    expect(page.form.html({ skipBlockTypes: [ApiBlockType.Key] })).not.toContain("label=");
   });
 
   it("exposes raw form dicts with traversal up and down the tree", () => {

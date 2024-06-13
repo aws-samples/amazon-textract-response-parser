@@ -8,8 +8,15 @@ import {
   ApiWordBlock,
 } from "../../src/api-models/content";
 import { ApiBlock } from "../../src/api-models/document";
-import { IApiBlockWrapper, IBlockManager } from "../../src/base";
-import { LineGeneric, SelectionElement, Signature, Word, buildWithContent } from "../../src/content";
+import { IApiBlockWrapper, IBlockManager, PageHostedApiBlockWrapper } from "../../src/base";
+import {
+  LineGeneric,
+  SelectionElement,
+  Signature,
+  WithWords,
+  Word,
+  buildWithContent,
+} from "../../src/content";
 
 const EXAMPLE_WORD_BLOCK: ApiWordBlock = {
   BlockType: "WORD" as ApiBlockType.Word,
@@ -169,7 +176,7 @@ class DummyPage implements IBlockManager {
     return this;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getItemByBlockId(id: string): any {
     if (!this._items) {
       throw new Error("Dummy page requires items in constructor to use getItemByBlockId");
@@ -224,6 +231,14 @@ describe("Word", () => {
     const word = new Word(EXAMPLE_WORD_BLOCK);
     expect(word.html()).toStrictEqual(word.text);
     expect(word.str()).toStrictEqual(word.text);
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const word = new Word(EXAMPLE_WORD_BLOCK);
+    expect(word.html({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual(word.text);
+    expect(word.html({ includeBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(word.html({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(word.html({ skipBlockTypes: [ApiBlockType.Line] })).toStrictEqual(word.text);
   });
 
   it("escapes forbidden entities in word text for html()", () => {
@@ -288,6 +303,15 @@ describe("SelectionElement", () => {
     expect(unselEl.html()).toStrictEqual('<input type="checkbox" disabled />');
   });
 
+  it("filters HTML rendering by block type", () => {
+    const selEl = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const elHtml = '<input type="checkbox" disabled checked />';
+    expect(selEl.html({ includeBlockTypes: [ApiBlockType.SelectionElement] })).toStrictEqual(elHtml);
+    expect(selEl.html({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(selEl.html({ skipBlockTypes: [ApiBlockType.SelectionElement] })).toStrictEqual("");
+    expect(selEl.html({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual(elHtml);
+  });
+
   it("uses selection status for str()", () => {
     const selEl = new SelectionElement(EXAMPLE_SELECT_BLOCK);
     expect(selEl.str()).toStrictEqual(ApiSelectionStatus.Selected);
@@ -339,6 +363,15 @@ describe("Signature", () => {
   it("renders semantic HTML", () => {
     const sigEl = new Signature(EXAMPLE_SIG_BLOCK);
     expect(sigEl.html()).toStrictEqual('<input class="signature" type="text" disabled value="[SIGNATURE]"/>');
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const sigEl = new Signature(EXAMPLE_SIG_BLOCK);
+    const elHtml = '<input class="signature" type="text" disabled value="[SIGNATURE]"/>';
+    expect(sigEl.html({ includeBlockTypes: [ApiBlockType.Signature] })).toStrictEqual(elHtml);
+    expect(sigEl.html({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(sigEl.html({ skipBlockTypes: [ApiBlockType.Signature] })).toStrictEqual("");
+    expect(sigEl.html({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual(elHtml);
   });
 
   it("renders an informational str() representation", () => {
@@ -394,6 +427,48 @@ describe("LineGeneric", () => {
     );
     const line = new LineGeneric(EXAMPLE_LINE_BLOCK, dummyPage);
     expect(line.html()).toStrictEqual(line.text);
+  });
+
+  it("filters getText by content types (including own block)", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
+    const line = new LineGeneric(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(line.nWords).toBeGreaterThan(0);
+    expect(line.getText({ skipBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(line.getText({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual(line.dict.Text);
+    expect(line.getText({ skipBlockTypes: [ApiBlockType.SelectionElement] })).toStrictEqual(line.dict.Text);
+    expect(line.getText({ includeBlockTypes: [ApiBlockType.Line] })).toStrictEqual(line.dict.Text);
+    expect(line.getText({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(line.getText({ includeBlockTypes: [ApiBlockType.Line, ApiBlockType.Word] })).toStrictEqual(
+      line.dict.Text,
+    );
+
+    // Because LineGeneric.getText does not actually iterate children, errors and warnings don't get generated:
+    expect(warn).toHaveBeenCalledTimes(0);
+    expect(() => line.getText({ onUnexpectedBlockType: "error", skipBlockTypes: [] })).not.toThrow();
+    expect(line.getText({ onUnexpectedBlockType: "warn" })).toStrictEqual(line.dict.Text);
+    expect(warn).toHaveBeenCalledTimes(0);
+    warn.mockReset();
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const line = new LineGeneric(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(line.html({ includeBlockTypes: [ApiBlockType.Line] })).toStrictEqual(line.text);
+    expect(line.html({ includeBlockTypes: [ApiBlockType.Signature] })).toStrictEqual("");
+    expect(line.html({ skipBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(line.html({ skipBlockTypes: [ApiBlockType.SelectionElement] })).toStrictEqual(line.text);
+    expect(line.html({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual(line.text);
   });
 
   it("escapes forbidden entities in line text for html()", () => {
@@ -496,7 +571,147 @@ describe("WithWords (via LineGeneric)", () => {
     const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
     expect(() => line.listWords()).not.toThrow();
     expect(line.listWords().length).toStrictEqual(0);
-    expect(warn).toHaveBeenCalledTimes(2); // Warn on each attempt to access
+    expect(warn).toHaveBeenCalledTimes(0); // No warnings with default settings
+    warn.mockReset();
+  });
+
+  it("filters specific content block types configured at runtime", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
+    const line = new LineGeneric(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(line.nWords).toBeGreaterThan(0);
+    expect(line.listWords({ includeBlockTypes: [ApiBlockType.Signature] }).length).toStrictEqual(0);
+    expect([...line.iterWords({ includeBlockTypes: [ApiBlockType.Signature] })].length).toStrictEqual(0);
+    const wordList = line.listWords({ includeBlockTypes: [ApiBlockType.Word] });
+    expect(wordList.length).toStrictEqual(1);
+    expect(wordList[0]).toBe(dummyWord);
+    const iterWords = [...line.iterWords({ includeBlockTypes: [ApiBlockType.Word] })];
+    expect(iterWords.length).toStrictEqual(1);
+    expect(iterWords[0]).toBe(dummyWord);
+    expect(warn).toHaveBeenCalledTimes(0);
+    warn.mockReset();
+  });
+
+  it("skips specific content block types configured at runtime", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
+    const line = new LineGeneric(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(line.listWords({ skipBlockTypes: [ApiBlockType.Word] }).length).toStrictEqual(0);
+    expect([...line.iterWords({ skipBlockTypes: [ApiBlockType.Word] })].length).toStrictEqual(0);
+    const wordList = line.listWords({ skipBlockTypes: [ApiBlockType.Line] });
+    expect(wordList.length).toStrictEqual(1);
+    expect(wordList[0]).toBe(dummyWord);
+    expect(warn).toHaveBeenCalledTimes(0);
+    const iterWords = [
+      ...line.iterWords({ onUnexpectedBlockType: "warn", skipBlockTypes: [ApiBlockType.Line] }),
+    ];
+    expect(iterWords.length).toStrictEqual(1);
+    expect(iterWords[0]).toBe(dummyWord);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockReset();
+  });
+
+  it("cannot request runtime blocks outside the mixin-configured scope", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const line = new LineGeneric(EXAMPLE_LINE_BLOCK, dummyPage);
+    const itemList = line.listWords({
+      includeBlockTypes: [ApiBlockType.SelectionElement, ApiBlockType.Word],
+    });
+    expect(itemList.length).toStrictEqual(1);
+    expect(itemList[0]).toBe(dummyWord);
+    const iterItems = [
+      ...line.iterWords({ includeBlockTypes: [ApiBlockType.SelectionElement, ApiBlockType.Word] }),
+    ];
+    expect(iterItems.length).toStrictEqual(1);
+    expect(iterItems[0]).toBe(dummyWord);
+  });
+
+  it("cannot prevent ignoring mixin-configured skip block types at runtime", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+
+    class ErrLine extends WithWords(PageHostedApiBlockWrapper, {
+      onUnexpectedBlockType: "error",
+      otherExpectedChildTypes: [ApiBlockType.SelectionElement],
+    })<ApiLineBlock, DummyPage> {}
+    const line = new ErrLine(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(() => line.listWords({ skipBlockTypes: [] })).not.toThrow();
+    expect(() => [...line.iterWords({ skipBlockTypes: [] })]).not.toThrow();
+  });
+
+  it("can override mixin-configured unexpected block handling at run-time", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const line = new LineGeneric(EXAMPLE_LINE_BLOCK, dummyPage);
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
+    expect(() => line.listWords()).not.toThrow();
+    expect(() => line.listWords({ onUnexpectedBlockType: "error" })).toThrow(/SELECTION_ELEMENT/);
+    expect(() => [...line.iterWords({ onUnexpectedBlockType: "error" })]).toThrow(/SELECTION_ELEMENT/);
+    expect(warn).toHaveBeenCalledTimes(0);
+    expect(line.listWords({ onUnexpectedBlockType: "warn" }).length).toStrictEqual(1);
+    expect([...line.iterWords({ onUnexpectedBlockType: "warn" })].length).toStrictEqual(1);
+    expect(warn).toHaveBeenCalledTimes(2);
+    warn.mockReset();
+  });
+
+  it("filters getText by content types (including own block)", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
+    // LineGeneric has specific getText behaviour, so we'll explicitly test the Mixin:
+    // class ErrLine extends WithWords(PageHostedApiBlockWrapper, { onUnexpectedBlockType: "error", otherExpectedChildTypes: [ApiBlockType.SelectionElement] })<ApiLineBlock, DummyPage> {}
+
+    class ItemWithWords extends WithWords(PageHostedApiBlockWrapper)<ApiLineBlock, DummyPage> {}
+    const itemWithWords = new ItemWithWords(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(itemWithWords.nWords).toBeGreaterThan(0);
+    expect(itemWithWords.getText({ skipBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(itemWithWords.getText({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(itemWithWords.getText({ skipBlockTypes: [ApiBlockType.SelectionElement] })).toStrictEqual(
+      itemWithWords.text,
+    );
+    expect(itemWithWords.getText({ includeBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(itemWithWords.getText({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(
+      itemWithWords.getText({ includeBlockTypes: [ApiBlockType.Line, ApiBlockType.Word] }),
+    ).toStrictEqual(itemWithWords.text);
+
+    expect(warn).toHaveBeenCalledTimes(0);
+    expect(() => itemWithWords.getText({ onUnexpectedBlockType: "error", skipBlockTypes: [] })).toThrow();
+    expect(() =>
+      itemWithWords.getText({
+        onUnexpectedBlockType: "error",
+        skipBlockTypes: [ApiBlockType.SelectionElement],
+      }),
+    ).not.toThrow();
+    expect(itemWithWords.getText({ onUnexpectedBlockType: "warn" })).toStrictEqual(itemWithWords.text);
+    expect(warn).toHaveBeenCalledTimes(1);
     warn.mockReset();
   });
 });
@@ -569,6 +784,7 @@ describe("WithContent (via LineGeneric)", () => {
     expect(nItems).toStrictEqual(line.nContentItems);
     expect(nItems).toStrictEqual(itemList.length);
     expect(warn).toHaveBeenCalledTimes(0);
+    warn.mockReset();
   });
 
   it("warns on unexpected content types if configured by Mixin", () => {
@@ -686,6 +902,7 @@ describe("WithContent (via LineGeneric)", () => {
     expect(nItems).toBeLessThan(line.nContentItems);
     expect(nItems).toStrictEqual(itemList.length);
     expect(warn).toHaveBeenCalledTimes(0);
+    warn.mockReset();
   });
 
   it("skips specific content block types configured at runtime", () => {
@@ -709,6 +926,7 @@ describe("WithContent (via LineGeneric)", () => {
     expect(nItems).toBeLessThan(line.nContentItems);
     expect(nItems).toStrictEqual(itemList.length);
     expect(warn).toHaveBeenCalledTimes(0);
+    warn.mockReset();
   });
 
   it("cannot request runtime blocks outside the mixin-configured scope", () => {
@@ -758,5 +976,46 @@ describe("WithContent (via LineGeneric)", () => {
     expect(() => line.listContent()).not.toThrow();
     expect(() => line.listContent({ onUnexpectedBlockType: "error" })).toThrow(/SELECTION_ELEMENT/);
     expect(() => [...line.iterContent({ onUnexpectedBlockType: "error" })]).toThrow(/SELECTION_ELEMENT/);
+  });
+
+  it("filters getText by content types (including own block)", () => {
+    const dummyWord = new Word(EXAMPLE_WORD_BLOCK);
+    const dummySel = new SelectionElement(EXAMPLE_SELECT_BLOCK);
+    const dummyPage = new DummyPage(
+      [EXAMPLE_LINE_BLOCK, EXAMPLE_WORD_BLOCK, EXAMPLE_SELECT_BLOCK],
+      [dummyWord, dummySel],
+    );
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
+    const LineWithContent = buildWithContent<Word>({
+      contentTypes: [ApiBlockType.Word, ApiBlockType.SelectionElement],
+    })(LineGeneric);
+    const line = new LineWithContent(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(line.nContentItems).toStrictEqual(2);
+    expect(line.getText({ skipBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(line.getText({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual(dummySel.text);
+    expect(line.getText({ skipBlockTypes: [ApiBlockType.SelectionElement] })).toStrictEqual(dummyWord.text);
+    expect(line.getText({ includeBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(line.getText({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(line.getText({ includeBlockTypes: [ApiBlockType.Line, ApiBlockType.Word] })).toStrictEqual(
+      dummyWord.text,
+    );
+    expect(warn).toHaveBeenCalledTimes(0);
+
+    const ContentWithWordsOnly = buildWithContent<Word>({
+      contentTypes: [ApiBlockType.Word],
+    })(LineGeneric);
+    const withStrictContent = new ContentWithWordsOnly(EXAMPLE_LINE_BLOCK, dummyPage);
+    expect(() => withStrictContent.getText({ onUnexpectedBlockType: "error" })).toThrow();
+    expect(() =>
+      withStrictContent.getText({
+        onUnexpectedBlockType: "error",
+        skipBlockTypes: [ApiBlockType.SelectionElement],
+      }),
+    ).not.toThrow();
+    expect(withStrictContent.getText({ onUnexpectedBlockType: "warn" })).toStrictEqual(
+      withStrictContent.text,
+    );
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockReset();
   });
 });

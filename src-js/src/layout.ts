@@ -5,7 +5,7 @@
  */
 
 // Local Dependencies:
-import { ApiBlockType, ApiLayoutBlockType, ApiRelationshipType, LAYOUT_BLOCK_TYPES } from "./api-models/base";
+import { ApiBlockType, ApiRelationshipType, LAYOUT_BLOCK_TYPES } from "./api-models/base";
 import { ApiBlock } from "./api-models/document";
 import {
   ApiLayoutBlock,
@@ -22,6 +22,7 @@ import {
 } from "./api-models/layout";
 import {
   ApiObjectWrapper,
+  doesFilterAllowBlockType,
   escapeHtml,
   getIterable,
   IApiBlockWrapper,
@@ -30,6 +31,7 @@ import {
   indent,
   INestedListOpts,
   IRenderable,
+  IRenderOpts,
   IWithParentPage,
   IWithRelatedItems,
   normalizeOptionalSet,
@@ -40,42 +42,6 @@ import { buildWithContent, IWithContent, LineGeneric } from "./content";
 import { FieldGeneric, IWithForm } from "./form";
 import { Geometry, IWithGeometry } from "./geometry";
 import { IWithTables, TableGeneric } from "./table";
-
-/**
- * Configurations for filtering layout .html() rendering by block type
- *
- * This interface is designed for compatibility with `IBlockTypeFilterOpts`, but our HTML renderers
- * can currently only support filtering by Layout* block types: Not all block types.
- *
- * TODO: Can we support broaden support to other block types and outside of Layout?
- *
- * @experimental
- */
-export interface ILayoutHtmlBlockTypeFilterOpts {
-  /**
-   * Only render layout blocks of the given type(s)
-   *
-   * By default, all blocks are returned unless otherwise documented. If you specify this filter,
-   * you probably want to include ApiBlockType.Line.
-   *
-   * @experimental Only LINE and LAYOUT_* block types are currently supported
-   */
-  includeBlockTypes?:
-    | ApiLayoutBlockType
-    | ApiBlockType.Line
-    | Array<ApiLayoutBlockType | ApiBlockType.Line>
-    | Set<ApiLayoutBlockType | ApiBlockType.Line>
-    | null;
-  /**
-   * Block types to silently skip/ignore in the results
-   *
-   * @experimental Only LINE LAYOUT_* block types are currently supported
-   */
-  skipBlockTypes?:
-    | Array<ApiLayoutBlockType>
-    | Set<ApiLayoutBlockType>
-    | null;
-}
 
 /**
  * Standard interface for parsed Layout items
@@ -123,8 +89,9 @@ export interface ILayoutItem<
    * Parsed page layout collection that this element belongs to
    */
   parentLayout: LayoutGeneric<TPage>;
-  // TODO: Remove this override if/when IRenderable also supports these options
-  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string;
+  // Because they're all content containers, Layout* items support the full IBlockTypeFilterOpts
+  // rather than just IRenderOpts
+  html(opts?: IBlockTypeFilterOpts): string;
   /**
    * Layout items (any layout block types) linked as children to this item
    *
@@ -293,6 +260,13 @@ class LayoutLineContainerItem<
 > extends buildWithContent<LineGeneric<IBlockManager>>({ contentTypes: [ApiBlockType.Line] })(
   LayoutItemBaseGeneric,
 )<TBlock, TPage> {
+  override getText(opts?: IBlockTypeFilterOpts) {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    return this.listContent(opts)
+      .map((c) => c.text)
+      .join("\n");
+  }
+
   /**
    * Iterate through the text `Line`s in this object
    *
@@ -332,14 +306,6 @@ class LayoutLineContainerItem<
   get nTextLines(): number {
     return this.listTextLines().length;
   }
-  /**
-   * The text representation of this element concatenates child text `Line`s, separated by newlines
-   */
-  override get text(): string {
-    return this.listContent()
-      .map((c) => c.text)
-      .join("\n");
-  }
 }
 
 /**
@@ -367,8 +333,10 @@ export class LayoutFigureGeneric<
    *
    * Detected text within the figure (if any), is included inside the div
    */
-  html(): string {
-    const content = this.text ? `\n${indent(escapeHtml(this.text))}\n` : "";
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
     return `<div class="figure">${content}</div>`;
   }
 
@@ -405,8 +373,11 @@ export class LayoutFooterGeneric<
    *
    * Note that there might be multiple footer elements on a page (e.g. horizontal columns)
    */
-  html(): string {
-    return `<div class="footer-el">\n${indent(escapeHtml(this.text))}\n</div>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
+    return `<div class="footer-el">${content}</div>`;
   }
 
   str(): string {
@@ -439,8 +410,11 @@ export class LayoutHeaderGeneric<
    *
    * Note that there might be multiple footer elements on a page (e.g. horizontal columns)
    */
-  html(): string {
-    return `<div class="header-el">\n${indent(escapeHtml(this.text))}\n</div>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
+    return `<div class="header-el">${content}</div>`;
   }
 
   str(): string {
@@ -557,32 +531,32 @@ export class LayoutKeyValueGeneric<
    * Since there's no guaranteed 1:1 correspondence between Layout K-V regions and detected form
    * fields, we loop through the plain text (from layout) but insert the semantic HTML for a whole
    * K-V Form Field at the first overlapping mention.
-   *
-   * @param opts: Experimental options to filter the output by block type, subject to change
    */
-  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string {
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
     const wordsToFields = this._mapPageContentToFormFields();
     const consumedIds: { [id: string]: true } = {};
     const lineReprs: string[] = [];
     for (const line of this.iterContent(opts)) {
       const wordReprs: string[] = [];
-      for (const word of line.iterWords()) {
+      for (const word of line.iterWords(opts)) {
         const wordId = word.id;
         if (wordId in consumedIds) continue;
         if (wordId in wordsToFields) {
           const field = wordsToFields[wordId];
-          wordReprs.push(field.html());
+          wordReprs.push(field.html(opts));
           this._listContentIdsInFormField(field).forEach((id) => {
             consumedIds[id] = true;
           });
         } else {
-          wordReprs.push(word.html());
+          wordReprs.push(word.html(opts));
         }
       }
       lineReprs.push(wordReprs.join(" "));
     }
-    const innerContent = lineReprs.filter((rep) => rep).join("\n");
-    return `<div class="key-value">\n${indent(innerContent)}\n</div>`;
+    const lineReprTexts = lineReprs.filter((rep) => rep).join("\n");
+    const content = lineReprTexts ? `\n${indent(lineReprTexts)}\n` : "";
+    return `<div class="key-value">${content}</div>`;
   }
 
   /**
@@ -618,8 +592,11 @@ export class LayoutPageNumberGeneric<
   /**
    * The semantic HTML representation for a page number element is a <div> of class "page-num"
    */
-  html(): string {
-    return `<div class="page-num">\n${indent(escapeHtml(this.text))}\n</div>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
+    return `<div class="page-num">${content}</div>`;
   }
 
   str(): string {
@@ -650,8 +627,11 @@ export class LayoutSectionHeaderGeneric<
   /**
    * The semantic HTML representation for a section heading is a <h2> tag
    */
-  html(): string {
-    return `<h2>\n${indent(escapeHtml(this.text))}\n</h2>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
+    return `<h2>${content}</h2>`;
   }
 
   str(): string {
@@ -798,32 +778,32 @@ export class LayoutTableGeneric<
    * Since there's no guaranteed 1:1 correspondence between the Layout Table regions and detected
    * Table objects, populate the div content by looping through the plain text (from layout) but
    * inserting the semantic HTML for each whole `<table>` at the first overlapping mention.
-   *
-   * @param opts: Experimental options to filter the output by block type, subject to change
    */
-  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string {
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
     const wordsToTables = this._mapPageContentToTables();
     const consumedIds: { [id: string]: true } = {};
     const lineReprs: string[] = [];
     for (const line of this.iterContent(opts)) {
       const wordReprs: string[] = [];
-      for (const word of line.iterWords()) {
+      for (const word of line.iterWords(opts)) {
         const wordId = word.id;
         if (wordId in consumedIds) continue;
         if (wordId in wordsToTables) {
           const table = wordsToTables[wordId];
-          wordReprs.push(table.html());
+          wordReprs.push(table.html(opts));
           this._listContentIdsInTable(table).forEach((id) => {
             consumedIds[id] = true;
           });
         } else {
-          wordReprs.push(word.html());
+          wordReprs.push(word.html(opts));
         }
       }
       lineReprs.push(wordReprs.join(" "));
     }
-    const innerContent = lineReprs.filter((rep) => rep).join("\n");
-    return `<div class="table">\n${indent(innerContent)}\n</div>`;
+    const lineReprsText = lineReprs.filter((rep) => rep).join("\n");
+    const content = lineReprsText ? `\n${indent(lineReprsText)}\n` : "";
+    return `<div class="table">${content}</div>`;
   }
 
   /**
@@ -861,8 +841,11 @@ export class LayoutTextGeneric<
   /**
    * The semantic HTML representation for a text element is a <p> paragraph tag
    */
-  html(): string {
-    return `<p>\n${indent(escapeHtml(this.text))}\n</p>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
+    return `<p>${content}</p>`;
   }
 
   /**
@@ -896,8 +879,11 @@ export class LayoutTitleGeneric<
   /**
    * The semantic HTML representation for a top-level title is a <h1> tag
    */
-  html(): string {
-    return `<h1>\n${indent(escapeHtml(this.text))}\n</h1>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
+    return `<h1>${content}</h1>`;
   }
 
   str(): string {
@@ -941,16 +927,18 @@ export class LayoutListGeneric<
    * Render the list as HTML
    *
    * TODO: Support ordered/numbered lists with <ol>, if we can infer when to use it?
-   * TODO: innerHTML option on LayoutText to get rid of the <p> tags?
+   * TODO: innerHTML option on LayoutText to get rid of the <p> tags maybe?
    *
-   * @param opts: Experimental options to filter the output by block type, subject to change
+   * @param opts Optional configuration for filtering rendering to certain content types
    */
-  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string {
-    return `<ul>\n${indent(
-      this.listContent(opts)
-        .map((item) => `<li>${item.html()}</li>`)
-        .join("\n"),
-    )}\n</ul>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const itemHtmls = this.listContent(opts)
+      .map((item) => item.html(opts))
+      .filter((s) => s)
+      .map((s) => `<li>${s}</li>`);
+    const content = itemHtmls.length ? `\n${indent(itemHtmls.join("\n"))}\n` : "";
+    return `<ul>${content}</ul>`;
   }
   /**
    * Iterate through the text `Line`s in this object
@@ -1157,12 +1145,11 @@ export class LayoutGeneric<
    *
    * Since this class is just a collection and not an API object wrapper, we don't wrap the content
    * HTML in anything: Leave that up to `Page`, `Document`, etc.
-   *
-   * @param opts: Experimental options to filter the output by block type, subject to change
    */
-  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string {
+  html(opts?: IRenderOpts): string {
     return this.listItems({ deep: false, ...opts })
       .map((item) => item.html(opts))
+      .filter((s) => s)
       .join("\n");
   }
 

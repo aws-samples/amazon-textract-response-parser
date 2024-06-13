@@ -5,11 +5,11 @@ import {
   AggregationMethod,
   ApiBlockWrapper,
   DocumentMetadata,
-  IApiBlockWrapper,
   IBlockManager,
   PageHostedApiBlockWrapper,
   aggregate,
   argMax,
+  doesFilterAllowBlockType,
   escapeHtml,
   getIterable,
   indent,
@@ -146,6 +146,73 @@ describe("normalizeOptionalSet", () => {
     expect(normalizeOptionalSet(testObj)).toStrictEqual(new Set([testObj]));
     expect(normalizeOptionalSet(false)).toStrictEqual(new Set([false]));
     expect(normalizeOptionalSet(0)).toStrictEqual(new Set([0]));
+  });
+});
+
+describe("doesFilterAllowBlockType", () => {
+  it("returns true for falsy and empty filter specs", () => {
+    expect(doesFilterAllowBlockType(undefined, ApiBlockType.Word)).toBe(true);
+    expect(doesFilterAllowBlockType(null, ApiBlockType.LayoutFigure)).toBe(true);
+    expect(doesFilterAllowBlockType({}, ApiBlockType.LayoutFigure)).toBe(true);
+    expect(
+      doesFilterAllowBlockType({ includeBlockTypes: null, skipBlockTypes: null }, ApiBlockType.LayoutFigure),
+    ).toBe(true);
+    expect(
+      doesFilterAllowBlockType(
+        { includeBlockTypes: undefined, skipBlockTypes: undefined },
+        ApiBlockType.LayoutFigure,
+      ),
+    ).toBe(true);
+    expect(doesFilterAllowBlockType(false as unknown as null, ApiBlockType.Cell)).toBe(true);
+  });
+
+  it("returns false when blockType is skipped", () => {
+    expect(
+      doesFilterAllowBlockType({ skipBlockTypes: [ApiBlockType.Line, ApiBlockType.Word] }, ApiBlockType.Word),
+    ).toBe(false);
+    expect(
+      doesFilterAllowBlockType(
+        { skipBlockTypes: new Set([ApiBlockType.Table, ApiBlockType.Word]) },
+        ApiBlockType.Word,
+      ),
+    ).toBe(false);
+    expect(
+      doesFilterAllowBlockType(
+        { skipBlockTypes: new Set([ApiBlockType.Table, ApiBlockType.Word]) },
+        ApiBlockType.Word,
+      ),
+    ).toBe(false);
+    expect(doesFilterAllowBlockType(null, ApiBlockType.LayoutFigure)).toBe(true);
+    expect(doesFilterAllowBlockType(false as unknown as null, ApiBlockType.Cell)).toBe(true);
+  });
+
+  it("requires blockType to be present in includeBlockTypes, when set", () => {
+    expect(doesFilterAllowBlockType({ includeBlockTypes: [] }, ApiBlockType.Word)).toBe(false);
+    expect(doesFilterAllowBlockType({ includeBlockTypes: new Set() }, ApiBlockType.Word)).toBe(false);
+    expect(
+      doesFilterAllowBlockType(
+        { includeBlockTypes: [ApiBlockType.Line, ApiBlockType.Word] },
+        ApiBlockType.Word,
+      ),
+    ).toBe(true);
+    expect(
+      doesFilterAllowBlockType({ includeBlockTypes: new Set([ApiBlockType.Word]) }, ApiBlockType.Word),
+    ).toBe(true);
+  });
+
+  it("returns false if a blockType is both included and skipped", () => {
+    expect(
+      doesFilterAllowBlockType(
+        { includeBlockTypes: [ApiBlockType.Word], skipBlockTypes: new Set([ApiBlockType.Word]) },
+        ApiBlockType.Word,
+      ),
+    ).toBe(false);
+    expect(
+      doesFilterAllowBlockType(
+        { includeBlockTypes: new Set([ApiBlockType.Word]), skipBlockTypes: [ApiBlockType.Word] },
+        ApiBlockType.Word,
+      ),
+    ).toBe(false);
   });
 });
 
@@ -321,10 +388,8 @@ describe("PageHostedApiBlockWrapper", () => {
       }
       return item;
     },
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    registerParsedItem: (blockId: string, item: IApiBlockWrapper<ApiBlock>) => {},
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    getBlockById: (blockId: string) => undefined,
+    registerParsedItem: () => {},
+    getBlockById: () => undefined,
     listBlocks: () => [],
   };
   const wrapper = new PageHostedApiBlockWrapper(
@@ -426,22 +491,12 @@ describe("PageHostedApiBlockWrapper", () => {
       onUnexpectedBlockType: "error",
     });
     // But running them should:
-    expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for (const item of iter) {
-        // Consume the iterator to force error
-      }
-    }).toThrow(/DUMMY-6.*TABLE/);
+    expect(() => [...iter]).toThrow(/DUMMY-6.*TABLE/);
     iter = wrapper.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
       includeBlockTypes: new Set([ApiBlockType.Word]),
       onUnexpectedBlockType: "error",
     });
-    expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for (const item of iter) {
-        // Consume the iterator to force error
-      }
-    }).toThrow(/DUMMY-6.*TABLE/);
+    expect(() => [...iter]).toThrow(/DUMMY-6.*TABLE/);
     expect(() =>
       wrapper.listRelatedItemsByRelType(ApiRelationshipType.Child, {
         includeBlockTypes: ApiBlockType.Word,
@@ -462,23 +517,13 @@ describe("PageHostedApiBlockWrapper", () => {
       onUnexpectedBlockType: "error",
       skipBlockTypes: [ApiBlockType.Table],
     });
-    expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for (const item of iter) {
-        // Consume the iterator to force error
-      }
-    }).toThrow(/DUMMY-9.*KEY/);
+    expect(() => [...iter]).toThrow(/DUMMY-9.*KEY/);
     iter = wrapper.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
       includeBlockTypes: [ApiBlockType.Word],
       onUnexpectedBlockType: "error",
       skipBlockTypes: [ApiBlockType.Table],
     });
-    expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for (const item of iter) {
-        // Consume the iterator to force error
-      }
-    }).toThrow(/DUMMY-9.*KEY/);
+    expect(() => [...iter]).toThrow(/DUMMY-9.*KEY/);
     expect(() =>
       wrapper.listRelatedItemsByRelType(ApiRelationshipType.Child, {
         includeBlockTypes: ApiBlockType.Word,
@@ -502,12 +547,7 @@ describe("PageHostedApiBlockWrapper", () => {
         onUnexpectedBlockType: "error",
       },
     );
-    expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      for (const item of iter) {
-        // Consume the iterator to force error
-      }
-    }).not.toThrow();
+    expect(() => [...iter]).not.toThrow();
     expect(() =>
       wrapper.listRelatedItemsByRelType([ApiRelationshipType.Answer, ApiRelationshipType.ComplexFeatures], {
         includeBlockTypes: [ApiBlockType.QueryResult, ApiBlockType.Word],
@@ -536,10 +576,7 @@ describe("PageHostedApiBlockWrapper", () => {
       skipBlockTypes: [ApiBlockType.Key],
     });
     expect(warn).toHaveBeenCalledTimes(0);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for (const item of iter) {
-      // Consume the iterator
-    }
+    [...iter];
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0][0]).toMatch(/DUMMY-6.*TABLE/);
     warn.mockClear();

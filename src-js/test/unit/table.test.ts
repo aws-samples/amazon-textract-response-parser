@@ -131,6 +131,34 @@ describe("MergedCell", () => {
     expect(headerCell.html()).toStrictEqual("<th>Date</th>");
   });
 
+  it("filters rendered HTML by block type", () => {
+    // With colspans and rowspans:
+    const doc = new TextractDocument(testTableMergedCellsJson);
+    const table = doc.pageNumber(1).tableAtIndex(0);
+    expect(table).toBeTruthy();
+
+    // Merged cell:
+    const hMergedCell = table.cellAt(2, 1) as MergedCellGeneric<Page>;
+    expect(hMergedCell.html()).toStrictEqual('<td colspan="4">Previous Balance</td>');
+    expect(hMergedCell.html({ includeBlockTypes: [ApiBlockType.MergedCell] })).toStrictEqual(
+      '<td colspan="4"></td>',
+    );
+    expect(hMergedCell.html({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(hMergedCell.html({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual('<td colspan="4"></td>');
+    expect(hMergedCell.html({ skipBlockTypes: [ApiBlockType.MergedCell] })).toStrictEqual("");
+
+    // Standard non-merged cell (th):
+    const docWithEntityTypes = new TextractDocument(testResponseJson);
+    const tableWithHeader = docWithEntityTypes.pageNumber(1).tableAtIndex(0);
+    expect(tableWithHeader).toBeTruthy();
+    const headerCell = table.cellAt(1, 1) as CellGeneric<Page>;
+    expect(headerCell.html()).toStrictEqual("<th>Date</th>");
+    expect(headerCell.html({ includeBlockTypes: [ApiBlockType.Cell] })).toStrictEqual("<th></th>");
+    expect(headerCell.html({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(headerCell.html({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual("<th></th>");
+    expect(headerCell.html({ skipBlockTypes: [ApiBlockType.Cell] })).toStrictEqual("");
+  });
+
   it("escapes forbidden entities in cell text for html()", () => {
     const responseCopy = JSON.parse(JSON.stringify(testTableMergedCellsJson));
     const doc = new TextractDocument(responseCopy);
@@ -174,6 +202,20 @@ describe("TableFooter", () => {
     // Check the content gets escaped:
     expect(tableFooter.html()).toContain(`&lt;!DOCTYPE&gt;&lt;html&gt;'woof"${origText}`);
   });
+
+  it("filters rendered HTML by block type", () => {
+    const responseCopy = JSON.parse(JSON.stringify(testTitleFootersJson));
+    const doc = new TextractDocument(responseCopy);
+    const tableFooter = doc.pageNumber(1).tableAtIndex(0).firstFooter as TableFooterGeneric<Page>;
+    expect(tableFooter).not.toBeUndefined();
+    expect(tableFooter.html({ includeBlockTypes: [ApiBlockType.TableFooter] })).toStrictEqual("");
+    expect(
+      tableFooter.html({ includeBlockTypes: [ApiBlockType.TableFooter, ApiBlockType.Word] }),
+    ).toStrictEqual(tableFooter.text);
+    expect(tableFooter.html({ skipBlockTypes: [ApiBlockType.TableFooter] })).toStrictEqual("");
+    expect(tableFooter.html({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(tableFooter.html({ skipBlockTypes: [ApiBlockType.TableTitle] })).toStrictEqual(tableFooter.text);
+  });
 });
 
 describe("TableTitle", () => {
@@ -204,6 +246,20 @@ describe("TableTitle", () => {
     word.dict.Text = `<!DOCTYPE><html>'woof"${origText}`;
     // Check the content gets escaped:
     expect(tableTitle.html()).toContain(`&lt;!DOCTYPE&gt;&lt;html&gt;'woof"${origText}`);
+  });
+
+  it("filters rendered HTML by block type", () => {
+    const responseCopy = JSON.parse(JSON.stringify(testTitleFootersJson));
+    const doc = new TextractDocument(responseCopy);
+    const tableTitle = doc.pageNumber(1).tableAtIndex(0).firstTitle as TableTitleGeneric<Page>;
+    expect(tableTitle).not.toBeUndefined();
+    expect(tableTitle.html({ includeBlockTypes: [ApiBlockType.TableTitle] })).toStrictEqual("");
+    expect(
+      tableTitle.html({ includeBlockTypes: [ApiBlockType.TableTitle, ApiBlockType.Word] }),
+    ).toStrictEqual(tableTitle.text);
+    expect(tableTitle.html({ skipBlockTypes: [ApiBlockType.TableTitle] })).toStrictEqual("");
+    expect(tableTitle.html({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(tableTitle.html({ skipBlockTypes: [ApiBlockType.TableFooter] })).toStrictEqual(tableTitle.text);
   });
 });
 
@@ -759,6 +815,33 @@ describe("Table", () => {
     expect(tableWithHeader.html()).toStrictEqual(REFERENCE_TABLE_WITH_HEADER_HTML);
 
     // TODO: Ideally could add tests for footer-only and having both?
+  });
+
+  it("filters rendered HTML by block type", () => {
+    const docTableNoCaption = new TextractDocument(testTableMergedCellsJson);
+    const tableNoCaption = docTableNoCaption.pageNumber(1).tableAtIndex(0);
+    expect(tableNoCaption.html()).toStrictEqual(REFERENCE_TABLE_NO_CAPTION_HTML);
+
+    expect(tableNoCaption.html({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(
+      tableNoCaption.html({
+        includeBlockTypes: [
+          ApiBlockType.Cell,
+          ApiBlockType.MergedCell,
+          ApiBlockType.Table,
+          ApiBlockType.Word,
+        ],
+      }),
+    ).toStrictEqual(REFERENCE_TABLE_NO_CAPTION_HTML);
+    expect(tableNoCaption.html({ skipBlockTypes: [ApiBlockType.Table] })).toStrictEqual("");
+    expect(
+      tableNoCaption.html({ skipBlockTypes: [ApiBlockType.Cell, ApiBlockType.MergedCell] }),
+    ).not.toContain("<td>");
+
+    const docTableWithHeader = new TextractDocument(testResponseJson);
+    const tableWithHeader = docTableWithHeader.pageNumber(1).tableAtIndex(0);
+    expect(tableWithHeader.html()).toContain("<caption");
+    expect(tableWithHeader.html({ skipBlockTypes: [ApiBlockType.TableTitle] })).not.toContain("<caption");
   });
 
   it("mutates confidence fields", () => {

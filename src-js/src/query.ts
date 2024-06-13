@@ -9,11 +9,13 @@ import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
 import { ApiQueryBlock, ApiQueryResultBlock } from "./api-models/query";
 import {
   argMax,
+  doesFilterAllowBlockType,
   escapeHtml,
   getIterable,
-  indent,
   IBlockManager,
+  indent,
   IRenderable,
+  IRenderOpts,
   PageHostedApiBlockWrapper,
 } from "./base";
 import { Geometry } from "./geometry";
@@ -55,7 +57,8 @@ export class QueryResultGeneric<TPage extends IBlockManager>
   /**
    * The semantic `html()` representation of a query result is just its (HTML-escaped) text
    */
-  html(): string {
+  html(opts?: IRenderOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
     return escapeHtml(this.text);
   }
 
@@ -162,13 +165,18 @@ export class QueryInstanceGeneric<TPage extends IBlockManager>
    * The question itself is presented within `<p>` tags, and then a bulleted list of the answers /
    * results in order of descending confidence.
    */
-  html(): string {
-    const resultsByConf = this.listResultsByConfidence();
+  html(opts?: IRenderOpts): string {
+    const renderQuery = doesFilterAllowBlockType(opts, ApiBlockType.Query);
+    const renderResults = doesFilterAllowBlockType(opts, ApiBlockType.QueryResult);
+    if (!renderQuery && !renderResults) return "";
+    const resultsByConf = renderResults ? this.listResultsByConfidence() : [];
     const resultsHtml = resultsByConf.map((res) => `<li>${res.html()}</li>`).join("\n");
     return [
       '<div class="query">',
-      indent(`<p>${escapeHtml(this.text)}</p>`),
-      indent(resultsByConf.length ? ["<ul>", indent(resultsHtml), "</ul>"].join("\n") : "<ul></ul>"),
+      renderQuery ? indent(`<p>${escapeHtml(this.text)}</p>`) : "",
+      renderResults
+        ? indent(resultsByConf.length ? ["<ul>", indent(resultsHtml), "</ul>"].join("\n") : "<ul></ul>")
+        : "",
       "</div>",
     ].join("\n");
   }
@@ -256,10 +264,16 @@ export class QueryInstanceCollectionGeneric<TPage extends IBlockManager> impleme
   /**
    * The `html()` for a QueryCollection lists all queries within a `<div>` of class "queries"
    */
-  html(): string {
-    return ['<div class="queries">', indent(this._queries.map((q) => q.html()).join("\n")), "</div>"].join(
-      "\n",
-    );
+  html(opts?: IRenderOpts): string {
+    const renderQuery = doesFilterAllowBlockType(opts, ApiBlockType.Query);
+    const renderResults = doesFilterAllowBlockType(opts, ApiBlockType.QueryResult);
+    if (!renderQuery && !renderResults) return "";
+    const queryHtmls = this._queries
+      .map((q) => q.html(opts))
+      .filter((s) => s)
+      .join("\n");
+    const content = queryHtmls ? `\n${indent(queryHtmls)}\n` : "";
+    return `<div class="queries">${content}</div>`;
   }
 
   /**

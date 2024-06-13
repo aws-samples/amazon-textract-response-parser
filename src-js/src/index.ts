@@ -6,6 +6,7 @@
 export * from "./api-models";
 
 export {
+  ActionOnUnexpectedBlockType,
   aggregate,
   AggregationMethod,
   /**
@@ -14,18 +15,29 @@ export {
   ApiBlockWrapper,
   argMax,
   DocumentMetadata,
+  doesFilterAllowBlockType,
   escapeHtml,
   getIterable,
   IApiBlockWrapper,
   IBlockManager,
+  IBlockTypeFilterOpts,
   IDocBlocks,
   IEscapeHtmlOpts,
   IIndentOpts,
   indent,
   IRenderable,
+  IRenderOpts,
   modalAvg,
 } from "./base";
-export { IWithContent, IWithWords, SelectionElement, Signature, Word } from "./content";
+export {
+  IWithContent,
+  IWithContentMixinOptions,
+  IWithWords,
+  IWithWordsMixinOptions,
+  SelectionElement,
+  Signature,
+  Word,
+} from "./content";
 export {
   Cell,
   Field,

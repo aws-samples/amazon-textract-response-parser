@@ -25,6 +25,7 @@ import {
   modalAvg,
   IBlockManager,
   IRenderable,
+  IRenderOpts,
   IApiBlockWrapper,
   IWithRelatedItems,
   IBlockTypeFilterOpts,
@@ -42,7 +43,6 @@ import {
 } from "./form";
 import { BoundingBox, Geometry } from "./geometry";
 import {
-  ILayoutHtmlBlockTypeFilterOpts,
   LayoutFigureGeneric,
   LayoutFooterGeneric,
   LayoutGeneric,
@@ -1207,11 +1207,11 @@ export class Page
    *
    * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
    *
-   * @param opts: Experimental options to filter the output by block type, subject to change
+   * @param opts Optional configuration to filter rendering to certain content types
    *
    * @throws If Textract Layout analysis was not enabled in the API request.
    */
-  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string {
+  html(opts?: IRenderOpts): string {
     if (this.hasLayout) {
       // Since the Textract LAYOUT feature was enabled, we can use it to render semantic HTML
       return this._layout.html(opts);
@@ -1752,11 +1752,11 @@ export class TextractDocument
    *
    * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
    *
-   * @param opts: Experimental options to filter the output by block type, subject to change
+   * @param opts Optional configuration to filter rendering to certain content types
    *
    * @throws If Textract Layout analysis was not enabled in the API request.
    */
-  html(opts?: ILayoutHtmlBlockTypeFilterOpts): string {
+  html(opts?: IRenderOpts): string {
     const bodyHtml = [
       "<body>",
       indent(this._pages.map((page) => `<div class="page">\n${indent(page.html(opts))}\n</div>`).join("\n")),

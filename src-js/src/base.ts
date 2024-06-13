@@ -72,11 +72,59 @@ export interface IWithText {
   get text(): string;
 }
 
+/**
+ * Configurations for filtering rendering (e.g. HTML) by block type
+ *
+ * This interface is designed for general compatibility with `IBlockTypeFilterOpts`, but where the
+ * concept of `onUnexpectedBlockType` may not be applicable.
+ */
+export interface IRenderOpts {
+  /**
+   * *Only* render blocks of the given type(s)
+   *
+   * By default, all blocks are returned unless otherwise documented. If you specify this filter,
+   * you probably want to include *at least* ApiBlockType.Line and ApiBlockType.Word!
+   */
+  includeBlockTypes?: ApiBlockType | ApiBlockType[] | Set<ApiBlockType> | null;
+  /**
+   * Block types to omit from the results
+   */
+  skipBlockTypes?: ApiBlockType[] | Set<ApiBlockType> | null;
+}
+
+/**
+ * Convenience method to check whether a block type filter spec allows a particular BlockType
+ *
+ * Useful for handling un-normalized arguments where e.g. the whole filter spec may be null, or the
+ * specifiers haven't been normalized to `Set`s.
+ *
+ * @param filterOpts An (un-normalized) filter specification for methods like listContent
+ * @param blockType The block type of interest
+ * @returns false if the block type is explicitly disallowed by skip or include rules, else true
+ */
+export function doesFilterAllowBlockType(
+  filterOpts: IRenderOpts | null | undefined,
+  blockType: ApiBlockType,
+): boolean {
+  if (!filterOpts) return true;
+  if (filterOpts.skipBlockTypes) {
+    const skipBlockTypes = normalizeOptionalSet(filterOpts.skipBlockTypes);
+    if (skipBlockTypes.has(blockType)) return false;
+  }
+  if (filterOpts.includeBlockTypes) {
+    const includeBlockTypes = normalizeOptionalSet(filterOpts.includeBlockTypes);
+    if (!includeBlockTypes.has(blockType)) return false;
+  }
+  return true;
+}
+
 export interface IRenderable extends IWithText {
   /**
    * Return a best-effort semantic HTML representation of this element and its content
+   *
+   * @param opts Optional configuration for filtering rendering to certain content types
    */
-  html(): string;
+  html(opts?: IRenderOpts): string;
 
   // TODO: Add Markdown options in future?
 
@@ -344,6 +392,15 @@ export function argMax(arr: number[]): { maxValue: number; maxIndex: number } {
 }
 
 /**
+ * Possible actions to take when encountering an unexpected Block type in results
+ *
+ * "error" throws an error, "warn" logs a warning, and falsy values silently ignore.
+ *
+ * TODO: Could/should we introduce a callback option one day?
+ */
+export type ActionOnUnexpectedBlockType = "error" | "warn" | null;
+
+/**
  * Configuration options for filtering collections of Textract API "Block"s by type
  */
 export interface IBlockTypeFilterOpts {
@@ -358,7 +415,7 @@ export interface IBlockTypeFilterOpts {
    *
    * Set "error" to throw an error, "warn" to log a warning, or falsy to skip silently.
    */
-  onUnexpectedBlockType?: "error" | "warn" | null;
+  onUnexpectedBlockType?: ActionOnUnexpectedBlockType;
   /**
    * Block types to silently skip/ignore in the results
    */
