@@ -6,7 +6,10 @@ import {
   ApiBlockWrapper,
   DocumentMetadata,
   IBlockManager,
+  IDocBlocks,
   PageHostedApiBlockWrapper,
+  _implIterRelatedBlocksByRelType,
+  _implListRelatedBlocksByRelType,
   aggregate,
   argMax,
   doesFilterAllowBlockType,
@@ -321,6 +324,80 @@ describe("indent", () => {
   });
 });
 
+describe("_impl{Iter/List}RelatedBlocksByRelType", () => {
+  // Most of these functions get covered by higher tests, but need to check missing block handling
+  it("provides configurable handling for missing blocks", () => {
+    const baseBlock = {
+      Id: "DUMMY-1",
+      BlockType: ApiBlockType.Line,
+      Relationships: [{ Ids: ["DOESNOTEXIST"], Type: ApiRelationshipType.Child }],
+    };
+    const baseWrapper = new ApiBlockWrapper(baseBlock as unknown as ApiBlock);
+    const host = {
+      getBlockById: (blockId: string) => (blockId == baseBlock.Id ? baseBlock : undefined),
+    } as IDocBlocks;
+
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {}); // eslint-disable-line @typescript-eslint/no-empty-function
+
+    // By default, throw error:
+    const errIterable = _implIterRelatedBlocksByRelType(
+      ApiRelationshipType.Child,
+      undefined,
+      baseWrapper,
+      host,
+    );
+    expect(() => [...errIterable]).toThrow(/DOESNOTEXIST/);
+    expect(() =>
+      _implListRelatedBlocksByRelType(ApiRelationshipType.Child, undefined, baseWrapper, host),
+    ).toThrow(/DOESNOTEXIST/);
+
+    // Warn when requested:
+    expect([
+      ..._implIterRelatedBlocksByRelType(
+        ApiRelationshipType.Child,
+        { onMissingBlockId: "warn" },
+        baseWrapper,
+        host,
+      ),
+    ]).toStrictEqual([]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain("DOESNOTEXIST");
+    warn.mockClear();
+    expect(
+      _implListRelatedBlocksByRelType(
+        ApiRelationshipType.Child,
+        { onMissingBlockId: "warn" },
+        baseWrapper,
+        host,
+      ),
+    ).toStrictEqual([]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain("DOESNOTEXIST");
+    warn.mockClear();
+
+    // Silently omit when requested:
+    expect([
+      ..._implIterRelatedBlocksByRelType(
+        ApiRelationshipType.Child,
+        { onMissingBlockId: null },
+        baseWrapper,
+        host,
+      ),
+    ]).toStrictEqual([]);
+    expect(warn).toHaveBeenCalledTimes(0);
+    expect(
+      _implListRelatedBlocksByRelType(
+        ApiRelationshipType.Child,
+        { onMissingBlockId: null },
+        baseWrapper,
+        host,
+      ),
+    ).toStrictEqual([]);
+    expect(warn).toHaveBeenCalledTimes(0);
+    warn.mockReset();
+  });
+});
+
 describe("ApiBlockWrapper", () => {
   it("fetches related blocks filtered by one or more relationship types", () => {
     const wrapper = new ApiBlockWrapper({
@@ -371,6 +448,16 @@ describe("PageHostedApiBlockWrapper", () => {
     "DUMMY-9": { id: "DUMMY-9", blockType: ApiBlockType.Key },
     "DUMMY-0": { id: "DUMMY-0", blockType: ApiBlockType.Word },
   };
+  const dummyBlockMap: { [id: string]: ApiBlock } = Object.keys(dummyItemMap).reduce(
+    (acc, id) => {
+      acc[id] = {
+        Id: id,
+        BlockType: dummyItemMap[id].blockType,
+      } as ApiBlock;
+      return acc;
+    },
+    {} as { [id: string]: ApiBlock },
+  );
   const dummyHost: IBlockManager = {
     getItemByBlockId: (
       blockId: string,
@@ -389,8 +476,8 @@ describe("PageHostedApiBlockWrapper", () => {
       return item;
     },
     registerParsedItem: () => {},
-    getBlockById: () => undefined,
-    listBlocks: () => [],
+    getBlockById: (blockId: string) => dummyBlockMap[blockId],
+    listBlocks: () => [...Object.values(dummyBlockMap)],
   };
   const wrapper = new PageHostedApiBlockWrapper(
     {

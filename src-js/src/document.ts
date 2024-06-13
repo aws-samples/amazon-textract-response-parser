@@ -3,11 +3,10 @@
  */
 
 // Local Dependencies:
-import { ApiBlockType, ApiRelationshipType, isLayoutBlockType } from "./api-models/base";
+import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
 import { ApiLineBlock } from "./api-models/content";
 import { ApiBlock, ApiPageBlock } from "./api-models/document";
 import { ApiKeyBlock, ApiKeyValueEntityType, ApiKeyValueSetBlock } from "./api-models/form";
-import { ApiLayoutBlock } from "./api-models/layout";
 import { ApiQueryBlock } from "./api-models/query";
 import {
   ApiDocumentMetadata,
@@ -227,25 +226,12 @@ export class Page
     this._parentDocument = parentDocument;
     this._geometry = new Geometry(pageBlock.Geometry, this);
 
-    // Placeholders pre-parsing to keep TypeScript happy:
-    this._content = [];
-    this._lines = [];
-    this._tables = [];
-    this._form = new FormGeneric<Page>([], this);
-    this._itemsByBlockId = {};
-    this._layout = new LayoutGeneric<Page>([], this);
-    this._queries = new QueryInstanceCollectionGeneric<Page>([], this);
-    // Parse the content:
-    this._parse(blocks);
-  }
-
-  _parse(blocks: ApiBlock[]): void {
     this._content = [];
     this._itemsByBlockId = {};
     this._lines = [];
     this._tables = [];
+    // TODO: Make .form & .queries stateless like .layout already is
     const formKeyBlocks: Array<ApiKeyBlock | ApiKeyValueSetBlock> = [];
-    const layoutBlocks: ApiLayoutBlock[] = [];
     const queryBlocks: ApiQueryBlock[] = [];
 
     blocks.forEach((item) => {
@@ -260,8 +246,6 @@ export class Page
         if (item.EntityTypes.indexOf(ApiKeyValueEntityType.Key) >= 0) {
           formKeyBlocks.push(item);
         }
-      } else if (isLayoutBlockType(item.BlockType)) {
-        layoutBlocks.push(item as ApiLayoutBlock);
       } else if (item.BlockType === ApiBlockType.Query) {
         queryBlocks.push(item);
       } else if (item.BlockType === ApiBlockType.SelectionElement) {
@@ -283,7 +267,7 @@ export class Page
 
     this._form = new FormGeneric<Page>(formKeyBlocks, this);
     this._queries = new QueryInstanceCollectionGeneric<Page>(queryBlocks, this);
-    this._layout = new LayoutGeneric<Page>(layoutBlocks, this);
+    this._layout = new LayoutGeneric<Page>(this);
   }
 
   getBlockById(blockId: string): ApiBlock | undefined {

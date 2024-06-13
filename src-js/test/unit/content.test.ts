@@ -521,7 +521,7 @@ describe("LineGeneric", () => {
     const line = new LineGeneric(lineBlockCopy, dummyPage);
     expect(warn).toHaveBeenCalledTimes(0);
     warn.mockReset();
-    expect(() => line.listWords()).toThrow("missing");
+    expect(() => line.listWords()).toThrow("DOESNOTEXIST");
   });
 
   it("propagates confidence updates to underlying dict", () => {

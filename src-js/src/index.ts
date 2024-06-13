@@ -6,6 +6,7 @@
 export * from "./api-models";
 
 export {
+  ActionOnMissingBlock,
   ActionOnUnexpectedBlockType,
   aggregate,
   AggregationMethod,

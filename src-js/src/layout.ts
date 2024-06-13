@@ -21,6 +21,7 @@ import {
   ApiLayoutTitleBlock,
 } from "./api-models/layout";
 import {
+  _implIterRelatedBlocksByRelType,
   ApiObjectWrapper,
   doesFilterAllowBlockType,
   escapeHtml,
@@ -49,7 +50,8 @@ import { IWithTables, TableGeneric } from "./table";
 export interface ILayoutItem<
   TBlock extends ApiLayoutBlock,
   TContent extends IApiBlockWrapper<ApiBlock> & IRenderable,
-  TPage extends IBlockManager &
+  TPage extends IApiBlockWrapper<ApiBlock> &
+    IBlockManager &
     IWithForm<IBlockManager> &
     IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
     IWithTables<IBlockManager>,
@@ -147,7 +149,8 @@ export interface ILayoutItem<
  */
 class LayoutItemBaseGeneric<
     TBlock extends ApiLayoutBlock,
-    TPage extends IBlockManager &
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
       IWithForm<IBlockManager> &
       IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
       IWithTables<IBlockManager>,
@@ -253,7 +256,8 @@ class LayoutItemBaseGeneric<
  */
 class LayoutLineContainerItem<
   TBlock extends ApiLayoutBlock,
-  TPage extends IBlockManager &
+  TPage extends IApiBlockWrapper<ApiBlock> &
+    IBlockManager &
     IWithForm<IBlockManager> &
     IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
     IWithTables<IBlockManager>,
@@ -314,7 +318,8 @@ class LayoutLineContainerItem<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutFigure`.
  */
 export class LayoutFigureGeneric<
-    TPage extends IBlockManager &
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
       IWithForm<IBlockManager> &
       IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
       IWithTables<IBlockManager>,
@@ -354,7 +359,8 @@ export class LayoutFigureGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutFooter`.
  */
 export class LayoutFooterGeneric<
-    TPage extends IBlockManager &
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
       IWithForm<IBlockManager> &
       IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
       IWithTables<IBlockManager>,
@@ -391,7 +397,8 @@ export class LayoutFooterGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutHeader`.
  */
 export class LayoutHeaderGeneric<
-    TPage extends IBlockManager &
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
       IWithForm<IBlockManager> &
       IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
       IWithTables<IBlockManager>,
@@ -428,7 +435,8 @@ export class LayoutHeaderGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutKeyValue`.
  */
 export class LayoutKeyValueGeneric<
-    TPage extends IBlockManager &
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
       IWithForm<IBlockManager> &
       IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
       IWithTables<IBlockManager>,
@@ -575,7 +583,8 @@ export class LayoutKeyValueGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutPageNumber`.
  */
 export class LayoutPageNumberGeneric<
-    TPage extends IBlockManager &
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
       IWithForm<IBlockManager> &
       IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
       IWithTables<IBlockManager>,
@@ -610,7 +619,8 @@ export class LayoutPageNumberGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutSectionHeader`.
  */
 export class LayoutSectionHeaderGeneric<
-    TPage extends IBlockManager &
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
       IWithForm<IBlockManager> &
       IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
       IWithTables<IBlockManager>,
@@ -645,7 +655,8 @@ export class LayoutSectionHeaderGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutTable`.
  */
 export class LayoutTableGeneric<
-    TPage extends IBlockManager &
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
       IWithForm<IBlockManager> &
       IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
       IWithTables<IBlockManager>,
@@ -824,7 +835,8 @@ export class LayoutTableGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutText`.
  */
 export class LayoutTextGeneric<
-    TPage extends IBlockManager &
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
       IWithForm<IBlockManager> &
       IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
       IWithTables<IBlockManager>,
@@ -862,7 +874,8 @@ export class LayoutTextGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutTitle`.
  */
 export class LayoutTitleGeneric<
-    TPage extends IBlockManager &
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
       IWithForm<IBlockManager> &
       IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
       IWithTables<IBlockManager>,
@@ -897,14 +910,16 @@ export class LayoutTitleGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutList`.
  */
 export class LayoutListGeneric<
-    TPage extends IBlockManager &
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
       IWithForm<IBlockManager> &
       IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
       IWithTables<IBlockManager>,
   >
   extends buildWithContent<
     LayoutTextGeneric<
-      IBlockManager &
+      IApiBlockWrapper<ApiBlock> &
+        IBlockManager &
         IWithForm<IBlockManager> &
         IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
         IWithTables<IBlockManager>
@@ -914,7 +929,8 @@ export class LayoutListGeneric<
     ILayoutItem<
       ApiLayoutListBlock,
       LayoutTextGeneric<
-        IBlockManager &
+        IApiBlockWrapper<ApiBlock> &
+          IBlockManager &
           IWithForm<IBlockManager> &
           IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
           IWithTables<IBlockManager>
@@ -1022,7 +1038,8 @@ export class LayoutListGeneric<
  * TypeScript type collecting all possible TRP parsed objects corresponding to layout elements
  */
 export type LayoutItemGeneric<
-  TPage extends IBlockManager &
+  TPage extends IApiBlockWrapper<ApiBlock> &
+    IBlockManager &
     IWithForm<IBlockManager> &
     IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
     IWithTables<IBlockManager>,
@@ -1044,7 +1061,8 @@ export type LayoutItemGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/Layout`.
  */
 export class LayoutGeneric<
-    TPage extends IBlockManager &
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
       IWithForm<IBlockManager> &
       IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
       IWithTables<IBlockManager>,
@@ -1053,10 +1071,15 @@ export class LayoutGeneric<
 {
   _parentPage: TPage;
 
-  constructor(layoutBlocks: ApiLayoutBlock[], parentPage: TPage) {
+  constructor(parentPage: TPage) {
     this._parentPage = parentPage;
 
-    layoutBlocks.forEach((block) => {
+    for (const block of _implIterRelatedBlocksByRelType(
+      ApiRelationshipType.Child,
+      { includeBlockTypes: LAYOUT_BLOCK_TYPES, onMissingBlockId: "error" },
+      parentPage,
+      parentPage,
+    )) {
       // The PageHostedBlockWrappers will automatically self-register with the manager (page):
       switch (block.BlockType) {
         case ApiBlockType.LayoutFigure:
@@ -1089,14 +1112,8 @@ export class LayoutGeneric<
         case ApiBlockType.LayoutTitle:
           new LayoutTitleGeneric(block, this);
           break;
-        default:
-          console.warn(
-            `Ignoring unrecognised BlockType '${(block as ApiBlock).BlockType}' when parsing layout block ${
-              (block as ApiBlock).Id
-            }`,
-          );
       }
-    });
+    }
   }
 
   /**

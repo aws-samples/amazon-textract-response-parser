@@ -102,6 +102,7 @@ describe("Top-level index.ts", () => {
       /* eslint-disable @typescript-eslint/no-unused-vars */
       const {
         // base:
+        ActionOnMissingBlock,
         ActionOnUnexpectedBlockType,
         aggregate,
         AggregationMethod,
