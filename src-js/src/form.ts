@@ -297,7 +297,7 @@ export class FieldGeneric<TPage extends IBlockManager>
     return this.value ? this.value.isSelected : null;
   }
   /**
-   * A field is a "selection" if its .value contains one SELECTION_ELEMENT
+   * A field is a "checkbox" if its .value contains one SELECTION_ELEMENT
    *
    * Use this to check whether this is a checkbox/radio button/etc field. Other (text) content may
    * also be present.

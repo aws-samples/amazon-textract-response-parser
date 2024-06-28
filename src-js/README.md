@@ -166,7 +166,7 @@ const page = doc.pageNumber(1);
 const fieldByPage = page.form.getFieldByKey("Address");
 ```
 
-`field.isCheckbox` is true for fields whose value contain exactly one SelectionElement object: meaning they're a (key=label)->(value=checkbox/radio) pair. For these fields, you can directly use `field.selectionStatus` or `field.isSelected` to look up the value's status. For other (non-selection) fields, they'll return `null`.
+`field.isCheckbox` is true for fields whose value contain exactly one SelectionElement object: meaning they're a (key=label)->(value=checkbox/radio) pair. For these fields, you can directly use `field.selectionStatus` or `field.isSelected` to look up the value's status. For other (non-checkbox) fields, they'll return `null`.
 
 
 ## Tables
