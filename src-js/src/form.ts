@@ -4,10 +4,12 @@
 
 // Local Dependencies:
 import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
+import { ApiSelectionStatus } from "./api-models/content";
 import { ApiKeyBlock, ApiKeyValueSetBlock, ApiValueBlock } from "./api-models/form";
 import {
   aggregate,
   AggregationMethod,
+  doesFilterAllowBlockType,
   escapeHtml,
   getIterable,
   IApiBlockWrapper,
@@ -15,6 +17,8 @@ import {
   IDocBlocks,
   indent,
   IRenderable,
+  IRenderOpts,
+  normalizeOptionalSet,
   PageHostedApiBlockWrapper,
 } from "./base";
 import { buildWithContent, IWithContent, SelectionElement, Signature, WithWords, Word } from "./content";
@@ -73,8 +77,14 @@ export class FieldKeyGeneric<TPage extends IBlockManager>
   /**
    * The semantic `html()` representation of a field key is just the (HTML-escaped) text
    */
-  html(): string {
-    return escapeHtml(this.text);
+  html({ includeBlockTypes = null, skipBlockTypes = null }: IRenderOpts = {}): string {
+    // WithWords.getText already filters by our self block type (KEY or KEY_VALUE_SET), but we'd
+    // like to also support explicitly skipping by KEY even if our block is KEY_VALUE_SET:
+    if (skipBlockTypes) {
+      skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
+      if (skipBlockTypes.has(ApiBlockType.Key)) return "";
+    }
+    return escapeHtml(this.getText({ includeBlockTypes, skipBlockTypes }));
   }
   /**
    * The `str()` representation of a field key is just the contained text
@@ -120,8 +130,41 @@ export class FieldValueGeneric<TPage extends IBlockManager>
   get geometry(): Geometry<ApiKeyValueSetBlock | ApiValueBlock, FieldValueGeneric<TPage>> {
     return this._geometry;
   }
+  /**
+   * A field value is "a checkbox" if it contains one SELECTION_ELEMENT
+   *
+   * Use this to check whether this field value is a checkbox/radio button/etc. Other (text)
+   * content may also be present.
+   */
+  get isCheckbox(): boolean {
+    return this.listContent({ includeBlockTypes: [ApiBlockType.SelectionElement] }).length == 1;
+  }
+  /**
+   * Selection status if field value is one SELECTION_ELEMENT, else null
+   *
+   * If the field value contains exactly one SELECTION_ELEMENT, this property returns `true` if
+   * it's SELECTED or `false` if it's NOT_SELECTED. Otherwise, this property returns null.
+   */
+  get isSelected(): boolean | null {
+    const selEls = this.listContent({
+      includeBlockTypes: [ApiBlockType.SelectionElement],
+    }) as SelectionElement[];
+    return selEls.length === 1 ? selEls[0].selectionStatus === ApiSelectionStatus.Selected : null;
+  }
   get parentField(): FieldGeneric<TPage> {
     return this._parentField;
+  }
+  /**
+   * Selection status if field value is one SELECTION_ELEMENT, else null
+   *
+   * If the field value contains exactly one SELECTION_ELEMENT, this property returns its
+   * SelectionStatus. Otherwise, null.
+   */
+  get selectionStatus(): ApiSelectionStatus | null {
+    const selEls = this.listContent({
+      includeBlockTypes: [ApiBlockType.SelectionElement],
+    }) as SelectionElement[];
+    return selEls.length === 1 ? selEls[0].selectionStatus : null;
   }
 
   /**
@@ -142,8 +185,14 @@ export class FieldValueGeneric<TPage extends IBlockManager>
   /**
    * The semantic `html()` representation of a field value is just the (HTML-escaped) text
    */
-  html(): string {
-    return escapeHtml(this.text);
+  html({ includeBlockTypes = null, skipBlockTypes = null }: IRenderOpts = {}): string {
+    // WithContent.getText already filters by our self block type (KEY or KEY_VALUE_SET), but we'd
+    // like to also support explicitly skipping by VALUE even if our block is KEY_VALUE_SET:
+    if (skipBlockTypes) {
+      skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
+      if (skipBlockTypes.has(ApiBlockType.Value)) return "";
+    }
+    return escapeHtml(this.getText({ includeBlockTypes, skipBlockTypes }));
   }
   /**
    * The `str()` representation of a field value is just the contained text
@@ -238,6 +287,24 @@ export class FieldGeneric<TPage extends IBlockManager>
     // Hoisting required property from key to implement IApiBlockWrapper
     return this._key.id;
   }
+  /**
+   * Selection status if field value is one SELECTION_ELEMENT, else null
+   *
+   * If the field value contains exactly one SELECTION_ELEMENT, this property returns `true` if
+   * it's SELECTED or `false` if it's NOT_SELECTED. Otherwise, this property returns null.
+   */
+  get isSelected(): boolean | null {
+    return this.value ? this.value.isSelected : null;
+  }
+  /**
+   * A field is a "checkbox" if its .value contains one SELECTION_ELEMENT
+   *
+   * Use this to check whether this is a checkbox/radio button/etc field. Other (text) content may
+   * also be present.
+   */
+  get isCheckbox(): boolean {
+    return !!this.value?.isCheckbox;
+  }
   get key(): FieldKeyGeneric<TPage> {
     return this._key;
   }
@@ -246,6 +313,15 @@ export class FieldGeneric<TPage extends IBlockManager>
   }
   get parentPage(): TPage {
     return this._parentForm.parentPage;
+  }
+  /**
+   * Selection status if field value is one SELECTION_ELEMENT, else null
+   *
+   * If the field value contains exactly one SELECTION_ELEMENT, this property returns its
+   * SelectionStatus. Otherwise, null.
+   */
+  get selectionStatus(): ApiSelectionStatus | null {
+    return this.value ? this.value.selectionStatus : null;
   }
   get text(): string {
     return `${this._key.text}: ${this._value?.text || ""}`;
@@ -282,10 +358,22 @@ export class FieldGeneric<TPage extends IBlockManager>
    *
    * We render a text field, but `disable` it to prevent accidental edits when viewing reports
    */
-  html(): string {
-    return `<input label="${escapeHtml(this._key.text, {
-      forAttr: true,
-    })}" type="text" disabled value="${escapeHtml(this._value?.text || "", { forAttr: true })}" />`;
+  html(opts?: IRenderOpts): string {
+    let renderKey = doesFilterAllowBlockType(opts, this.key.blockType);
+    let renderValue = this.value && doesFilterAllowBlockType(opts, this.value.blockType);
+    if (opts && opts.skipBlockTypes) {
+      const skipSpec = normalizeOptionalSet(opts.skipBlockTypes);
+      if (skipSpec.has(ApiBlockType.Key)) renderKey = false;
+      if (skipSpec.has(ApiBlockType.Value)) renderValue = false;
+    }
+    if (!renderKey && !renderValue) return "";
+
+    const keyPartial = renderKey ? ` label="${escapeHtml(this._key.getText(opts), { forAttr: true })}"` : "";
+    const valPartial = renderValue
+      ? ` value="${escapeHtml(this.value ? this.value.getText(opts) : "", { forAttr: true })}"`
+      : "";
+    // TODO: Checkbox type for selector fields?
+    return `<input${keyPartial} type="text" disabled${valPartial} />`;
   }
 
   str(): string {
@@ -348,12 +436,11 @@ export class FormGeneric<TPage extends IBlockManager> implements IRenderable {
    *
    * Within the `<form>`, we list out all the individual fields
    */
-  html(): string {
-    return `<form>\n${indent(
-      this.listFields()
-        .map((f) => f.html())
-        .join("\n"),
-    )}\n</form>`;
+  html(opts: IRenderOpts = {}): string {
+    const fieldHtmls = this.listFields()
+      .map((f) => f.html(opts))
+      .filter((s) => s);
+    return fieldHtmls.length ? `<form>\n${indent(fieldHtmls.join("\n"))}\n</form>` : "<form></form>";
   }
 
   /**

@@ -2,6 +2,7 @@ import { ApiAnswerRelationship, ApiBlockType, ApiRelationshipType } from "../../
 import { ApiQueryBlock, ApiQueryResultBlock } from "../../src/api-models/query";
 import { ApiAnalyzeDocumentResponse, ApiResponsePage } from "../../src/api-models/response";
 import { QueryInstance, QueryResult, TextractDocument } from "../../src/document";
+import { QueryInstanceCollectionGeneric } from "../../src/query";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const testResponseJson: ApiResponsePage = require("../data/test-query-response.json");
@@ -55,6 +56,17 @@ describe("QueryResult", () => {
     expect(topResult.str()).toStrictEqual(topResult.text);
   });
 
+  it("filters HTML rendering by block type", () => {
+    const page = new TextractDocument(testResponseJson).pageNumber(1);
+    const topResult = page.queries.getQueryByAlias("name")?.topResult as QueryResult;
+    expect(topResult).toBeTruthy();
+
+    expect(topResult.html({ includeBlockTypes: [ApiBlockType.QueryResult] })).toStrictEqual(topResult.text);
+    expect(topResult.html({ includeBlockTypes: [ApiBlockType.Query] })).toStrictEqual("");
+    expect(topResult.html({ skipBlockTypes: [ApiBlockType.QueryResult] })).toStrictEqual("");
+    expect(topResult.html({ skipBlockTypes: [ApiBlockType.Query] })).toStrictEqual(topResult.text);
+  });
+
   it("escapes forbidden entities in word text for html()", () => {
     const responseCopy = JSON.parse(JSON.stringify(testResponseJson));
     const page = new TextractDocument(responseCopy).pageNumber(1);
@@ -91,6 +103,34 @@ describe("QueryInstance", () => {
     expect(query.text).toStrictEqual("What is the patient name?");
     expect(query.topResult?.text).toStrictEqual("Mary Major");
     expect(query.html()).toStrictEqual(REFERENCE_QUERY_HTML);
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const page = new TextractDocument(testResponseJson).pageNumber(1);
+    const query = page.queries.getQueryByAlias("name") as QueryInstance;
+    expect(query).toBeTruthy();
+    const topResult = query.topResult as QueryResult;
+    expect(topResult).toBeTruthy();
+
+    expect(query.html({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(query.html({ includeBlockTypes: [ApiBlockType.Query, ApiBlockType.QueryResult] })).toStrictEqual(
+      REFERENCE_QUERY_HTML,
+    );
+    const includeQueryOnly = query.html({ includeBlockTypes: [ApiBlockType.Query] });
+    expect(includeQueryOnly).toContain(query.text);
+    expect(includeQueryOnly).not.toContain("<ul>");
+    const includeResultsOnly = query.html({ includeBlockTypes: [ApiBlockType.QueryResult] });
+    expect(includeResultsOnly).toContain(topResult.text);
+    expect(includeResultsOnly).not.toContain(query.text);
+
+    expect(query.html({ skipBlockTypes: [ApiBlockType.Word] })).toStrictEqual(REFERENCE_QUERY_HTML);
+    expect(query.html({ skipBlockTypes: [ApiBlockType.Query, ApiBlockType.QueryResult] })).toStrictEqual("");
+    const skipQueryOnly = query.html({ skipBlockTypes: [ApiBlockType.Query] });
+    expect(skipQueryOnly).toContain(topResult.text);
+    expect(skipQueryOnly).not.toContain(query.text);
+    const skipResultsOnly = query.html({ skipBlockTypes: [ApiBlockType.QueryResult] });
+    expect(skipResultsOnly).toContain(query.text);
+    expect(skipResultsOnly).not.toContain(topResult.text);
   });
 
   it("escapes forbidden entities in query+response text for html()", () => {
@@ -291,6 +331,21 @@ describe("QueryCollection", () => {
         expect(collStr).toContain(query.topResult.text);
       }
     }
+  });
+
+  it("renders empty HTML div when no queries present", () => {
+    const page = new TextractDocument(testResponseJson).pageNumber(1);
+    const queries = new QueryInstanceCollectionGeneric([], page);
+    expect(queries.html()).toStrictEqual('<div class="queries"></div>');
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const page = new TextractDocument(testResponseJson).pageNumber(1);
+    expect(page.queries.html()).toBeTruthy();
+    expect(page.queries.html({ includeBlockTypes: [ApiBlockType.Word] })).toStrictEqual("");
+    expect(
+      page.queries.html({ skipBlockTypes: [ApiBlockType.Query, ApiBlockType.QueryResult] }),
+    ).toStrictEqual("");
   });
 
   it("provides access to underlying API result objects", () => {

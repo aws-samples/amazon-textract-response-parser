@@ -102,6 +102,8 @@ describe("Top-level index.ts", () => {
       /* eslint-disable @typescript-eslint/no-unused-vars */
       const {
         // base:
+        ActionOnMissingBlock,
+        ActionOnUnexpectedBlockType,
         aggregate,
         AggregationMethod,
         /**
@@ -110,19 +112,24 @@ describe("Top-level index.ts", () => {
         ApiBlockWrapper,
         argMax,
         DocumentMetadata,
+        doesFilterAllowBlockType,
         escapeHtml,
         getIterable,
         IApiBlockWrapper,
         IBlockManager,
+        IBlockTypeFilterOpts,
         IDocBlocks,
         IEscapeHtmlOpts,
         IIndentOpts,
         indent,
         IRenderable,
+        IRenderOpts,
         modalAvg,
         // content:
         IWithContent,
+        IWithContentMixinOptions,
         IWithWords,
+        IWithWordsMixinOptions,
         SelectionElement,
         Signature,
         Word,

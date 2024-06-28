@@ -130,6 +130,28 @@ describe("LayoutItemBase and LayoutText", () => {
     }
   });
 
+  it("filters nested layout items", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    // LAYOUT_LIST items should link to LAYOUT_TEXT children:
+    const lsBlock = finDocResponseJson.Blocks.find(
+      (block) => block.BlockType === ApiBlockType.LayoutList,
+    ) as ApiLayoutListBlock;
+    const lsBlockCids = (lsBlock.Relationships || [])[0].Ids;
+    expect(lsBlockCids.length).toBeGreaterThan(0);
+    const ls = page.layout
+      .listItems()
+      .find((ls) => ls.blockType === ApiBlockType.LayoutList) as LayoutListGeneric<Page>;
+    expect(ls).toBeTruthy();
+    expect(ls.listLayoutChildren().map((c) => c.id)).toStrictEqual(lsBlockCids);
+    expect(
+      ls.listLayoutChildren({ includeBlockTypes: [ApiBlockType.LayoutText] }).map((c) => c.id),
+    ).toStrictEqual(lsBlockCids);
+    expect(ls.listLayoutChildren({ includeBlockTypes: [ApiBlockType.LayoutTable] }).length).toStrictEqual(0);
+    expect(ls.listLayoutChildren({ skipBlockTypes: [ApiBlockType.LayoutText] }).length).toStrictEqual(0);
+  });
+
   it("renders semantic representations", () => {
     const doc = new TextractDocument(finDocResponseJson);
     const page = doc.pageNumber(1);
@@ -145,6 +167,27 @@ describe("LayoutItemBase and LayoutText", () => {
     expect(item.text).toStrictEqual(textLines.map((l) => l.text).join("\n"));
     expect(item.str()).toStrictEqual(item.text);
     expect(item.html()).toStrictEqual(`<p>\n${indent(item.text)}\n</p>`);
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const item = page.layout
+      .listItems()
+      .find((item) => item.blockType === ApiBlockType.LayoutText) as LayoutTextGeneric<Page>;
+    expect(item).toBeTruthy();
+    expect(item.nContentItems).toBeGreaterThan(1); // Check it has multiple lines
+
+    const textLines = item.listContent();
+    const defaultHtml = `<p>\n${indent(textLines.map((l) => l.text).join("\n"))}\n</p>`;
+    expect(item.html({ skipBlockTypes: [ApiBlockType.LayoutText] })).toStrictEqual("");
+    expect(item.html({ skipBlockTypes: [ApiBlockType.Line] })).toStrictEqual("<p></p>");
+    expect(item.html({ includeBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(item.html({ includeBlockTypes: [ApiBlockType.LayoutText] })).toStrictEqual("<p></p>");
+    expect(item.html({ includeBlockTypes: [ApiBlockType.LayoutText, ApiBlockType.Line] })).toContain(
+      defaultHtml,
+    );
   });
 });
 
@@ -162,6 +205,22 @@ describe("LayoutFigure", () => {
     expect(fig.html()).toStrictEqual('<div class="figure"></div>');
     expect(fig.str()).toStrictEqual("#### Figure ####\n################");
   });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(payStubResponseJson);
+    const page = doc.pageNumber(1);
+
+    const fig = page.layout
+      .listItems()
+      .find((item) => item.blockType === ApiBlockType.LayoutFigure) as LayoutFigureGeneric<Page>;
+    const defaultHtml = '<div class="figure"></div>';
+    expect(fig).toBeTruthy();
+    expect(fig.html({ skipBlockTypes: [ApiBlockType.LayoutFigure] })).toStrictEqual("");
+    expect(fig.html({ skipBlockTypes: [ApiBlockType.Line] })).toStrictEqual(defaultHtml);
+    expect(fig.html({ includeBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(fig.html({ includeBlockTypes: [ApiBlockType.LayoutFigure] })).toStrictEqual(defaultHtml);
+    expect(fig.html({ includeBlockTypes: [] })).toStrictEqual("");
+  });
 });
 
 describe("LayoutFooter", () => {
@@ -177,6 +236,25 @@ describe("LayoutFooter", () => {
     expect(foot.html()).toStrictEqual(`<div class="footer-el">\n\t${foot.text}\n</div>`);
     expect(foot.str()).toStrictEqual(`---- Footer text ----\n${foot.text}\n---------------------`);
   });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(taxFormResponseJson);
+    const page = doc.pageNumber(1);
+
+    const foot = page.layout
+      .listItems()
+      .find((item) => item.blockType === ApiBlockType.LayoutFooter) as LayoutFooterGeneric<Page>;
+    expect(foot).toBeTruthy();
+
+    const emptyHtml = '<div class="footer-el"></div>';
+    expect(foot.html({ skipBlockTypes: [ApiBlockType.LayoutFooter] })).toStrictEqual("");
+    expect(foot.html({ skipBlockTypes: [ApiBlockType.Word] })).toContain(foot.text);
+    expect(foot.html({ includeBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(foot.html({ includeBlockTypes: [ApiBlockType.LayoutFooter] })).toStrictEqual(emptyHtml);
+    expect(foot.html({ includeBlockTypes: [ApiBlockType.LayoutFooter, ApiBlockType.Line] })).toContain(
+      foot.text,
+    );
+  });
 });
 
 describe("LayoutHeader", () => {
@@ -191,6 +269,25 @@ describe("LayoutHeader", () => {
     expect(head.text).toStrictEqual("IV. Administered Accounts");
     expect(head.html()).toStrictEqual(`<div class="header-el">\n\t${head.text}\n</div>`);
     expect(head.str()).toStrictEqual(`---- Header text ----\n${head.text}\n---------------------`);
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const head = page.layout
+      .listItems()
+      .find((item) => item.blockType === ApiBlockType.LayoutHeader) as LayoutHeaderGeneric<Page>;
+    expect(head).toBeTruthy();
+
+    const emptyHtml = '<div class="header-el"></div>';
+    expect(head.html({ skipBlockTypes: [ApiBlockType.LayoutHeader] })).toStrictEqual("");
+    expect(head.html({ skipBlockTypes: [ApiBlockType.Word] })).toContain(head.text);
+    expect(head.html({ includeBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(head.html({ includeBlockTypes: [ApiBlockType.LayoutHeader] })).toStrictEqual(emptyHtml);
+    expect(head.html({ includeBlockTypes: [ApiBlockType.LayoutHeader, ApiBlockType.Line] })).toContain(
+      head.text,
+    );
   });
 });
 
@@ -246,6 +343,24 @@ describe("LayoutKeyValue", () => {
     expect((kvHtml.match(/\t<input label="/g) || []).length).toStrictEqual(kv.listFields().length);
     // TODO: More fine-grained checks
   });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(taxFormResponseJson);
+    const page = doc.pageNumber(1);
+
+    const kv = page.layout
+      .listItems()
+      .find((item) => item.blockType === ApiBlockType.LayoutKeyValue) as LayoutKeyValueGeneric<Page>;
+    expect(kv).toBeTruthy();
+
+    expect(kv.html({ skipBlockTypes: [ApiBlockType.LayoutKeyValue] })).toStrictEqual("");
+    const emptyHtml = '<div class="key-value"></div>';
+    expect(kv.html({ skipBlockTypes: [ApiBlockType.KeyValueSet, ApiBlockType.Line] })).toStrictEqual(
+      emptyHtml,
+    );
+    expect(kv.html({ includeBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    // TODO: Can we test just skipping KV or just skipping text lines?
+  });
 });
 
 describe("LayoutPageNumber", () => {
@@ -261,6 +376,25 @@ describe("LayoutPageNumber", () => {
     expect(pgnum.text).toStrictEqual("57");
     expect(pgnum.html()).toStrictEqual(`<div class="page-num">\n\t${pgnum.text}\n</div>`);
     expect(pgnum.str()).toStrictEqual(`---- Page number: ${pgnum.text}`);
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const pgnum = page.layout
+      .listItems()
+      .find((item) => item.blockType === ApiBlockType.LayoutPageNumber) as LayoutPageNumberGeneric<Page>;
+    expect(pgnum).toBeTruthy();
+
+    const emptyHtml = '<div class="page-num"></div>';
+    expect(pgnum.html({ skipBlockTypes: [ApiBlockType.LayoutPageNumber] })).toStrictEqual("");
+    expect(pgnum.html({ skipBlockTypes: [ApiBlockType.Word] })).toContain(pgnum.text);
+    expect(pgnum.html({ includeBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(pgnum.html({ includeBlockTypes: [ApiBlockType.LayoutPageNumber] })).toStrictEqual(emptyHtml);
+    expect(pgnum.html({ includeBlockTypes: [ApiBlockType.LayoutPageNumber, ApiBlockType.Line] })).toContain(
+      pgnum.text,
+    );
   });
 });
 
@@ -279,6 +413,27 @@ describe("LayoutSectionHeader", () => {
     expect(head.text).toStrictEqual("Earnings Statement");
     expect(head.html()).toStrictEqual(`<h2>\n\t${head.text}\n</h2>`);
     expect(head.str()).toStrictEqual("\nEarnings Statement\n------------------\n");
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(payStubResponseJson);
+    const page = doc.pageNumber(1);
+
+    const head = page.layout
+      .listItems()
+      .find(
+        (item) => item.blockType === ApiBlockType.LayoutSectionHeader,
+      ) as LayoutSectionHeaderGeneric<Page>;
+    expect(head).toBeTruthy();
+
+    const emptyHtml = "<h2></h2>";
+    expect(head.html({ skipBlockTypes: [ApiBlockType.LayoutSectionHeader] })).toStrictEqual("");
+    expect(head.html({ skipBlockTypes: [ApiBlockType.Word] })).toContain(head.text);
+    expect(head.html({ includeBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(head.html({ includeBlockTypes: [ApiBlockType.LayoutSectionHeader] })).toStrictEqual(emptyHtml);
+    expect(head.html({ includeBlockTypes: [ApiBlockType.LayoutSectionHeader, ApiBlockType.Line] })).toContain(
+      head.text,
+    );
   });
 });
 
@@ -341,6 +496,21 @@ describe("LayoutTable", () => {
     expect(tabStr).toMatch(/\n|==================================|$/g);
     expect(tabStr).toContain(tab.text);
   });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(payStubResponseJson);
+    const page = doc.pageNumber(1);
+    const tab = page.layout
+      .listItems()
+      .find((item) => item.blockType === ApiBlockType.LayoutTable) as LayoutTableGeneric<Page>;
+    expect(tab).toBeTruthy();
+
+    expect(
+      tab.html({ includeBlockTypes: [ApiBlockType.Cell, ApiBlockType.MergedCell, ApiBlockType.Word] }),
+    ).toStrictEqual("");
+    expect(tab.html({ skipBlockTypes: [ApiBlockType.LayoutTable] })).toStrictEqual("");
+    expect(tab.html({ skipBlockTypes: [ApiBlockType.Table] })).toStrictEqual('<div class="table"></div>');
+  });
 });
 
 describe("LayoutTitle", () => {
@@ -356,6 +526,25 @@ describe("LayoutTitle", () => {
     expect(head.text).toStrictEqual("ADMINISTERED ACCOUNTS");
     expect(head.html()).toStrictEqual(`<h1>\n\t${head.text}\n</h1>`);
     expect(head.str()).toStrictEqual("\n\nADMINISTERED ACCOUNTS\n=====================\n");
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const head = page.layout
+      .listItems()
+      .find((item) => item.blockType === ApiBlockType.LayoutTitle) as LayoutTitleGeneric<Page>;
+    expect(head).toBeTruthy();
+
+    const emptyHtml = "<h1></h1>";
+    expect(head.html({ skipBlockTypes: [ApiBlockType.LayoutTitle] })).toStrictEqual("");
+    expect(head.html({ skipBlockTypes: [ApiBlockType.Word] })).toContain(head.text);
+    expect(head.html({ includeBlockTypes: [ApiBlockType.Line] })).toStrictEqual("");
+    expect(head.html({ includeBlockTypes: [ApiBlockType.LayoutTitle] })).toStrictEqual(emptyHtml);
+    expect(head.html({ includeBlockTypes: [ApiBlockType.LayoutTitle, ApiBlockType.Line] })).toContain(
+      head.text,
+    );
   });
 });
 
@@ -432,6 +621,33 @@ describe("LayoutList", () => {
     expect((lsHtml.match(/<li>/g) || []).length).toStrictEqual(ls.nContentItems);
     // TODO: Stricter checks?
   });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const ls = page.layout
+      .listItems()
+      .find((item) => item.blockType === ApiBlockType.LayoutList) as LayoutListGeneric<Page>;
+    expect(ls).toBeTruthy();
+    expect(ls.str()).toStrictEqual(ls.text);
+    expect(ls.html({ includeBlockTypes: [ApiBlockType.LayoutText] })).toStrictEqual("");
+    expect(ls.html({ includeBlockTypes: [ApiBlockType.LayoutList] })).toStrictEqual("<ul></ul>");
+    expect(ls.html({ skipBlockTypes: [ApiBlockType.LayoutText] })).toStrictEqual("<ul></ul>");
+    const noTextHtml =
+      "<ul>\n" +
+      indent(
+        ls
+          .listContent()
+          .map(() => "<li><p></p></li>")
+          .join("\n"),
+      ) +
+      "\n</ul>";
+    expect(ls.html({ skipBlockTypes: [ApiBlockType.Line] })).toStrictEqual(noTextHtml);
+    expect(ls.html({ includeBlockTypes: [ApiBlockType.LayoutList, ApiBlockType.LayoutText] })).toStrictEqual(
+      noTextHtml,
+    );
+  });
 });
 
 describe("Layout", () => {
@@ -454,6 +670,40 @@ describe("Layout", () => {
     expect(layoutItem.parentPage).toBe(page);
     expect(layoutItem.confidence).toBeGreaterThan(1); // (<1% very unlikely)
     expect(layoutItem.confidence).toBeLessThanOrEqual(100);
+  });
+
+  it("filters layout items by allow-listing block types", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const iterItems = [...page.layout.iterItems({ includeBlockTypes: ApiBlockType.LayoutHeader })];
+    const listItems = page.layout.listItems({ includeBlockTypes: ApiBlockType.LayoutHeader });
+    expect(iterItems.length).toStrictEqual(listItems.length);
+    expect(listItems.length).toStrictEqual(2);
+  });
+
+  it("filters layout items by skipping block types", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const iterItems = [
+      ...page.layout.iterItems({ skipBlockTypes: [ApiBlockType.LayoutHeader, ApiBlockType.LayoutFooter] }),
+    ];
+    const listItems = page.layout.listItems({
+      skipBlockTypes: [ApiBlockType.LayoutHeader, ApiBlockType.LayoutFooter],
+    });
+    expect(iterItems.length).toStrictEqual(listItems.length);
+    expect(listItems.length).toStrictEqual(12);
+  });
+
+  it("cannot broaden filters beyond Layout* elements", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const iterItems = [...page.layout.iterItems({ includeBlockTypes: [ApiBlockType.Line] })];
+    const listItems = page.layout.listItems({ includeBlockTypes: [ApiBlockType.Line] });
+    expect(iterItems.length).toStrictEqual(0);
+    expect(listItems.length).toStrictEqual(0);
   });
 
   it("loads and navigates top-level layout elements per page", () => {
@@ -506,6 +756,20 @@ describe("Layout", () => {
         .map((item) => item.html())
         .join("\n"),
     );
+  });
+
+  it("filters HTML rendering by block type", () => {
+    const doc = new TextractDocument(finDocResponseJson);
+    const page = doc.pageNumber(1);
+
+    const origHtml = page.layout.html();
+    expect(origHtml).toContain('<div class="header-el">');
+    expect(page.layout.html({ skipBlockTypes: [ApiBlockType.LayoutHeader] })).not.toContain(
+      '<div class="header-el">',
+    );
+    const titleOnlyHtml = page.layout.html({ includeBlockTypes: [ApiBlockType.LayoutTitle] });
+    expect(titleOnlyHtml).toContain("<h1>");
+    expect(titleOnlyHtml).not.toContain("<p>");
   });
 
   it("does not duplicate content of nested layout items in semantic representations", () => {

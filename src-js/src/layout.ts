@@ -21,16 +21,23 @@ import {
   ApiLayoutTitleBlock,
 } from "./api-models/layout";
 import {
+  _implIterRelatedBlocksByRelType,
   ApiObjectWrapper,
+  doesFilterAllowBlockType,
   escapeHtml,
   getIterable,
   IApiBlockWrapper,
   IBlockManager,
+  IBlockTypeFilterOpts,
   indent,
   INestedListOpts,
   IRenderable,
+  IRenderOpts,
   IWithParentPage,
+  IWithRelatedItems,
+  normalizeOptionalSet,
   PageHostedApiBlockWrapper,
+  setIntersection,
 } from "./base";
 import { buildWithContent, IWithContent, LineGeneric } from "./content";
 import { FieldGeneric, IWithForm } from "./form";
@@ -43,7 +50,11 @@ import { IWithTables, TableGeneric } from "./table";
 export interface ILayoutItem<
   TBlock extends ApiLayoutBlock,
   TContent extends IApiBlockWrapper<ApiBlock> & IRenderable,
-  TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+  TPage extends IApiBlockWrapper<ApiBlock> &
+    IBlockManager &
+    IWithForm<IBlockManager> &
+    IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+    IWithTables<IBlockManager>,
   TGeometryHost extends ApiObjectWrapper<TBlock>,
 > extends IApiBlockWrapper<TBlock>,
     IRenderable,
@@ -80,6 +91,9 @@ export interface ILayoutItem<
    * Parsed page layout collection that this element belongs to
    */
   parentLayout: LayoutGeneric<TPage>;
+  // Because they're all content containers, Layout* items support the full IBlockTypeFilterOpts
+  // rather than just IRenderOpts
+  html(opts?: IBlockTypeFilterOpts): string;
   /**
    * Layout items (any layout block types) linked as children to this item
    *
@@ -87,7 +101,7 @@ export interface ILayoutItem<
    * LAYOUT_TEXT children - so no nesting should be present anyway.
    */
   iterLayoutChildren(
-    opts: INestedListOpts,
+    opts: IBlockTypeFilterOpts & INestedListOpts,
   ): Iterable<
     ILayoutItem<
       ApiLayoutBlock,
@@ -115,7 +129,7 @@ export interface ILayoutItem<
    * LAYOUT_TEXT children - so no nesting should be present anyway.
    */
   listLayoutChildren(
-    opts?: INestedListOpts,
+    opts?: IBlockTypeFilterOpts & INestedListOpts,
   ): Array<
     ILayoutItem<
       ApiLayoutBlock,
@@ -135,10 +149,13 @@ export interface ILayoutItem<
  */
 class LayoutItemBaseGeneric<
     TBlock extends ApiLayoutBlock,
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends PageHostedApiBlockWrapper<TBlock, TPage>
-  // extends buildWithContent<IApiBlockWrapper<ApiBlock> & IRenderable>()(PageHostedApiBlockWrapper)<TBlock, TPage>
   implements IWithGeometry<TBlock, LayoutItemBaseGeneric<TBlock, TPage>>, IWithParentPage<TPage>
 {
   _geometry: Geometry<ApiLayoutBlock, LayoutItemBaseGeneric<TBlock, TPage>>;
@@ -166,7 +183,7 @@ class LayoutItemBaseGeneric<
     return this._parentLayout;
   }
   iterLayoutChildren(
-    opts: INestedListOpts = {},
+    opts: IBlockTypeFilterOpts & INestedListOpts = {},
   ): Iterable<
     ILayoutItem<
       ApiLayoutBlock,
@@ -177,9 +194,12 @@ class LayoutItemBaseGeneric<
   > {
     return getIterable(() => this.listLayoutChildren(opts));
   }
-  listLayoutChildren(
-    opts: INestedListOpts = {},
-  ): Array<
+  listLayoutChildren({
+    deep = false,
+    includeBlockTypes = null,
+    onUnexpectedBlockType = null,
+    skipBlockTypes = null,
+  }: IBlockTypeFilterOpts & INestedListOpts = {}): Array<
     ILayoutItem<
       ApiLayoutBlock,
       IApiBlockWrapper<ApiBlock> & IRenderable,
@@ -195,8 +215,15 @@ class LayoutItemBaseGeneric<
         ApiObjectWrapper<ApiLayoutBlock>
       >
     > = [];
+    if (includeBlockTypes) {
+      includeBlockTypes = setIntersection(LAYOUT_BLOCK_TYPES, normalizeOptionalSet(includeBlockTypes));
+    } else {
+      includeBlockTypes = LAYOUT_BLOCK_TYPES;
+    }
     for (const childRaw of this.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
-      includeBlockTypes: LAYOUT_BLOCK_TYPES,
+      includeBlockTypes,
+      onUnexpectedBlockType,
+      skipBlockTypes,
     })) {
       const child = childRaw as ILayoutItem<
         ApiLayoutBlock,
@@ -205,7 +232,15 @@ class LayoutItemBaseGeneric<
         ApiObjectWrapper<ApiLayoutBlock>
       >;
       result.push(child);
-      if (opts.deep) result = result.concat(child.listLayoutChildren(opts));
+      if (deep)
+        result = result.concat(
+          child.listLayoutChildren({
+            deep,
+            includeBlockTypes,
+            onUnexpectedBlockType,
+            skipBlockTypes,
+          }),
+        );
     }
     return result;
   }
@@ -221,10 +256,21 @@ class LayoutItemBaseGeneric<
  */
 class LayoutLineContainerItem<
   TBlock extends ApiLayoutBlock,
-  TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+  TPage extends IApiBlockWrapper<ApiBlock> &
+    IBlockManager &
+    IWithForm<IBlockManager> &
+    IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+    IWithTables<IBlockManager>,
 > extends buildWithContent<LineGeneric<IBlockManager>>({ contentTypes: [ApiBlockType.Line] })(
   LayoutItemBaseGeneric,
 )<TBlock, TPage> {
+  override getText(opts?: IBlockTypeFilterOpts) {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    return this.listContent(opts)
+      .map((c) => c.text)
+      .join("\n");
+  }
+
   /**
    * Iterate through the text `Line`s in this object
    *
@@ -264,14 +310,6 @@ class LayoutLineContainerItem<
   get nTextLines(): number {
     return this.listTextLines().length;
   }
-  /**
-   * The text representation of this element concatenates child text `Line`s, separated by newlines
-   */
-  override get text(): string {
-    return this.listContent()
-      .map((c) => c.text)
-      .join("\n");
-  }
 }
 
 /**
@@ -280,7 +318,11 @@ class LayoutLineContainerItem<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutFigure`.
  */
 export class LayoutFigureGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutFigureBlock, TPage>
   implements
@@ -296,8 +338,10 @@ export class LayoutFigureGeneric<
    *
    * Detected text within the figure (if any), is included inside the div
    */
-  html(): string {
-    const content = this.text ? `\n${indent(escapeHtml(this.text))}\n` : "";
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
     return `<div class="figure">${content}</div>`;
   }
 
@@ -315,7 +359,11 @@ export class LayoutFigureGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutFooter`.
  */
 export class LayoutFooterGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutFooterBlock, TPage>
   implements
@@ -331,8 +379,11 @@ export class LayoutFooterGeneric<
    *
    * Note that there might be multiple footer elements on a page (e.g. horizontal columns)
    */
-  html(): string {
-    return `<div class="footer-el">\n${indent(escapeHtml(this.text))}\n</div>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
+    return `<div class="footer-el">${content}</div>`;
   }
 
   str(): string {
@@ -346,7 +397,11 @@ export class LayoutFooterGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutHeader`.
  */
 export class LayoutHeaderGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutHeaderBlock, TPage>
   implements
@@ -362,8 +417,11 @@ export class LayoutHeaderGeneric<
    *
    * Note that there might be multiple footer elements on a page (e.g. horizontal columns)
    */
-  html(): string {
-    return `<div class="header-el">\n${indent(escapeHtml(this.text))}\n</div>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
+    return `<div class="header-el">${content}</div>`;
   }
 
   str(): string {
@@ -377,7 +435,11 @@ export class LayoutHeaderGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutKeyValue`.
  */
 export class LayoutKeyValueGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutKeyValueBlock, TPage>
   implements
@@ -478,29 +540,31 @@ export class LayoutKeyValueGeneric<
    * fields, we loop through the plain text (from layout) but insert the semantic HTML for a whole
    * K-V Form Field at the first overlapping mention.
    */
-  html(): string {
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
     const wordsToFields = this._mapPageContentToFormFields();
     const consumedIds: { [id: string]: true } = {};
     const lineReprs: string[] = [];
-    for (const line of this.iterContent()) {
+    for (const line of this.iterContent(opts)) {
       const wordReprs: string[] = [];
-      for (const word of line.iterWords()) {
+      for (const word of line.iterWords(opts)) {
         const wordId = word.id;
         if (wordId in consumedIds) continue;
         if (wordId in wordsToFields) {
           const field = wordsToFields[wordId];
-          wordReprs.push(field.html());
+          wordReprs.push(field.html(opts));
           this._listContentIdsInFormField(field).forEach((id) => {
             consumedIds[id] = true;
           });
         } else {
-          wordReprs.push(word.html());
+          wordReprs.push(word.html(opts));
         }
       }
       lineReprs.push(wordReprs.join(" "));
     }
-    const innerContent = lineReprs.filter((rep) => rep).join("\n");
-    return `<div class="key-value">\n${indent(innerContent)}\n</div>`;
+    const lineReprTexts = lineReprs.filter((rep) => rep).join("\n");
+    const content = lineReprTexts ? `\n${indent(lineReprTexts)}\n` : "";
+    return `<div class="key-value">${content}</div>`;
   }
 
   /**
@@ -519,7 +583,11 @@ export class LayoutKeyValueGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutPageNumber`.
  */
 export class LayoutPageNumberGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutPageNumberBlock, TPage>
   implements
@@ -533,8 +601,11 @@ export class LayoutPageNumberGeneric<
   /**
    * The semantic HTML representation for a page number element is a <div> of class "page-num"
    */
-  html(): string {
-    return `<div class="page-num">\n${indent(escapeHtml(this.text))}\n</div>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
+    return `<div class="page-num">${content}</div>`;
   }
 
   str(): string {
@@ -548,7 +619,11 @@ export class LayoutPageNumberGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutSectionHeader`.
  */
 export class LayoutSectionHeaderGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutSectionHeaderBlock, TPage>
   implements
@@ -562,8 +637,11 @@ export class LayoutSectionHeaderGeneric<
   /**
    * The semantic HTML representation for a section heading is a <h2> tag
    */
-  html(): string {
-    return `<h2>\n${indent(escapeHtml(this.text))}\n</h2>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
+    return `<h2>${content}</h2>`;
   }
 
   str(): string {
@@ -577,7 +655,11 @@ export class LayoutSectionHeaderGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutTable`.
  */
 export class LayoutTableGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutTableBlock, TPage>
   implements
@@ -708,29 +790,31 @@ export class LayoutTableGeneric<
    * Table objects, populate the div content by looping through the plain text (from layout) but
    * inserting the semantic HTML for each whole `<table>` at the first overlapping mention.
    */
-  html(): string {
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
     const wordsToTables = this._mapPageContentToTables();
     const consumedIds: { [id: string]: true } = {};
     const lineReprs: string[] = [];
-    for (const line of this.iterContent()) {
+    for (const line of this.iterContent(opts)) {
       const wordReprs: string[] = [];
-      for (const word of line.iterWords()) {
+      for (const word of line.iterWords(opts)) {
         const wordId = word.id;
         if (wordId in consumedIds) continue;
         if (wordId in wordsToTables) {
           const table = wordsToTables[wordId];
-          wordReprs.push(table.html());
+          wordReprs.push(table.html(opts));
           this._listContentIdsInTable(table).forEach((id) => {
             consumedIds[id] = true;
           });
         } else {
-          wordReprs.push(word.html());
+          wordReprs.push(word.html(opts));
         }
       }
       lineReprs.push(wordReprs.join(" "));
     }
-    const innerContent = lineReprs.filter((rep) => rep).join("\n");
-    return `<div class="table">\n${indent(innerContent)}\n</div>`;
+    const lineReprsText = lineReprs.filter((rep) => rep).join("\n");
+    const content = lineReprsText ? `\n${indent(lineReprsText)}\n` : "";
+    return `<div class="table">${content}</div>`;
   }
 
   /**
@@ -751,7 +835,11 @@ export class LayoutTableGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutText`.
  */
 export class LayoutTextGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutTextBlock, TPage>
   implements
@@ -765,8 +853,11 @@ export class LayoutTextGeneric<
   /**
    * The semantic HTML representation for a text element is a <p> paragraph tag
    */
-  html(): string {
-    return `<p>\n${indent(escapeHtml(this.text))}\n</p>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
+    return `<p>${content}</p>`;
   }
 
   /**
@@ -783,7 +874,11 @@ export class LayoutTextGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutTitle`.
  */
 export class LayoutTitleGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends LayoutLineContainerItem<ApiLayoutTitleBlock, TPage>
   implements
@@ -797,8 +892,11 @@ export class LayoutTitleGeneric<
   /**
    * The semantic HTML representation for a top-level title is a <h1> tag
    */
-  html(): string {
-    return `<h1>\n${indent(escapeHtml(this.text))}\n</h1>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const rawText = this.getText(opts);
+    const content = rawText ? `\n${indent(escapeHtml(rawText))}\n` : "";
+    return `<h1>${content}</h1>`;
   }
 
   str(): string {
@@ -812,15 +910,31 @@ export class LayoutTitleGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/LayoutList`.
  */
 export class LayoutListGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   extends buildWithContent<
-    LayoutTextGeneric<IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>>
+    LayoutTextGeneric<
+      IApiBlockWrapper<ApiBlock> &
+        IBlockManager &
+        IWithForm<IBlockManager> &
+        IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+        IWithTables<IBlockManager>
+    >
   >({ contentTypes: [ApiBlockType.LayoutText] })(LayoutItemBaseGeneric)<ApiLayoutListBlock, TPage>
   implements
     ILayoutItem<
       ApiLayoutListBlock,
-      LayoutTextGeneric<IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>>,
+      LayoutTextGeneric<
+        IApiBlockWrapper<ApiBlock> &
+          IBlockManager &
+          IWithForm<IBlockManager> &
+          IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+          IWithTables<IBlockManager>
+      >,
       TPage,
       LayoutItemBaseGeneric<ApiLayoutListBlock, TPage>
     >
@@ -829,14 +943,18 @@ export class LayoutListGeneric<
    * Render the list as HTML
    *
    * TODO: Support ordered/numbered lists with <ol>, if we can infer when to use it?
-   * TODO: innerHTML option on LayoutText to get rid of the <p> tags?
+   * TODO: innerHTML option on LayoutText to get rid of the <p> tags maybe?
+   *
+   * @param opts Optional configuration for filtering rendering to certain content types
    */
-  html(): string {
-    return `<ul>\n${indent(
-      this.listContent()
-        .map((item) => `<li>${item.html()}</li>`)
-        .join("\n"),
-    )}\n</ul>`;
+  html(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    const itemHtmls = this.listContent(opts)
+      .map((item) => item.html(opts))
+      .filter((s) => s)
+      .map((s) => `<li>${s}</li>`);
+    const content = itemHtmls.length ? `\n${indent(itemHtmls.join("\n"))}\n` : "";
+    return `<ul>${content}</ul>`;
   }
   /**
    * Iterate through the text `Line`s in this object
@@ -920,7 +1038,11 @@ export class LayoutListGeneric<
  * TypeScript type collecting all possible TRP parsed objects corresponding to layout elements
  */
 export type LayoutItemGeneric<
-  TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+  TPage extends IApiBlockWrapper<ApiBlock> &
+    IBlockManager &
+    IWithForm<IBlockManager> &
+    IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+    IWithTables<IBlockManager>,
 > =
   | LayoutFigureGeneric<TPage>
   | LayoutFooterGeneric<TPage>
@@ -939,57 +1061,59 @@ export type LayoutItemGeneric<
  * If you're consuming this library, you probably just want to use `document.ts/Layout`.
  */
 export class LayoutGeneric<
-    TPage extends IBlockManager & IWithForm<IBlockManager> & IWithTables<IBlockManager>,
+    TPage extends IApiBlockWrapper<ApiBlock> &
+      IBlockManager &
+      IWithForm<IBlockManager> &
+      IWithRelatedItems<IApiBlockWrapper<ApiBlock>> &
+      IWithTables<IBlockManager>,
   >
   implements IRenderable, IWithParentPage<TPage>
 {
-  _items: LayoutItemGeneric<TPage>[];
   _parentPage: TPage;
 
-  constructor(layoutBlocks: ApiLayoutBlock[], parentPage: TPage) {
-    this._items = [];
+  constructor(parentPage: TPage) {
     this._parentPage = parentPage;
 
-    layoutBlocks.forEach((block) => {
+    for (const block of _implIterRelatedBlocksByRelType(
+      ApiRelationshipType.Child,
+      { includeBlockTypes: LAYOUT_BLOCK_TYPES, onMissingBlockId: "error" },
+      parentPage,
+      parentPage,
+    )) {
+      // The PageHostedBlockWrappers will automatically self-register with the manager (page):
       switch (block.BlockType) {
         case ApiBlockType.LayoutFigure:
-          this._items.push(new LayoutFigureGeneric(block, this));
+          new LayoutFigureGeneric(block, this);
           break;
         case ApiBlockType.LayoutHeader:
-          this._items.push(new LayoutHeaderGeneric(block, this));
+          new LayoutHeaderGeneric(block, this);
           break;
         case ApiBlockType.LayoutFooter:
-          this._items.push(new LayoutFooterGeneric(block, this));
+          new LayoutFooterGeneric(block, this);
           break;
         case ApiBlockType.LayoutKeyValue:
-          this._items.push(new LayoutKeyValueGeneric(block, this));
+          new LayoutKeyValueGeneric(block, this);
           break;
         case ApiBlockType.LayoutList:
-          this._items.push(new LayoutListGeneric(block, this));
+          new LayoutListGeneric(block, this);
           break;
         case ApiBlockType.LayoutPageNumber:
-          this._items.push(new LayoutPageNumberGeneric(block, this));
+          new LayoutPageNumberGeneric(block, this);
           break;
         case ApiBlockType.LayoutSectionHeader:
-          this._items.push(new LayoutSectionHeaderGeneric(block, this));
+          new LayoutSectionHeaderGeneric(block, this);
           break;
         case ApiBlockType.LayoutTable:
-          this._items.push(new LayoutTableGeneric(block, this));
+          new LayoutTableGeneric(block, this);
           break;
         case ApiBlockType.LayoutText:
-          this._items.push(new LayoutTextGeneric(block, this));
+          new LayoutTextGeneric(block, this);
           break;
         case ApiBlockType.LayoutTitle:
-          this._items.push(new LayoutTitleGeneric(block, this));
+          new LayoutTitleGeneric(block, this);
           break;
-        default:
-          console.warn(
-            `Ignoring unrecognised BlockType '${(block as ApiBlock).BlockType}' when parsing layout block ${
-              (block as ApiBlock).Id
-            }`,
-          );
       }
-    });
+    }
   }
 
   /**
@@ -1016,7 +1140,7 @@ export class LayoutGeneric<
    * items on the page, not just those at the top level.
    */
   get nItemsTotal(): number {
-    return this._items.length;
+    return this.listItems({ deep: true }).length;
   }
   /**
    * Parsed TRP.js page to which this Layout corresponds
@@ -1039,35 +1163,68 @@ export class LayoutGeneric<
    * Since this class is just a collection and not an API object wrapper, we don't wrap the content
    * HTML in anything: Leave that up to `Page`, `Document`, etc.
    */
-  html(): string {
-    return this.listItems({ deep: false })
-      .map((item) => item.html())
+  html(opts?: IRenderOpts): string {
+    return this.listItems({ deep: false, ...opts })
+      .map((item) => item.html(opts))
+      .filter((s) => s)
       .join("\n");
   }
 
   /**
    * Iterate through (just the top level, or all) the Items in the Layout.
    */
-  iterItems({ deep = true }: INestedListOpts = {}): Iterable<LayoutItemGeneric<TPage>> {
-    return getIterable(() => this.listItems({ deep }));
+  iterItems({
+    deep = true,
+    includeBlockTypes = null,
+    onUnexpectedBlockType = null,
+    skipBlockTypes = null,
+  }: IBlockTypeFilterOpts & INestedListOpts = {}): Iterable<LayoutItemGeneric<TPage>> {
+    return getIterable(() =>
+      this.listItems({ deep, includeBlockTypes, onUnexpectedBlockType, skipBlockTypes }),
+    );
   }
 
   /**
    * List (just the top level, or all) the Items in the Layout.
    */
-  listItems({ deep = true }: INestedListOpts = {}): LayoutItemGeneric<TPage>[] {
+  listItems({
+    deep = true,
+    includeBlockTypes = null,
+    onUnexpectedBlockType = null,
+    skipBlockTypes = null,
+  }: IBlockTypeFilterOpts & INestedListOpts = {}): LayoutItemGeneric<TPage>[] {
+    let normIncludeBlockTypes = includeBlockTypes;
+    if (normIncludeBlockTypes) {
+      normIncludeBlockTypes = normalizeOptionalSet(normIncludeBlockTypes);
+      normIncludeBlockTypes = setIntersection(LAYOUT_BLOCK_TYPES, normIncludeBlockTypes);
+    } else {
+      normIncludeBlockTypes = LAYOUT_BLOCK_TYPES;
+    }
+
     const visitedIds = new Set<string>();
     const result: LayoutItemGeneric<TPage>[] = [];
-    this._items.forEach((item) => {
-      if (visitedIds.has(item.id)) return;
+
+    for (const item of this.parentPage.listRelatedItemsByRelType(ApiRelationshipType.Child, {
+      includeBlockTypes: normIncludeBlockTypes,
+      onUnexpectedBlockType,
+      skipBlockTypes, // TODO: Specify base PAGE skipBlockTypes for better warn/error behaviour
+    }) as Iterable<LayoutItemGeneric<TPage>>) {
+      if (visitedIds.has(item.id)) continue;
       result.push(item);
       // PAGE children include all LAYOUT_* items, even those listed as children by each other.
       // Therefore if the user wants `deep`, we can just return the whole _items list... But
       // otherwise, we need to actively find and filter out the nested children:
       if (!deep) {
-        item.listLayoutChildren({ deep: true }).forEach((child) => visitedIds.add(child.id));
+        item
+          .listLayoutChildren({
+            deep: true,
+            includeBlockTypes,
+            onUnexpectedBlockType,
+            skipBlockTypes,
+          })
+          .forEach((child) => visitedIds.add(child.id));
       }
-    });
+    }
     return result;
   }
 

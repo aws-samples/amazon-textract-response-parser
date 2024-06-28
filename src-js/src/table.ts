@@ -17,16 +17,19 @@ import {
 import {
   aggregate,
   AggregationMethod,
+  Constructor,
+  doesFilterAllowBlockType,
   escapeHtml,
   getIterable,
-  indent,
   IBlockManager,
+  IBlockTypeFilterOpts,
+  IHostedApiBlockWrapper,
+  indent,
   IRenderable,
-  PageHostedApiBlockWrapper,
-  Constructor,
-  IApiBlockWrapper,
+  IRenderOpts,
   IWithParentPage,
   IWithText,
+  PageHostedApiBlockWrapper,
 } from "./base";
 import { buildWithContent, IWithContent, SelectionElement, Signature, WithWords, Word } from "./content";
 import { Geometry } from "./geometry";
@@ -38,7 +41,7 @@ import { Geometry } from "./geometry";
  */
 class CellBaseGeneric<TBlock extends ApiCellBlock | ApiMergedCellBlock, TPage extends IBlockManager>
   extends PageHostedApiBlockWrapper<TBlock, TPage>
-  implements IWithParentPage<TPage>
+  implements IHostedApiBlockWrapper<TBlock, TPage>
 {
   _geometry: Geometry<TBlock, CellBaseGeneric<TBlock, TPage>>;
   _parentTable: TableGeneric<TPage>;
@@ -120,7 +123,7 @@ function WithCellBaseProps<
   TBlock extends ApiCellBlock | ApiMergedCellBlock,
   TPage extends IBlockManager,
   T extends Constructor<
-    IApiBlockWrapper<TBlock> &
+    IHostedApiBlockWrapper<TBlock, TPage> &
       IWithContent<SelectionElement | Signature | Word> &
       IWithParentPage<TPage> &
       IWithText
@@ -192,7 +195,8 @@ function WithCellBaseProps<
     /**
      * Get semantic HTML of the cell as a `<th>` (if header/title EntityType) or `<td>` element
      */
-    html(): string {
+    html(opts?: IRenderOpts): string {
+      if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
       const tagName = this.hasEntityTypes([
         ApiTableCellEntityType.ColumnHeader,
         ApiTableCellEntityType.SectionTitle,
@@ -207,7 +211,7 @@ function WithCellBaseProps<
           this.columnSpan > 1 ? ` colspan="${this.columnSpan}"` : "",
           this.rowSpan > 1 ? ` rowspan="${this.rowSpan}"` : "",
           ">",
-          escapeHtml(this.text),
+          escapeHtml(this.getText(opts)),
           `</${tagName}>`,
         ].join(""),
         { skipFirstLine: true },
@@ -275,12 +279,12 @@ export class MergedCellGeneric<TPage extends IBlockManager> extends WithCellBase
     return this.childBlockIds.map((cid) => this.parentTable._getSplitCellByBlockId(cid));
   }
 
-  override iterContent(): Iterable<SelectionElement | Signature | Word> {
+  override iterContent(opts: IBlockTypeFilterOpts = {}): Iterable<SelectionElement | Signature | Word> {
     // iterContent needs to traverse each child CELL in turn, instead of directly scannning current
     const getIterator = (): Iterator<SelectionElement | Signature | Word> => {
       const cells = this.listSubCells();
       const tryListCellContents = (ixCell: number) =>
-        cells.length > ixCell ? cells[ixCell].listContent() : [];
+        cells.length > ixCell ? cells[ixCell].listContent(opts) : [];
       let ixCurrCell = 0;
       let cellContents = tryListCellContents(ixCurrCell);
       let ixCurrItem = -1;
@@ -307,10 +311,10 @@ export class MergedCellGeneric<TPage extends IBlockManager> extends WithCellBase
    *
    * Concatenates content across all sub-cells
    */
-  override listContent(): Array<SelectionElement | Signature | Word> {
+  override listContent(opts: IBlockTypeFilterOpts = {}): Array<SelectionElement | Signature | Word> {
     // listContent needs to traverse each child CELL in turn, instead of directly scannning current
     return ([] as Array<SelectionElement | Signature | Word>).concat(
-      ...this.listSubCells().map((c) => c.listContent()),
+      ...this.listSubCells().map((c) => c.listContent(opts)),
     );
   }
 
@@ -473,8 +477,9 @@ export class TableFooterGeneric<TPage extends IBlockManager>
    * The presence of header and/or footer will affect what element it gets wrapped in when rendering
    * an overall `Table` object.
    */
-  html(): string {
-    return escapeHtml(this.text);
+  html({ includeBlockTypes = null, skipBlockTypes = null }: IRenderOpts = {}): string {
+    // WithWords.getText already filters by our self (TABLE_FOOTER) block type:
+    return escapeHtml(this.getText({ includeBlockTypes, skipBlockTypes }));
   }
 
   str(): string {
@@ -504,8 +509,9 @@ export class TableTitleGeneric<TPage extends IBlockManager>
    * The presence of header and/or footer will affect what element it gets wrapped in when rendering
    * an overall `Table` object.
    */
-  html(): string {
-    return escapeHtml(this.text);
+  html({ includeBlockTypes = null, skipBlockTypes = null }: IRenderOpts = {}): string {
+    // WithWords.getText already filters by our self (TABLE_TITLE) block type:
+    return escapeHtml(this.getText({ includeBlockTypes, skipBlockTypes }));
   }
 
   str(): string {
@@ -917,21 +923,26 @@ export class TableGeneric<TPage extends IBlockManager> extends PageHostedApiBloc
    * present - because an HTML table can only have one `<caption>` child. In those cases, you'll
    * see an outer `<div class="table-wrapper">`.
    */
-  html(): string {
+  html(opts?: IRenderOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
     const rowHtmls = this.listRows().map((row) =>
       [
         "<tr>",
         indent(
           row
             .listCells()
-            .map((cell) => cell.html())
+            .map((cell) => cell.html(opts))
             .join("\n"),
         ),
         "</tr>",
       ].join("\n"),
     );
-    const titleTexts = this.listTitles().map((item) => item.html());
-    const footerTexts = this.listFooters().map((item) => item.html());
+    const titleTexts = this.listTitles()
+      .map((item) => item.html(opts))
+      .filter((s) => s);
+    const footerTexts = this.listFooters()
+      .map((item) => item.html(opts))
+      .filter((s) => s);
     if (titleTexts.length && footerTexts.length) {
       // Need to accommodate both a title and a footer -> Use <div>s
       const titleInnerHtml =

@@ -3,11 +3,10 @@
  */
 
 // Local Dependencies:
-import { ApiBlockType, isLayoutBlockType } from "./api-models/base";
+import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
 import { ApiLineBlock } from "./api-models/content";
 import { ApiBlock, ApiPageBlock } from "./api-models/document";
 import { ApiKeyBlock, ApiKeyValueEntityType, ApiKeyValueSetBlock } from "./api-models/form";
-import { ApiLayoutBlock } from "./api-models/layout";
 import { ApiQueryBlock } from "./api-models/query";
 import {
   ApiDocumentMetadata,
@@ -25,7 +24,12 @@ import {
   modalAvg,
   IBlockManager,
   IRenderable,
+  IRenderOpts,
   IApiBlockWrapper,
+  IWithRelatedItems,
+  IBlockTypeFilterOpts,
+  _implIterRelatedItemsByRelType,
+  _implListRelatedItemsByRelType,
 } from "./base";
 import { LineGeneric, SelectionElement, Signature, Word } from "./content";
 import {
@@ -173,10 +177,17 @@ export interface HeaderFooterSegmentModelParams {
  *
  * Wraps an Amazon Textract API `PAGE` Block, with utilities for analysis. You'll usually create
  * this via a `TextractDocument`, rather than directly.
+ *
+ * TODO: Should we be making TextractDocument the block manager, rather than Page?
  */
 export class Page
   extends ApiBlockWrapper<ApiPageBlock>
-  implements IBlockManager, IRenderable, IWithForm<Page>, IWithTables<Page>
+  implements
+    IBlockManager,
+    IRenderable,
+    IWithForm<Page>,
+    IWithRelatedItems<IApiBlockWrapper<ApiBlock>>,
+    IWithTables<Page>
 {
   _blocks: ApiBlock[];
   _content: Array<LineGeneric<Page> | TableGeneric<Page> | FieldGeneric<Page>>;
@@ -215,25 +226,12 @@ export class Page
     this._parentDocument = parentDocument;
     this._geometry = new Geometry(pageBlock.Geometry, this);
 
-    // Placeholders pre-parsing to keep TypeScript happy:
-    this._content = [];
-    this._lines = [];
-    this._tables = [];
-    this._form = new FormGeneric<Page>([], this);
-    this._itemsByBlockId = {};
-    this._layout = new LayoutGeneric<Page>([], this);
-    this._queries = new QueryInstanceCollectionGeneric<Page>([], this);
-    // Parse the content:
-    this._parse(blocks);
-  }
-
-  _parse(blocks: ApiBlock[]): void {
     this._content = [];
     this._itemsByBlockId = {};
     this._lines = [];
     this._tables = [];
+    // TODO: Make .form & .queries stateless like .layout already is
     const formKeyBlocks: Array<ApiKeyBlock | ApiKeyValueSetBlock> = [];
-    const layoutBlocks: ApiLayoutBlock[] = [];
     const queryBlocks: ApiQueryBlock[] = [];
 
     blocks.forEach((item) => {
@@ -248,8 +246,6 @@ export class Page
         if (item.EntityTypes.indexOf(ApiKeyValueEntityType.Key) >= 0) {
           formKeyBlocks.push(item);
         }
-      } else if (isLayoutBlockType(item.BlockType)) {
-        layoutBlocks.push(item as ApiLayoutBlock);
       } else if (item.BlockType === ApiBlockType.Query) {
         queryBlocks.push(item);
       } else if (item.BlockType === ApiBlockType.SelectionElement) {
@@ -271,7 +267,7 @@ export class Page
 
     this._form = new FormGeneric<Page>(formKeyBlocks, this);
     this._queries = new QueryInstanceCollectionGeneric<Page>(queryBlocks, this);
-    this._layout = new LayoutGeneric<Page>(layoutBlocks, this);
+    this._layout = new LayoutGeneric<Page>(this);
   }
 
   getBlockById(blockId: string): ApiBlock | undefined {
@@ -957,6 +953,13 @@ export class Page
     return getIterable(() => this._lines);
   }
 
+  iterRelatedItemsByRelType(
+    relType: ApiRelationshipType | ApiRelationshipType[],
+    opts: IBlockTypeFilterOpts = {},
+  ): Iterable<IApiBlockWrapper<ApiBlock>> {
+    return _implIterRelatedItemsByRelType(relType, opts, this, this);
+  }
+
   /**
    * Iterate through any signatures detected on the page
    *
@@ -1021,6 +1024,13 @@ export class Page
    */
   listLines(): LineGeneric<Page>[] {
     return this._lines.slice();
+  }
+
+  listRelatedItemsByRelType(
+    relType: ApiRelationshipType | ApiRelationshipType[],
+    opts: IBlockTypeFilterOpts = {},
+  ): IApiBlockWrapper<ApiBlock>[] {
+    return _implListRelatedItemsByRelType(relType, opts, this, this);
   }
 
   /**
@@ -1181,12 +1191,14 @@ export class Page
    *
    * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
    *
+   * @param opts Optional configuration to filter rendering to certain content types
+   *
    * @throws If Textract Layout analysis was not enabled in the API request.
    */
-  html(): string {
+  html(opts?: IRenderOpts): string {
     if (this.hasLayout) {
       // Since the Textract LAYOUT feature was enabled, we can use it to render semantic HTML
-      return this._layout.html();
+      return this._layout.html(opts);
     } else {
       // To render semantic HTML for non-Layout-analysed documents, we'd want to collect the
       // various components (plain text lines, fields, tables, etc) in approximate reading order
@@ -1724,12 +1736,14 @@ export class TextractDocument
    *
    * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html
    *
+   * @param opts Optional configuration to filter rendering to certain content types
+   *
    * @throws If Textract Layout analysis was not enabled in the API request.
    */
-  html(): string {
+  html(opts?: IRenderOpts): string {
     const bodyHtml = [
       "<body>",
-      indent(this._pages.map((page) => `<div class="page">\n${indent(page.html())}\n</div>`).join("\n")),
+      indent(this._pages.map((page) => `<div class="page">\n${indent(page.html(opts))}\n</div>`).join("\n")),
       "</body>",
     ].join("\n");
 

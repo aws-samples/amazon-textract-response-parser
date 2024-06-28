@@ -166,6 +166,8 @@ const page = doc.pageNumber(1);
 const fieldByPage = page.form.getFieldByKey("Address");
 ```
 
+`field.isCheckbox` is true for fields whose value contain exactly one SelectionElement object: meaning they're a (key=label)->(value=checkbox/radio) pair. For these fields, you can directly use `field.selectionStatus` or `field.isSelected` to look up the value's status. For other (non-checkbox) fields, they'll return `null`.
+
 
 ## Tables
 
@@ -225,6 +227,15 @@ page.layout.listItems().forEach((layItem) => {
   const children = layItem.listContent();  // Usually text LINEs, but sometimes other Layout* items
   console.log(layItem.text + "\n");  // ...Or you can just pull up the text
 });
+
+// Filtering by content type is also supported:
+for (const layItem of page.layout.listItems({
+  skipBlockTypes: [
+    ApiBlockType.LayoutHeader, ApiBlockType.LayoutFooter, ApiBlockType.LayoutPageNumber
+  ],
+})) {
+  console.log(layItem.text);
+}
 ```
 
 If Forms and/or Tables analyses were also enabled, you'll be able to traverse from the relevant Layout object types to these more detailed representations. **However,** because these are separate analyses the correspondence may not be 1-to-1 and TRP is having to do some reconciliation under the hood:
@@ -299,12 +310,40 @@ Some caveats to be aware of:
 - Top-level `Page.html()` and `TextractDocument.html()` currently depend on Layout analysis being enabled, because the Layout results are used to sequence all the elements together.
 - Only HTML is supported currently, but we're keen to add `.markdown()` if there's interest
 
-If either of these affects your planned use-cases, please let us know in the GitHub issues to help prioritise!
+You can also **filter out** types of content you don't want to include in your HTML. 
+
+```typescript
+// Most commonly, you'll `skip` high-level layout elements like `LayoutHeader`:
+const docHtml = doc.html({
+  skipBlockTypes: [
+    ApiBlockType.LayoutHeader, ApiBlockType.LayoutFooter, ApiBlockType.LayoutPageNumber
+  ],
+});
+
+// Skipping lower-level blocks is also possible, but can produce weird results:
+const docHtmlNoCellsOrSelectors = doc.html({
+  skipBlockTypes: [ApiBlockType.Cell, ApiBlockType.SelectionElement],
+});
+
+// Allow-listing is also possible, but you should include *everything* relevant:
+const docTablesHtml = doc.html({
+  includeBlockTypes: [
+    ApiBlockType.Page,
+    ApiBlockType.LayoutTable,
+    ApiBlockType.Table,
+    ApiBlockType.Cell,
+    ApiBlockType.SelectionElement,
+    ApiBlockType.Word,
+  ],
+});
+```
+
+If you have feedback about these features, please let us know in the GitHub issues to help prioritise!
 
 
 ### Segment headers and footers from main content
 
-This is another task for which you might find [Textract Layout analysis](https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html) useful - by looping through layout items and excluding those of type 'header', 'footer', and 'page number'.
+This is another task for which you might find [Textract Layout analysis](https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html) useful - by looping through layout items and filtering out those of type `LayoutHeader`, `LayoutFooter` and `PageNumber`.
 
 However, TRP.js also provides a heuristic function you can try instead:
 

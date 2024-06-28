@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.2 (2024-06-28)
+### Added
+- Filter content by block type in a variety of contexts, with `includeBlockTypes` (allow-list) and `skipBlockTypes` (deny-list) options. These filters are available in the core `iter/listContent()`, `Layout.iter/listItems()` and `LayoutItem.iter/listLayoutChildren()` accessors, but can also be used to hide certain content (like page headers and footers) when you render with `.html({...})`. ([#179](https://github.com/aws-samples/amazon-textract-response-parser/issues/179))
+- Low-level relationship traversal via `iter/listRelatedItemsByRelType()` is now supported from `Page`s (PAGE blocks)
+- New accessor on `SelectionElement.isSelected`, in convenient boolean format (versus the 2-member `.selectionStatus` enumeration)
+- Form `Field.isCheckbox` and `FieldValue.isCheckbox`, check if a K->V field corresponds to a (label)->(checkbox) pair. Also added `{Field/FieldValue}.isSelected` and `.selectionStatus`, which return `null` for non-'checkbox' fields. (Pre-work for [#183](https://github.com/aws-samples/amazon-textract-response-parser/issues/183))
+### Changed
+- `WithContent` mixin options refactored to more closely mirror `IBlockTypeFilterOpts`, because WithContent now aligns to `iter/listRelatedItemsByRelType()` under the hood. This will give us more fine-grained but standardised control of missing and unexpected non-content child block type handling, per item class... But means some warning/error behaviour when parsing Textract JSON might have shifted a little (hopefully for the better).
+- A page's `Layout` no longer keeps any internal list-of-items state, instead referring to the parent `PAGE` block's child relationships directly.
+
 ## 0.4.1 (2024-06-04)
 ### Added
 - `iter/listRelatedItemsByRelType()` utility methods on all host-linked block wrapper objects, as most common use-cases for `relatedBlockIdsByRelType()` were just to then fetch the parsed wrapper for the retrieved block ID. Hope to further standardise across `childBlockIds`, `relatedBlockIdsByRelType`, and these new methods in a future release - but this might require some breaking changes to drive consistency in the handling of invalid JSONs (with missing block IDs, etc).

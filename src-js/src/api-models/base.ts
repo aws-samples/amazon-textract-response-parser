@@ -265,6 +265,23 @@ export const enum ApiBlockType {
 }
 
 /**
+ * Subset type of the ApiBlockType enumeration that corresponds to LAYOUT_* blocks
+ *
+ * TODO: Should/can all the Layout-specific stuff in here be moved out of `base.ts`?
+ */
+export type ApiLayoutBlockType =
+  | ApiBlockType.LayoutFigure
+  | ApiBlockType.LayoutFooter
+  | ApiBlockType.LayoutHeader
+  | ApiBlockType.LayoutKeyValue
+  | ApiBlockType.LayoutList
+  | ApiBlockType.LayoutPageNumber
+  | ApiBlockType.LayoutSectionHeader
+  | ApiBlockType.LayoutTable
+  | ApiBlockType.LayoutText
+  | ApiBlockType.LayoutTitle;
+
+/**
  * Canonical Set of API block types counted as Layout* elements
  *
  * See: https://docs.aws.amazon.com/textract/latest/dg/layoutresponse.html

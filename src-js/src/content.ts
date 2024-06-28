@@ -3,7 +3,7 @@
  */
 
 // Local Dependencies:
-import { ApiBlockType } from "./api-models/base";
+import { ApiBlockType, ApiRelationshipType } from "./api-models/base";
 import {
   ApiLineBlock,
   ApiSelectionElementBlock,
@@ -14,15 +14,23 @@ import {
 } from "./api-models/content";
 import { ApiBlock } from "./api-models/document";
 import {
+  ActionOnUnexpectedBlockType,
   ApiBlockWrapper,
   Constructor,
+  doesFilterAllowBlockType,
   escapeHtml,
   IApiBlockWrapper,
   IBlockManager,
+  IBlockTypeFilterOpts,
+  IHostedApiBlockWrapper,
   IRenderable,
+  IRenderOpts,
   IWithParentPage,
   IWithText,
+  normalizeOptionalSet,
   PageHostedApiBlockWrapper,
+  setIntersection,
+  setUnion,
 } from "./base";
 import { Geometry, IWithGeometry } from "./geometry";
 
@@ -76,7 +84,8 @@ export class Word
   /**
    * The semantic `html()` representation of a `Word` is just the (HTML-escaped) text
    */
-  html(): string {
+  html(opts?: IRenderOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
     return escapeHtml(this.text);
   }
 
@@ -104,21 +113,33 @@ export interface IWithContent<TContent extends IApiBlockWrapper<ApiBlock> & IRen
    */
   get nContentItems(): number;
   /**
+   * Return the text content of this element, with additional options
+   *
+   * Unlike the plain `.text` property, this method supports filtering which block types are
+   * included and controlling behaviour when unexpected ones are encountered.
+   *
+   * @param opts Optional configuration for filtering rendering to certain content types
+   */
+  getText(opts?: IBlockTypeFilterOpts): string;
+  /**
    * Iterate through the Content items in this object
+   *
+   * Optionally filter certain content Block types by specifying `opts`
+   *
    * @example
    * for (const item of cell.iterContent()) {
    *   console.log(item.text);
    * }
    * @example
-   * [...cell.iterContent()].forEach(
+   * [...cell.iterContent({ skipBlockTypes: [ApiBlockType.SelectionElement] })].forEach(
    *   (item) => console.log(item.text)
    * );
    */
-  iterContent(): Iterable<TContent>;
+  iterContent(opts?: IBlockTypeFilterOpts): Iterable<TContent>;
   /**
    * List the Content items in this object
    */
-  listContent(): Array<TContent>;
+  listContent(opts?: IBlockTypeFilterOpts): Array<TContent>;
 }
 
 /**
@@ -133,9 +154,19 @@ export interface IWithContentMixinOptions {
   contentTypes?: ApiBlockType[];
 
   /**
-   * Set `true` to throw an error if content iteration finds a child not in `contentTypes`
+   * Action to take on encountering a child Block of unexpected BlockType
+   *
+   * Set "error" to throw an error, "warn" to log a warning, or falsy to skip silently.
    */
-  strict?: boolean;
+  onUnexpectedBlockType?: ActionOnUnexpectedBlockType;
+
+  /**
+   * Other types of direct child block that are expected but non-content
+   *
+   * This is optional to specify, but setting it up will provide more useful behaviour when using
+   * strict `onUnexpectedBlockType`s settings.
+   */
+  otherExpectedChildTypes?: ApiBlockType[] | null;
 }
 
 /**
@@ -157,8 +188,15 @@ export interface IWithContentMixinOptions {
  */
 export function buildWithContent<TContent extends IApiBlockWrapper<ApiBlock> & IRenderable>({
   contentTypes = [ApiBlockType.SelectionElement, ApiBlockType.Signature, ApiBlockType.Word],
-  strict = false,
+  onUnexpectedBlockType = null,
+  otherExpectedChildTypes = null,
 }: IWithContentMixinOptions = {}) {
+  // (contentTypes cannot be `undefined` or null because of the default value)
+  const contentTypesSet: Set<ApiBlockType> = new Set(contentTypes);
+  const defaultOnUnexpected = onUnexpectedBlockType; // Need to rename because it'll be shadowed
+  const otherTypesSet: Set<ApiBlockType> = otherExpectedChildTypes
+    ? new Set(otherExpectedChildTypes)
+    : new Set();
   /**
    * TypeScript mixin for a container `Block` wrapper whose `Child` blocks are actual content
    *
@@ -169,56 +207,64 @@ export function buildWithContent<TContent extends IApiBlockWrapper<ApiBlock> & I
   return function WithContent<
     TBlock extends ApiBlock,
     TPage extends IBlockManager,
-    T extends Constructor<IApiBlockWrapper<TBlock> & IWithParentPage<TPage>>,
+    T extends Constructor<IHostedApiBlockWrapper<TBlock, TPage>>,
   >(SuperClass: T) {
     return class extends SuperClass implements IWithContent<TContent> {
-      iterContent(): Iterable<TContent> {
-        const getIterator = (): Iterator<TContent> => {
-          const childBlockIds = this.childBlockIds;
-          let ixCurr = 0;
-          return {
-            next: (): IteratorResult<TContent> => {
-              let nextVal: TContent | undefined;
-              while (ixCurr < childBlockIds.length) {
-                const item = this.parentPage.getItemByBlockId(childBlockIds[ixCurr]);
-                ++ixCurr;
-                if (!contentTypes.length || contentTypes.indexOf(item.blockType) >= 0) {
-                  nextVal = item as TContent;
-                  break;
-                } else if (strict) {
-                  throw new Error(
-                    `Child ${item.id} of parent ${this.id} has unexpected non-content block type ${item.blockType}`,
-                  );
-                }
-              }
-              return nextVal ? { done: false, value: nextVal } : { done: true, value: undefined };
-            },
-          };
-        };
-        return {
-          [Symbol.iterator]: getIterator,
-        };
+      getText(opts?: IBlockTypeFilterOpts) {
+        if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+        return this.listContent(opts)
+          .map((c) => c.text)
+          .join(" ");
       }
 
-      listContent(): Array<TContent> {
-        if (!this.dict.Relationships) {
-          // Many block types will simply omit the Relationships key if no content or other links
-          // present - so this is not worth raising a warning over.
-          return [];
+      iterContent({
+        includeBlockTypes = null,
+        onUnexpectedBlockType = defaultOnUnexpected,
+        skipBlockTypes = null,
+      }: IBlockTypeFilterOpts = {}): Iterable<TContent> {
+        if (includeBlockTypes) {
+          includeBlockTypes = normalizeOptionalSet(includeBlockTypes);
+          includeBlockTypes = setIntersection(contentTypesSet, includeBlockTypes);
+        } else {
+          includeBlockTypes = contentTypesSet;
         }
+        if (skipBlockTypes) {
+          skipBlockTypes;
+          skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
+          skipBlockTypes = setUnion(skipBlockTypes, otherTypesSet);
+        } else {
+          skipBlockTypes = otherTypesSet;
+        }
+        return this.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
+          includeBlockTypes,
+          onUnexpectedBlockType,
+          skipBlockTypes,
+        }) as Iterable<TContent>;
+      }
 
-        const result: Array<TContent> = [];
-        for (const cid of this.childBlockIds) {
-          const item = this.parentPage.getItemByBlockId(cid);
-          if (!contentTypes.length || contentTypes.indexOf(item.blockType) >= 0) {
-            result.push(item as TContent);
-          } else if (strict) {
-            throw new Error(
-              `Child ${item.id} of parent ${this.id} has unexpected non-content block type ${item.blockType}`,
-            );
-          }
+      listContent({
+        includeBlockTypes = null,
+        onUnexpectedBlockType = defaultOnUnexpected,
+        skipBlockTypes = null,
+      }: IBlockTypeFilterOpts = {}): Array<TContent> {
+        if (includeBlockTypes) {
+          includeBlockTypes = normalizeOptionalSet(includeBlockTypes);
+          includeBlockTypes = setIntersection(contentTypesSet, includeBlockTypes);
+        } else {
+          includeBlockTypes = contentTypesSet;
         }
-        return result;
+        if (skipBlockTypes) {
+          skipBlockTypes;
+          skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
+          skipBlockTypes = setUnion(skipBlockTypes, otherTypesSet);
+        } else {
+          skipBlockTypes = otherTypesSet;
+        }
+        return this.listRelatedItemsByRelType(ApiRelationshipType.Child, {
+          includeBlockTypes,
+          onUnexpectedBlockType,
+          skipBlockTypes,
+        }) as TContent[];
       }
 
       get nContentItems(): number {
@@ -232,12 +278,30 @@ export function buildWithContent<TContent extends IApiBlockWrapper<ApiBlock> & I
        * join content with something other than a space (like a newline) should override this.
        */
       get text(): string {
-        return this.listContent()
-          .map((c) => c.text)
-          .join(" ");
+        return this.getText();
       }
     };
   };
+}
+
+/**
+ * Configuration options for WithWords mixin
+ */
+export interface IWithWordsMixinOptions {
+  /**
+   * Action to take on encountering a child Block of unexpected BlockType
+   *
+   * Set "error" to throw an error, "warn" to log a warning, or falsy to skip silently.
+   */
+  onUnexpectedBlockType?: ActionOnUnexpectedBlockType;
+
+  /**
+   * Other types of direct child block that are expected but non-content
+   *
+   * This is optional to specify, but setting it up will provide more useful behaviour when using
+   * strict `onUnexpectedBlockType`s settings.
+   */
+  otherExpectedChildTypes?: ApiBlockType[] | null;
 }
 
 /**
@@ -252,7 +316,20 @@ export interface IWithWords extends IWithText {
    */
   get nWords(): number;
   /**
+   * Return the text content of this element, with additional options
+   *
+   * Unlike the plain `.text` property, this method supports controlling error behaviour when
+   * non-WORD blocks are encountered.
+   *
+   * @param opts Optional configuration for filtering rendering to certain content types
+   */
+  getText(opts?: IBlockTypeFilterOpts): string;
+  /**
    * Iterate through the text `Word` items in this object
+   *
+   * Optionally control what happens when unexpected (non-Word) block types are encountered, by
+   * specifying filter `opts`.
+   *
    * @example
    * for (const word of line.iterWords()) {
    *   console.log(word.text);
@@ -262,11 +339,14 @@ export interface IWithWords extends IWithText {
    *   (word) => console.log(word.text)
    * );
    */
-  iterWords(): Iterable<Word>;
+  iterWords(opts?: IBlockTypeFilterOpts): Iterable<Word>;
   /**
    * List the text `Word`s in this object
+   *
+   * Optionally control what happens when unexpected (non-Word) block types are encountered, by
+   * specifying filter `opts`.
    */
-  listWords(): Word[];
+  listWords(opts?: IBlockTypeFilterOpts): Word[];
   /**
    * Fetch a particular text `Word` in this object by index from 0 to `.nWords - 1`
    * @param ix 0-based index in the word list
@@ -280,51 +360,79 @@ export interface IWithWords extends IWithText {
  *
  * Adds dynamic functionality to list and traverse the Word objects contained in the content, and a
  * basic implementation for getting the overall `.text`.
+ *
+ * @param SuperClass The class to extend
+ * @param opts Configuration options for how to handle other (non-WORD) child blocks
  */
 export function WithWords<
   TBlock extends ApiBlock,
   TPage extends IBlockManager,
-  T extends Constructor<IApiBlockWrapper<TBlock> & IWithParentPage<TPage>>,
->(SuperClass: T) {
+  T extends Constructor<IHostedApiBlockWrapper<TBlock, TPage> & IWithParentPage<TPage>>,
+>(
+  SuperClass: T,
+  { onUnexpectedBlockType = null, otherExpectedChildTypes = null }: IWithWordsMixinOptions = {},
+) {
+  const contentTypesSet = new Set([ApiBlockType.Word]);
+  const defaultOnUnexpected = onUnexpectedBlockType; // Need to rename because it'll be shadowed
+  const otherTypesSet: Set<ApiBlockType> = otherExpectedChildTypes
+    ? new Set(otherExpectedChildTypes)
+    : new Set();
   return class extends SuperClass implements IWithWords {
-    iterWords(): Iterable<Word> {
-      const getIterator = (): Iterator<Word> => {
-        const childBlockIds = this.childBlockIds;
-        let ixCurr = 0;
-        return {
-          next: (): IteratorResult<Word> => {
-            let nextVal: Word | undefined;
-            while (ixCurr < childBlockIds.length) {
-              const item = this.parentPage.getItemByBlockId(childBlockIds[ixCurr]);
-              ++ixCurr;
-              if (item.blockType === ApiBlockType.Word) {
-                nextVal = item as Word;
-                break;
-              }
-            }
-            return nextVal ? { done: false, value: nextVal } : { done: true, value: undefined };
-          },
-        };
-      };
-      return {
-        [Symbol.iterator]: getIterator,
-      };
+    getText(opts?: IBlockTypeFilterOpts) {
+      if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+      return this.listWords(opts)
+        .map((w) => w.text)
+        .join(" ");
     }
 
-    listWords(): Word[] {
-      if (!this.dict.Relationships) {
-        console.warn(
-          `Tried to fetch WORD children on block ${this.id} of type ${this.blockType} with no 'Relationships'`,
-        );
-        return [];
+    iterWords({
+      includeBlockTypes = null,
+      onUnexpectedBlockType = defaultOnUnexpected,
+      skipBlockTypes = null,
+    }: IBlockTypeFilterOpts = {}): Iterable<Word> {
+      if (includeBlockTypes) {
+        includeBlockTypes = normalizeOptionalSet(includeBlockTypes);
+        includeBlockTypes = setIntersection(contentTypesSet, includeBlockTypes);
+      } else {
+        includeBlockTypes = contentTypesSet;
       }
+      if (skipBlockTypes) {
+        skipBlockTypes;
+        skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
+        skipBlockTypes = setUnion(skipBlockTypes, otherTypesSet);
+      } else {
+        skipBlockTypes = otherTypesSet;
+      }
+      return this.iterRelatedItemsByRelType(ApiRelationshipType.Child, {
+        includeBlockTypes,
+        onUnexpectedBlockType,
+        skipBlockTypes,
+      }) as Iterable<Word>;
+    }
 
-      const result: Word[] = [];
-      for (const cid of this.childBlockIds) {
-        const item = this.parentPage.getItemByBlockId(cid);
-        if (item.blockType === ApiBlockType.Word) result.push(item as Word);
+    listWords({
+      includeBlockTypes = null,
+      onUnexpectedBlockType = defaultOnUnexpected,
+      skipBlockTypes = null,
+    }: IBlockTypeFilterOpts = {}): Word[] {
+      if (includeBlockTypes) {
+        includeBlockTypes = normalizeOptionalSet(includeBlockTypes);
+        includeBlockTypes = setIntersection(contentTypesSet, includeBlockTypes);
+      } else {
+        includeBlockTypes = contentTypesSet;
       }
-      return result;
+      if (skipBlockTypes) {
+        skipBlockTypes;
+        skipBlockTypes = normalizeOptionalSet(skipBlockTypes);
+        skipBlockTypes = setUnion(skipBlockTypes, otherTypesSet);
+      } else {
+        skipBlockTypes = otherTypesSet;
+      }
+      return this.listRelatedItemsByRelType(ApiRelationshipType.Child, {
+        includeBlockTypes,
+        onUnexpectedBlockType,
+        skipBlockTypes,
+      }) as Word[];
     }
 
     get nWords(): number {
@@ -338,9 +446,7 @@ export function WithWords<
      * join words with something other than a space (like a newline) should override this.
      */
     get text(): string {
-      return this.listWords()
-        .map((c) => c.text)
-        .join(" ");
+      return this.getText();
     }
 
     wordAtIndex(ix: number): Word {
@@ -393,9 +499,26 @@ export class LineGeneric<TPage extends IBlockManager>
   }
 
   /**
-   * The semantic `html()` representation of a `Line` is just the (HTML-escaped) text
+   * Fetch the text in this line with filtering options
+   *
+   * Note that since `LINE.Text` comes directly from Textract, filtering out `ApiBlockType.Word`
+   * won't have any effect here.
+   *
+   * @param opts Optional configuration for filtering rendering to certain content types
    */
-  html(): string {
+  override getText(opts?: IBlockTypeFilterOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
+    return this._dict.Text;
+  }
+
+  /**
+   * The semantic `html()` representation of a `Line` is just the (HTML-escaped) text
+   *
+   * Note that since `LINE.Text` comes directly from Textract, filtering out `ApiBlockType.Word`
+   * won't have any effect here.
+   */
+  html(opts?: IRenderOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
     return escapeHtml(this.text);
   }
 
@@ -438,6 +561,14 @@ export class SelectionElement
     return this._geometry;
   }
   /**
+   * `true` if SELECTED, `false` if NOT_SELECTED, or raise an error if some unexpected value
+   */
+  get isSelected(): boolean {
+    if (this.selectionStatus === ApiSelectionStatus.Selected) return true;
+    if (this.selectionStatus === ApiSelectionStatus.NotSelected) return false;
+    throw new Error(`Block ${this.id} has unexpected SelectionStatus: ${this.selectionStatus}`);
+  }
+  /**
    * Whether the element is selected/ticked/checked/etc, or not
    */
   get selectionStatus(): ApiSelectionStatus {
@@ -452,7 +583,8 @@ export class SelectionElement
    *
    * We render a checkbox, but `disable` it to prevent accidental edits when viewing reports
    */
-  html(): string {
+  html(opts?: IRenderOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
     return `<input type="checkbox" disabled ${
       this.selectionStatus === ApiSelectionStatus.Selected ? "checked " : ""
     }/>`;
@@ -510,7 +642,8 @@ export class Signature
    *
    * We render a checkbox, but `disable` it to prevent accidental edits when viewirg reports
    */
-  html(): string {
+  html(opts?: IRenderOpts): string {
+    if (!doesFilterAllowBlockType(opts, this.blockType)) return "";
     return `<input class="signature" type="text" disabled value="[SIGNATURE]"/>`;
   }
 
