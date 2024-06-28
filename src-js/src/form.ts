@@ -131,6 +131,15 @@ export class FieldValueGeneric<TPage extends IBlockManager>
     return this._geometry;
   }
   /**
+   * A field value is "a checkbox" if it contains one SELECTION_ELEMENT
+   *
+   * Use this to check whether this field value is a checkbox/radio button/etc. Other (text)
+   * content may also be present.
+   */
+  get isCheckbox(): boolean {
+    return this.listContent({ includeBlockTypes: [ApiBlockType.SelectionElement] }).length == 1;
+  }
+  /**
    * Selection status if field value is one SELECTION_ELEMENT, else null
    *
    * If the field value contains exactly one SELECTION_ELEMENT, this property returns `true` if
@@ -141,15 +150,6 @@ export class FieldValueGeneric<TPage extends IBlockManager>
       includeBlockTypes: [ApiBlockType.SelectionElement],
     }) as SelectionElement[];
     return selEls.length === 1 ? selEls[0].selectionStatus === ApiSelectionStatus.Selected : null;
-  }
-  /**
-   * A field value is a "selection" if it contains one SELECTION_ELEMENT
-   *
-   * Use this to check whether this field value is a checkbox/radio button/etc. Other (text)
-   * content may also be present.
-   */
-  get isSelection(): boolean {
-    return this.listContent({ includeBlockTypes: [ApiBlockType.SelectionElement] }).length == 1;
   }
   get parentField(): FieldGeneric<TPage> {
     return this._parentField;
@@ -302,8 +302,8 @@ export class FieldGeneric<TPage extends IBlockManager>
    * Use this to check whether this is a checkbox/radio button/etc field. Other (text) content may
    * also be present.
    */
-  get isSelection(): boolean {
-    return !!this.value?.isSelection;
+  get isCheckbox(): boolean {
+    return !!this.value?.isCheckbox;
   }
   get key(): FieldKeyGeneric<TPage> {
     return this._key;

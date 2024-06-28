@@ -59,21 +59,21 @@ describe("FieldValue", () => {
     const doc = new TextractDocument(responseCopy);
 
     const nonSelValue = doc.form.getFieldByKey("Phone Number:")?.value as FieldValue;
-    expect(nonSelValue.isSelection).toBe(false);
+    expect(nonSelValue.isCheckbox).toBe(false);
     expect(nonSelValue.isSelected).toBe(null);
     expect(nonSelValue.selectionStatus).toBe(null);
 
     const selNotSelectedValue = doc.form.getFieldByKey("Company Employee")?.value as FieldValue;
-    expect(selNotSelectedValue.isSelection).toBe(true);
+    expect(selNotSelectedValue.isCheckbox).toBe(true);
     expect(selNotSelectedValue.isSelected).toBe(false);
     expect(selNotSelectedValue.selectionStatus).toBe(ApiSelectionStatus.NotSelected);
     const selSelectedValue = doc.form.getFieldByKey("Job fair")?.value as FieldValue;
-    expect(selSelectedValue.isSelection).toBe(true);
+    expect(selSelectedValue.isCheckbox).toBe(true);
     expect(selSelectedValue.isSelected).toBe(true);
     expect(selSelectedValue.selectionStatus).toBe(ApiSelectionStatus.Selected);
 
     const emptyValue = doc.form.getFieldByKey("Position Held")?.value as FieldValue;
-    expect(emptyValue.isSelection).toBe(false);
+    expect(emptyValue.isCheckbox).toBe(false);
     expect(emptyValue.isSelected).toBe(null);
     expect(emptyValue.selectionStatus).toBe(null);
   });
@@ -199,21 +199,21 @@ describe("FieldGeneric", () => {
     const doc = new TextractDocument(responseCopy);
 
     const nonSel = doc.form.getFieldByKey("Phone Number:") as Field;
-    expect(nonSel.isSelection).toBe(false);
+    expect(nonSel.isCheckbox).toBe(false);
     expect(nonSel.isSelected).toBe(null);
     expect(nonSel.selectionStatus).toBe(null);
 
     const selNotSelected = doc.form.getFieldByKey("Company Employee") as Field;
-    expect(selNotSelected.isSelection).toBe(true);
+    expect(selNotSelected.isCheckbox).toBe(true);
     expect(selNotSelected.isSelected).toBe(false);
     expect(selNotSelected.selectionStatus).toBe(ApiSelectionStatus.NotSelected);
     const selSelected = doc.form.getFieldByKey("Job fair") as Field;
-    expect(selSelected.isSelection).toBe(true);
+    expect(selSelected.isCheckbox).toBe(true);
     expect(selSelected.isSelected).toBe(true);
     expect(selSelected.selectionStatus).toBe(ApiSelectionStatus.Selected);
 
     const emptyValueField = doc.form.getFieldByKey("Position Held") as Field;
-    expect(emptyValueField.isSelection).toBe(false);
+    expect(emptyValueField.isCheckbox).toBe(false);
     expect(emptyValueField.isSelected).toBe(null);
     expect(emptyValueField.selectionStatus).toBe(null);
 
