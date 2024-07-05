@@ -270,7 +270,7 @@ class TGeometry():
 
     def rotate(self, origin: TPoint = TPoint(0, 0), degrees: float = 180.0):
         self.bounding_box.rotate(origin=origin, degrees=degrees)
-        [p.rotate(origin_x=origin.x, origin_y=origin.y) for p in self.polygon]
+        [p.rotate(origin_x=origin.x, origin_y=origin.y, degrees=degrees) for p in self.polygon]
 
     def scale(self, doc_width=None, doc_height=None):
         self.bounding_box.scale(doc_width=doc_width, doc_height=doc_height)
