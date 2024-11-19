@@ -1178,7 +1178,7 @@ export class Page
   }
 
   /**
-   * Return a best-effort semantic HTML representation of the page and its content
+   * Return a best-effort semantic HTML representation of the page content
    *
    * This is useful for ingesting the document into tools like search engines or Generative Large
    * Language Models (LLMs) that might be capable of understanding semantic structure such as
@@ -1203,8 +1203,14 @@ export class Page
       // To render semantic HTML for non-Layout-analysed documents, we'd want to collect the
       // various components (plain text lines, fields, tables, etc) in approximate reading order
       // and intersperse them. It seems possible, but not straightforward - don't have a solution
-      // yet.
-      throw new Error("Page.html() is not yet implemented for results where Textract LAYOUT was not enabled");
+      // yet. Only allow returning empty HTML for empty page:
+      if (this.listRelatedItemsByRelType(ApiRelationshipType.Child).length) {
+        throw new Error(
+          "Page.html() is not yet implemented for results where Textract LAYOUT was not enabled",
+        );
+      } else {
+        return "";
+      }
     }
   }
 

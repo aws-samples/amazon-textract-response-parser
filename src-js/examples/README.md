@@ -14,7 +14,7 @@ The projects use the **local build** of the library for pre-publication testing,
 
 To instead switch to published TRP.js versions (if you're using an example as a skeleton for your own project):
 
-- For NodeJS projects, Replace the package.json relative path in `"amazon-textract-response-parser": "file:../.."` with a normal version spec like `"amazon-textract-response-parser": "^0.4.2"`, and re-run `npm install`
+- For NodeJS projects, Replace the package.json relative path in `"amazon-textract-response-parser": "file:../.."` with a normal version spec like `"amazon-textract-response-parser": "^0.4.3"`, and re-run `npm install`
 - For browser IIFE projects, edit the `<script>` tag in the HTML to point to your chosen CDN or downloaded `trp.min.js` location
 
 

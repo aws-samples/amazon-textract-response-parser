@@ -192,6 +192,38 @@ describe("Page", () => {
     expect(sigList.length).toStrictEqual(nSignatures);
     expect(nSignatures).toStrictEqual(page.nSignatures);
   });
+
+  it("renders HTML representation for empty page with no content", () => {
+    const page = new TextractDocument({
+      AnalyzeDocumentModelVersion: "unknown",
+      Blocks: [
+        {
+          BlockType: ApiBlockType.Page,
+          Geometry: {
+            BoundingBox: {
+              Height: 1,
+              Left: 0,
+              Top: 0,
+              Width: 1,
+            },
+            Polygon: [
+              { X: 0, Y: 0 },
+              { X: 1, Y: 0 },
+              { X: 1, Y: 1 },
+              { X: 0, Y: 1 },
+            ],
+          },
+          Id: "dummy-page-id",
+        },
+      ],
+      DocumentMetadata: {
+        Pages: 1,
+      },
+    }).pageNumber(1);
+    const pageHtml = page.html();
+    expect(pageHtml).toStrictEqual(page.layout.html());
+    expect(pageHtml).toStrictEqual("");
+  });
 });
 
 describe("TextractDocument", () => {
