@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.3 (2024-11-19)
+### Changed
+- Bumped dev dependencies (including `cross-spawn`, `lint-staged`, `rollup`) for dependabot/audit
+### Fixed
+- `.html()` no longer fails on empty pages with no content (proposed fix for [this AWS re:Post question](https://repost.aws/questions/QU68wHh5vLSkiDC9Vt4lXXsw))
+
 ## 0.4.2 (2024-06-28)
 ### Added
 - Filter content by block type in a variety of contexts, with `includeBlockTypes` (allow-list) and `skipBlockTypes` (deny-list) options. These filters are available in the core `iter/listContent()`, `Layout.iter/listItems()` and `LayoutItem.iter/listLayoutChildren()` accessors, but can also be used to hide certain content (like page headers and footers) when you render with `.html({...})`. ([#179](https://github.com/aws-samples/amazon-textract-response-parser/issues/179))
