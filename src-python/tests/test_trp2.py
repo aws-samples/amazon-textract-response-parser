@@ -428,6 +428,41 @@ def test_tbbox_union():
     assert (b_union == b_gt)
 
 
+def test_geometry_schema_ignores_unknown_fields():
+    """
+    Ensure unknown fields are excluded during load for Geometry schema.
+    This validates BaseSchema Meta.unknown = EXCLUDE across nested schemas.
+    """
+    geometry_input = {
+        "BoundingBox": {
+            "Width": 1.0,
+            "Height": 1.0,
+            "Left": 0.0,
+            "Top": 0.0,
+            # Unknown field inside nested schema
+            "BogusField": "should be ignored",
+        },
+        "Polygon": [
+            {"X": 0.0, "Y": 0.0},
+            {"X": 1.0, "Y": 0.0},
+            {"X": 1.0, "Y": 1.0},
+            {"X": 0.0, "Y": 1.0},
+        ],
+        # Unknown field at top-level geometry
+        "Foo": "bar",
+        "AnotherUnknown": {"nested": 1},
+    }
+
+    geom = t2.TGeometrySchema().load(geometry_input)  # type: ignore
+    assert isinstance(geom, t2.TGeometry)
+
+    dumped = t2.TGeometrySchema().dump(geom)
+    # Unknown fields should not appear in dump
+    assert "Foo" not in dumped
+    assert "AnotherUnknown" not in dumped
+    assert "BogusField" not in dumped.get("BoundingBox", {})
+
+
 def test_get_blocks_for_relationship(caplog):
     caplog.set_level(logging.DEBUG)
 

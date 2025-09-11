@@ -26,6 +26,10 @@ class BaseSchema(m.Schema):
     """
     SKIP_VALUES = set([None])
 
+    class Meta:
+        # Exclude unknown fields during load to be lenient with inputs
+        unknown = m.EXCLUDE
+
     @m.post_dump
     def remove_skip_values(self, data, many, pass_many=False):
         return {
@@ -839,10 +843,6 @@ class TDocument():
 
 
 class THttpHeadersSchema(BaseSchema):
-
-    class Meta:
-        unknown = m.EXCLUDE
-
     date = m.fields.String(data_key="date", required=False)
     x_amzn_request_id = m.fields.String(data_key="x-amzn-requestid", required=False, allow_none=False)
     content_type = m.fields.String(data_key="content-type", required=False, allow_none=False)
@@ -855,10 +855,6 @@ class THttpHeadersSchema(BaseSchema):
 
 
 class TResponseMetadataSchema(BaseSchema):
-
-    class Meta:
-        unknown = m.EXCLUDE
-
     request_id = m.fields.String(data_key="RequestId", required=False, allow_none=False)
     http_status_code = m.fields.Int(data_key="HTTPStatusCode", required=False, allow_none=False)
     retry_attempts = m.fields.Int(data_key="RetryAttempts", required=False, allow_none=False)
@@ -870,10 +866,6 @@ class TResponseMetadataSchema(BaseSchema):
 
 
 class TDocumentSchema(BaseSchema):
-
-    class Meta:
-        unknown = m.EXCLUDE
-
     document_metadata = m.fields.Nested(TDocumentMetadataSchema,
                                         data_key="DocumentMetadata",
                                         required=False,
